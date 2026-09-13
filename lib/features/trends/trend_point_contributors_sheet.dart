@@ -7,7 +7,7 @@ import 'package:spend_trends/domain/category.dart';
 import 'package:spend_trends/domain/trend_spend_rate.dart';
 import 'package:spend_trends/features/activity/recategorize_sheet.dart';
 import 'package:spend_trends/features/trends/trend_point_contributors.dart';
-import 'package:spend_trends/providers/spend_trends_providers.dart';
+import 'package:spend_trends/features/categories/categories_providers.dart';
 import 'package:spend_trends/theme/finance_colors.dart';
 import 'package:spend_trends/widgets/app_sheet_panel.dart';
 import 'package:spend_trends/widgets/app_spreadsheet.dart';

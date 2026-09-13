@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:spend_trends/domain/categorizer.dart';
+import 'package:spend_trends/domain/copilot_default_rule_migration.dart';
 import 'package:spend_trends/features/settings/settings_section.dart';
-import 'package:spend_trends/providers/spend_trends_providers.dart';
+import 'package:spend_trends/providers/spend_data_changed.dart';
+import 'copilot_default_rule_migration_provider.dart';
 
 /// Releases Copilot user-locked categories to suggested and removes bad import rules.
 class const UnlockCopilotCategoriesTile() extends ConsumerStatefulWidget {
@@ -50,8 +51,10 @@ class _UnlockCopilotCategoriesTileState()
       );
     });
     try {
-      final categorizer = await ref.read(categorizerProvider.future);
-      final result = await categorizer.migrateCopilotUserCategoriesToSuggested(
+      final migration = await ref.read(
+        copilotDefaultRuleMigrationProvider.future,
+      );
+      final result = await migration.run(
         onProgress: (progress) {
           if (!mounted) return;
           setState(() => _progress = progress);

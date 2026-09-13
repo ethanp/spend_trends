@@ -11,11 +11,12 @@ import 'package:spend_trends/features/categories/category_browse_list.dart';
 import 'package:spend_trends/features/categories/category_editor_sheet.dart';
 import 'package:spend_trends/features/categories/category_list_sections.dart';
 import 'package:spend_trends/features/categories/group_editor_sheet.dart';
-import 'package:spend_trends/providers/spend_trends_providers.dart';
 import 'package:spend_trends/widgets/app_browse_split_shell.dart';
 import 'package:spend_trends/widgets/app_primary_button.dart';
 import 'package:spend_trends/widgets/app_sheet_panel.dart';
 import 'package:spend_trends/widgets/sync_status_nav_button.dart';
+
+import 'categories_providers.dart';
 
 class const CategoriesScreen() extends ConsumerStatefulWidget {
   @override

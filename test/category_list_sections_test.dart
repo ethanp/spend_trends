@@ -26,10 +26,11 @@ void main() {
       rowsById: const {},
     ).sections;
 
-    expect(
-      sections.map((section) => section.title),
-      ['Wants', 'Income', 'Ungrouped'],
-    );
+    expect(sections.map((section) => section.title), [
+      'Wants',
+      'Income',
+      'Ungrouped',
+    ]);
     expect(sections.any((section) => section.title == 'Cash flow'), isFalse);
 
     final incomeSection = sections.firstWhere(
@@ -43,9 +44,6 @@ void main() {
     final ungrouped = sections.firstWhere(
       (section) => section.title == 'Ungrouped',
     );
-    expect(
-      ungrouped.categories.map((category) => category.name),
-      ['Transfer'],
-    );
+    expect(ungrouped.categories.map((category) => category.name), ['Transfer']);
   });
 }

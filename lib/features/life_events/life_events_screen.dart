@@ -8,10 +8,12 @@ import 'package:spend_trends/domain/life_event.dart';
 import 'package:spend_trends/domain/stay_chain.dart';
 import 'package:spend_trends/features/life_chains/life_chain_screen.dart';
 import 'package:spend_trends/features/life_events/life_event_form_sheet.dart';
-import 'package:spend_trends/providers/spend_trends_providers.dart';
+import 'package:spend_trends/features/life_chains/life_chain_providers.dart';
 import 'package:spend_trends/widgets/app_card.dart';
 import 'package:spend_trends/widgets/app_primary_button.dart';
 import 'package:spend_trends/widgets/sync_status_nav_button.dart';
+
+import 'life_events_providers.dart';
 
 const _logger = ELogger('LifeEventsScreen');
 
@@ -71,7 +73,8 @@ class const _LifeEventsBody({
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return ListView(
-      padding: const EdgeInsets.all(ELayout.spaceLg).withOverlaidTabBar(context),
+      padding: const EdgeInsets.all(ELayout.spaceLg)
+          .withOverlaidTabBar(context),
       children: [
         _LifeChainHeroCard(kind: LifeChainKind.housing, chain: housingChain),
         const SizedBox(height: ELayout.spaceSm),

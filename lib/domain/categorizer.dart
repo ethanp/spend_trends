@@ -1,74 +1,15 @@
 import 'package:spend_trends/domain/category.dart';
+import 'package:spend_trends/domain/rule_match_index.dart';
 import 'package:spend_trends/domain/transaction.dart';
-import 'package:spend_trends/services/sqlite/accounts_repository.dart';
 import 'package:spend_trends/services/sqlite/categories_repository.dart';
 import 'package:spend_trends/services/sqlite/transactions_repository.dart';
 import 'package:uuid/uuid.dart';
 
-class const CopilotDefaultRuleMigrationResult({
-  required final int defaultImportRulesDeleted,
-  required final int transactionsReleased,
-});
-
-class const CopilotDefaultRuleMigrationProgress({
-  required final int completed,
-  required final int total,
-}) {
-  double get fraction => total <= 0 ? 0 : completed / total;
-}
-
 class Categorizer({
   required final CategoriesRepository _categoriesRepository,
   required final TransactionsRepository _transactionsRepository,
-  required final AccountsRepository _accountsRepository,
 }) {
   final _uuid = const Uuid();
-
-  /// Case-insensitive match of [rule] against the transaction description.
-  static bool ruleMatches(
-    BankTransaction transaction,
-    CategorizationRule rule,
-  ) {
-    final pattern = rule.pattern.trim().toLowerCase();
-    if (pattern.isEmpty) return false;
-    return _ruleMatchesPrepared(
-      transaction,
-      matchType: rule.matchType,
-      pattern: pattern,
-    );
-  }
-
-  /// Best matching rule: higher priority, then longer pattern, then exact over contains.
-  static CategorizationRule? bestMatchingRule(
-    BankTransaction transaction,
-    List<CategorizationRule> rules,
-  ) {
-    return RuleMatchIndex(rules).bestMatchingRule(transaction);
-  }
-
-  /// Rule that both matches [transaction] and explains its effective category.
-  static CategorizationRule? explainingRule(
-    BankTransaction transaction,
-    List<CategorizationRule> rules,
-  ) {
-    return RuleMatchIndex(rules).explainingRule(transaction);
-  }
-
-  static bool _ruleMatchesPrepared(
-    BankTransaction transaction, {
-    required RuleMatchType matchType,
-    required String pattern,
-  }) {
-    final merchantLower = transaction.normalizedMerchant.toLowerCase();
-    final descriptionLower = transaction.rawDescription.trim().toLowerCase();
-    return RuleMatchIndex._preparedRuleMatches(
-      matchType: matchType,
-      pattern: pattern,
-      merchantLower: merchantLower,
-      descriptionLower: descriptionLower,
-      haystack: '$descriptionLower\n$merchantLower',
-    );
-  }
 
   Future<String?> resolveCategoryId(BankTransaction transaction) async {
     if (transaction.hasUserCategory) {
@@ -76,7 +17,7 @@ class Categorizer({
     }
 
     final rules = await _categoriesRepository.listRules();
-    final matchingRule = bestMatchingRule(transaction, rules);
+    final matchingRule = RuleMatchIndex(rules).bestMatchingRule(transaction);
     if (matchingRule != null) return matchingRule.categoryId;
 
     return transaction.suggestedCategoryId;
@@ -123,46 +64,16 @@ class Categorizer({
     );
     final transactions = await _transactionsRepository.listAll();
     final existingRules = await _categoriesRepository.listRules();
+    final existingIndex = RuleMatchIndex(existingRules);
     return [
       for (final transaction in transactions)
-        if (ruleMatches(transaction, proposedRule) &&
-            !coveredByBetterExistingRule(
+        if (RuleMatchIndex.ruleMatches(transaction, proposedRule) &&
+            !existingIndex.coveredByBetterExistingRule(
               transaction: transaction,
-              existingRules: existingRules,
               proposedRule: proposedRule,
             ))
           transaction,
     ];
-  }
-
-  /// True when a competing existing rule would beat [proposedRule].
-  ///
-  /// Used so “apply rule to existing” does not overwrite a more-specific (or
-  /// otherwise better) rule that already matches — e.g. proposing `kroger`
-  /// skips txs where `kroger fuel` already wins. An existing rule with the
-  /// same pattern is ignored (upsert / re-apply of that rule).
-  static bool coveredByBetterExistingRule({
-    required BankTransaction transaction,
-    required List<CategorizationRule> existingRules,
-    required CategorizationRule proposedRule,
-  }) {
-    if (!ruleMatches(transaction, proposedRule)) return false;
-    final competingRules = [
-      for (final rule in existingRules)
-        if (!_sameContainsPattern(rule, proposedRule)) rule,
-      proposedRule,
-    ];
-    final winner = bestMatchingRule(transaction, competingRules);
-    return winner?.id != proposedRule.id;
-  }
-
-  static bool _sameContainsPattern(
-    CategorizationRule rule,
-    CategorizationRule proposedRule,
-  ) {
-    if (rule.matchType != proposedRule.matchType) return false;
-    return rule.pattern.trim().toLowerCase() ==
-        proposedRule.pattern.trim().toLowerCase();
   }
 
   /// Upserts a case-insensitive contains rule for [pattern] → [categoryId].
@@ -220,77 +131,6 @@ class Categorizer({
         categoryId: categoryId,
         priority: CategorizationRule.userCreatedPriority,
       ),
-    );
-  }
-
-  /// Releases Copilot user-locked categories to suggested (no merchant rules).
-  ///
-  /// Also deletes leftover priority-0 “default import” contains rules that were
-  /// incorrectly created from merchant names in earlier migrations/imports.
-  Future<CopilotDefaultRuleMigrationResult>
-  migrateCopilotUserCategoriesToSuggested({
-    void Function(CopilotDefaultRuleMigrationProgress progress)? onProgress,
-  }) async {
-    final accounts = await _accountsRepository.listAccounts();
-    final copilotAccountIds = {
-      for (final account in accounts)
-        if (account.externalId.startsWith('copilot:')) account.id,
-    };
-
-    final transactions = await _transactionsRepository.listAll();
-    final candidates = [
-      for (final transaction in transactions)
-        if (copilotAccountIds.contains(transaction.accountId) &&
-            transaction.hasUserCategory)
-          transaction,
-    ];
-
-    final defaultImportRules = [
-      for (final rule in await _categoriesRepository.listRules())
-        if (rule.isDefaultImport) rule,
-    ];
-
-    final totalSteps =
-        candidates.length + defaultImportRules.length + transactions.length;
-    void report(int completed) {
-      onProgress?.call(
-        CopilotDefaultRuleMigrationProgress(
-          completed: completed,
-          total: totalSteps,
-        ),
-      );
-    }
-
-    report(0);
-
-    var transactionsReleased = 0;
-    for (var index = 0; index < candidates.length; index++) {
-      final transaction = candidates[index];
-      await _transactionsRepository.releaseUserCategoryToSuggested(
-        transactionId: transaction.id,
-        categoryId: transaction.userCategoryId!,
-      );
-      transactionsReleased++;
-      report(index + 1);
-    }
-
-    var defaultImportRulesDeleted = 0;
-    for (var index = 0; index < defaultImportRules.length; index++) {
-      await _categoriesRepository.deleteRule(defaultImportRules[index].id);
-      defaultImportRulesDeleted++;
-      report(candidates.length + index + 1);
-    }
-
-    await applyRulesToUncategorized(
-      onProgress: (completed, total) {
-        report(candidates.length + defaultImportRules.length + completed);
-      },
-    );
-    report(totalSteps);
-
-    return CopilotDefaultRuleMigrationResult(
-      defaultImportRulesDeleted: defaultImportRulesDeleted,
-      transactionsReleased: transactionsReleased,
     );
   }
 
@@ -408,105 +248,4 @@ class Categorizer({
 class const RemoveRuleReclaimResult({
   required final int clearedTransactionCount,
   required final int reclaimedByOtherRulesCount,
-});
-
-/// Pre-normalized rules for repeated matching without re-trimming patterns.
-class RuleMatchIndex(List<CategorizationRule> rules) {
-  final List<_PreparedRule> _preparedRules = _prepareRules(rules);
-
-  CategorizationRule? bestMatchingRule(BankTransaction transaction) {
-    if (_preparedRules.isEmpty) return null;
-    final merchantLower = transaction.normalizedMerchant.toLowerCase();
-    final descriptionLower = transaction.rawDescription.trim().toLowerCase();
-    final haystack = '$descriptionLower\n$merchantLower';
-
-    _PreparedRule? bestPrepared;
-    for (final prepared in _preparedRules) {
-      if (!_preparedRuleMatches(
-        matchType: prepared.rule.matchType,
-        pattern: prepared.pattern,
-        merchantLower: merchantLower,
-        descriptionLower: descriptionLower,
-        haystack: haystack,
-      )) {
-        continue;
-      }
-      if (bestPrepared == null ||
-          _isBetterPreparedRule(prepared, bestPrepared)) {
-        bestPrepared = prepared;
-      }
-    }
-    return bestPrepared?.rule;
-  }
-
-  CategorizationRule? explainingRule(BankTransaction transaction) {
-    if (transaction.isUncategorized) return null;
-    final matchingRule = bestMatchingRule(transaction);
-    if (matchingRule == null) return null;
-    if (matchingRule.categoryId != transaction.effectiveCategoryId) return null;
-    return matchingRule;
-  }
-
-  /// Explaining rule for each transaction (one shared prepared-rule list).
-  Map<String, CategorizationRule?> explainingRulesByTransactionId(
-    Iterable<BankTransaction> transactions,
-  ) {
-    return {
-      for (final transaction in transactions)
-        transaction.id: explainingRule(transaction),
-    };
-  }
-
-  static List<_PreparedRule> _prepareRules(List<CategorizationRule> rules) {
-    final preparedRules = <_PreparedRule>[];
-    for (final rule in rules) {
-      final pattern = rule.pattern.trim().toLowerCase();
-      if (pattern.isEmpty) continue;
-      preparedRules.add(
-        _PreparedRule(
-          rule: rule,
-          pattern: pattern,
-          patternLength: pattern.length,
-        ),
-      );
-    }
-    return preparedRules;
-  }
-
-  static bool _preparedRuleMatches({
-    required RuleMatchType matchType,
-    required String pattern,
-    required String merchantLower,
-    required String descriptionLower,
-    required String haystack,
-  }) {
-    switch (matchType) {
-      case RuleMatchType.merchantExact:
-        return merchantLower == pattern || descriptionLower == pattern;
-      case RuleMatchType.merchantContains:
-        return haystack.contains(pattern);
-    }
-  }
-
-  static bool _isBetterPreparedRule(
-    _PreparedRule candidate,
-    _PreparedRule incumbent,
-  ) {
-    if (candidate.rule.priority != incumbent.rule.priority) {
-      return candidate.rule.priority > incumbent.rule.priority;
-    }
-    if (candidate.patternLength != incumbent.patternLength) {
-      return candidate.patternLength > incumbent.patternLength;
-    }
-    if (candidate.rule.matchType != incumbent.rule.matchType) {
-      return candidate.rule.matchType == RuleMatchType.merchantExact;
-    }
-    return candidate.pattern.compareTo(incumbent.pattern) < 0;
-  }
-}
-
-class const _PreparedRule({
-  required final CategorizationRule rule,
-  required final String pattern,
-  required final int patternLength,
 });

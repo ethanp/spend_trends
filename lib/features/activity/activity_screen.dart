@@ -15,10 +15,15 @@ import 'package:spend_trends/features/activity/recategorize_sheet.dart';
 import 'package:spend_trends/features/activity/suggest_categories_sheet.dart';
 import 'package:spend_trends/features/banks/banks_controller.dart';
 import 'package:spend_trends/features/banks/banks_pull_live_session.dart';
-import 'package:spend_trends/providers/spend_trends_providers.dart';
+import 'package:spend_trends/features/banks/banks_providers.dart';
+import 'package:spend_trends/features/banks/connection_status.dart';
+import 'package:spend_trends/features/categories/categories_providers.dart';
+import 'package:spend_trends/providers/spend_data_changed.dart';
 import 'package:spend_trends/widgets/app_browse_split_shell.dart';
 import 'package:spend_trends/widgets/app_card.dart';
 import 'package:spend_trends/widgets/sync_status_nav_button.dart';
+
+import 'transactions_list_provider.dart';
 
 class const ActivityScreen() extends ConsumerStatefulWidget {
   @override
@@ -287,9 +292,8 @@ class _ActivityScreenState() extends ConsumerState<ActivityScreen> {
         : 'All loaded transactions are already categorized. '
               'Turn off the filter to see them.';
     return SliverPadding(
-      padding: const EdgeInsets.symmetric(
-        horizontal: ELayout.spaceLg,
-      ).withOverlaidTabBar(context),
+      padding: const EdgeInsets.symmetric(horizontal: ELayout.spaceLg)
+          .withOverlaidTabBar(context),
       sliver: SliverToBoxAdapter(
         child: AppCard(child: Text(message, style: EText.body.medium)),
       ),
@@ -300,7 +304,8 @@ class _ActivityScreenState() extends ConsumerState<ActivityScreen> {
     final connected =
         ref.watch(connectionStatusProvider).asData?.value.isConnected ?? false;
     return ListView(
-      padding: const EdgeInsets.all(ELayout.spaceLg).withOverlaidTabBar(context),
+      padding: const EdgeInsets.all(ELayout.spaceLg)
+          .withOverlaidTabBar(context),
       children: [
         AppCard(
           child: Text(

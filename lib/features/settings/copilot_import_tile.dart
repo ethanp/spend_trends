@@ -1,9 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:spend_trends/domain/remove_copilot_duplicates.dart';
+import 'package:spend_trends/features/categories/categories_providers.dart';
 import 'package:spend_trends/features/settings/settings_section.dart';
-import 'package:spend_trends/providers/spend_trends_providers.dart';
+import 'package:spend_trends/providers/spend_data_changed.dart';
+import 'package:spend_trends/services/csv/copilot_csv_file.dart';
 import 'package:spend_trends/services/csv/import_copilot_transactions_csv.dart';
+import 'package:spend_trends/services/sqlite/accounts_repository.dart';
+import 'package:spend_trends/services/sqlite/categories_repository.dart';
+import 'package:spend_trends/services/sqlite/transactions_repository.dart';
+
+import 'remove_copilot_duplicates_provider.dart';
 
 class const CopilotImportTile() extends ConsumerStatefulWidget {
   @override

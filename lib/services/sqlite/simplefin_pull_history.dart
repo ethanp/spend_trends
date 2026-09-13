@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:spend_trends/services/simplefin/simplefin_models.dart';
 import 'package:ethan_sync/ethan_sync.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:powersync/powersync.dart';
 import 'package:uuid/uuid.dart';
 
@@ -434,3 +435,10 @@ class SimpleFinPullHistory(final PowerSyncDatabase _powerSync) {
         .toList();
   }
 }
+
+final simpleFinPullHistoryProvider = FutureProvider<SimpleFinPullHistory>((
+  ref,
+) async {
+  final database = await ref.watch(powerSyncDatabaseProvider.future);
+  return SimpleFinPullHistory(database);
+});

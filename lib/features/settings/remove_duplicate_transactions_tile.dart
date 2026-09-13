@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:spend_trends/domain/remove_copilot_duplicates.dart';
 import 'package:spend_trends/features/settings/settings_section.dart';
-import 'package:spend_trends/providers/spend_trends_providers.dart';
+import 'package:spend_trends/providers/spend_data_changed.dart';
+
+import 'remove_copilot_duplicates_provider.dart';
 
 /// Removes duplicate transactions from Copilot re-imports and linked SimpleFIN.
 class const RemoveDuplicateTransactionsTile() extends ConsumerStatefulWidget {

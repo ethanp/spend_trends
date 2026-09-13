@@ -11,7 +11,9 @@ import 'package:spend_trends/features/activity/default_contains_pattern.dart';
 import 'package:spend_trends/features/activity/existing_rule_overlaps.dart';
 import 'package:spend_trends/features/activity/overlapping_merchant_contains_rules.dart';
 import 'package:spend_trends/features/activity/rule_impact_match_row.dart';
-import 'package:spend_trends/providers/spend_trends_providers.dart';
+import 'package:spend_trends/features/categories/categories_providers.dart';
+import 'package:spend_trends/providers/spend_data_changed.dart';
+import 'package:spend_trends/services/sqlite/transactions_repository.dart';
 import 'package:spend_trends/widgets/category_picker.dart';
 import 'package:spend_trends/widgets/select_all_none_row.dart';
 

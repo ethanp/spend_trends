@@ -5,8 +5,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:spend_trends/app_identity.dart';
 import 'package:spend_trends/domain/stay_chain.dart';
 import 'package:spend_trends/features/life_chains/chain_stay_form_sheet.dart';
-import 'package:spend_trends/providers/spend_trends_providers.dart';
 import 'package:spend_trends/widgets/app_primary_button.dart';
+
+import 'life_chain_providers.dart';
 
 class const LifeChainScreen({required final LifeChainKind kind})
     extends ConsumerWidget {

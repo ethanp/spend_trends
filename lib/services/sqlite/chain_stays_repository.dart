@@ -1,6 +1,7 @@
 import 'package:spend_trends/domain/stay_chain.dart';
 import 'package:ethan_sync/ethan_sync.dart';
 import 'package:ethan_utils/ethan_utils.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:powersync/powersync.dart';
 import 'package:uuid/uuid.dart';
 
@@ -75,3 +76,17 @@ class ChainStaysRepository(
     );
   }
 }
+
+final housingStaysRepositoryProvider = FutureProvider<ChainStaysRepository>((
+  ref,
+) async {
+  final database = await ref.watch(powerSyncDatabaseProvider.future);
+  return ChainStaysRepository(database, tableName: 'housing_stays');
+});
+
+final jobStaysRepositoryProvider = FutureProvider<ChainStaysRepository>((
+  ref,
+) async {
+  final database = await ref.watch(powerSyncDatabaseProvider.future);
+  return ChainStaysRepository(database, tableName: 'job_stays');
+});

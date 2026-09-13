@@ -3,10 +3,13 @@ import 'dart:async';
 import 'package:ethan_utils/ethan_utils.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
-import 'package:spend_trends/domain/categorizer.dart';
+import 'package:spend_trends/domain/rule_match_index.dart';
 import 'package:spend_trends/domain/transaction.dart';
-import 'package:spend_trends/providers/spend_trends_providers.dart';
 import 'package:spend_trends/services/simplefin/simplefin_pull_progress.dart';
+import 'package:spend_trends/services/sqlite/categories_repository.dart';
+import 'package:spend_trends/services/sqlite/transactions_repository.dart';
+
+import 'banks_providers.dart';
 
 class BanksPullAccountProgress({
   required final String externalId,

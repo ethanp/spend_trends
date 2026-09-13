@@ -114,9 +114,18 @@ class DistributionWhiskerPainter({
     final centerX = size.width / 2;
     final minY = scale.yFromWhiskerBandTop(distribution.minCents, size.height);
     final maxY = scale.yFromWhiskerBandTop(distribution.maxCents, size.height);
-    final medianY = scale.yFromWhiskerBandTop(distribution.medianCents, size.height);
-    final averageY = scale.yFromWhiskerBandTop(distribution.averageCents, size.height);
-    final currentY = scale.yFromWhiskerBandTop(distribution.currentCents, size.height);
+    final medianY = scale.yFromWhiskerBandTop(
+      distribution.medianCents,
+      size.height,
+    );
+    final averageY = scale.yFromWhiskerBandTop(
+      distribution.averageCents,
+      size.height,
+    );
+    final currentY = scale.yFromWhiskerBandTop(
+      distribution.currentCents,
+      size.height,
+    );
 
     DistributionWhiskerMarks.paintRangeStem(
       canvas,
@@ -158,8 +167,10 @@ enum DistributionWhiskerGlyph() {
   now,
 }
 
-class _WhiskerMarkPainter(final DistributionWhiskerGlyph glyph, final Color color)
-    extends CustomPainter {
+class _WhiskerMarkPainter(
+  final DistributionWhiskerGlyph glyph,
+  final Color color,
+) extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final center = Offset(size.width / 2, size.height / 2);

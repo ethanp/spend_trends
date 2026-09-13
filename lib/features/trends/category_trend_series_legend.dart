@@ -136,7 +136,6 @@ class const CategoryTrendSeriesLegend({
     }
     return false;
   }
-
 }
 
 class const TrendLegendChip({

@@ -5,11 +5,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:spend_trends/features/banks/bank_account_balance_row.dart';
 import 'package:spend_trends/features/banks/bank_accounts_by_institution.dart';
 import 'package:spend_trends/features/banks/bank_institution_header.dart';
-import 'package:spend_trends/providers/spend_trends_providers.dart';
 import 'package:spend_trends/services/simplefin/simplefin_models.dart';
 import 'package:spend_trends/services/sqlite/simplefin_pull_history.dart';
 import 'package:spend_trends/theme/finance_colors.dart';
 import 'package:spend_trends/widgets/app_card.dart';
+
+import 'connection_status.dart';
 
 /// Dense institution-grouped account balances with exception-only status.
 class const BankAccountsList({

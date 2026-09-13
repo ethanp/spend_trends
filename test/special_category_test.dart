@@ -72,13 +72,13 @@ void main() {
 
     test('income ids include investments and exclude transfer', () {
       expect(SpecialCategory.isIncomeId(SpecialCategory.income.id), isTrue);
-      expect(SpecialCategory.isIncomeId(SpecialCategory.investments.id), isTrue);
-      expect(SpecialCategory.isIncomeId(SpecialCategory.transfer.id), isFalse);
-      expect(SpecialCategory.isInvestmentsName('Investments'), isTrue);
       expect(
-        SpecialCategory.investments.asSpendCategory().isIncome,
+        SpecialCategory.isIncomeId(SpecialCategory.investments.id),
         isTrue,
       );
+      expect(SpecialCategory.isIncomeId(SpecialCategory.transfer.id), isFalse);
+      expect(SpecialCategory.isInvestmentsName('Investments'), isTrue);
+      expect(SpecialCategory.investments.asSpendCategory().isIncome, isTrue);
       expect(SpecialCategory.transfer.asSpendCategory().isIncome, isFalse);
     });
   });

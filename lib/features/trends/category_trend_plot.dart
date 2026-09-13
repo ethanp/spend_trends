@@ -55,7 +55,9 @@ class CategoryTrendPlot._({
     );
   }
 
-  static double _highestSmoothedCents(List<CategoryTrendSeries> drawableSeries) {
+  static double _highestSmoothedCents(
+    List<CategoryTrendSeries> drawableSeries,
+  ) {
     var highest = 0.0;
     for (final series in drawableSeries) {
       for (final point in series.points) {

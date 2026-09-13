@@ -6,10 +6,11 @@ import 'package:spend_trends/domain/owned_asset.dart';
 import 'package:spend_trends/features/owned_assets/owned_asset_detail_pane.dart';
 import 'package:spend_trends/features/owned_assets/owned_asset_form_sheet.dart';
 import 'package:spend_trends/features/owned_assets/owned_asset_row.dart';
-import 'package:spend_trends/providers/spend_trends_providers.dart';
 import 'package:spend_trends/widgets/app_browse_split_shell.dart';
 import 'package:spend_trends/widgets/app_primary_button.dart';
 import 'package:spend_trends/widgets/help_tooltip.dart';
+
+import 'owned_assets_providers.dart';
 
 /// Banks section: manually tracked home / vehicle / other asset values.
 class const OwnedAssetsSection({

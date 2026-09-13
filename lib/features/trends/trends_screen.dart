@@ -15,8 +15,15 @@ import 'package:spend_trends/features/trends/category_trend_series.dart';
 import 'package:spend_trends/features/trends/net_worth_trend.dart';
 import 'package:spend_trends/features/trends/trend_chart_catalog.dart';
 import 'package:spend_trends/features/trends/trends_chart_bundle.dart';
-import 'package:spend_trends/providers/spend_trends_providers.dart';
+import 'package:spend_trends/features/activity/transactions_list_provider.dart';
+import 'package:spend_trends/features/banks/banks_providers.dart';
+import 'package:spend_trends/features/categories/categories_providers.dart';
+import 'package:spend_trends/features/life_chains/life_chain_providers.dart';
+import 'package:spend_trends/features/life_events/life_events_providers.dart';
+import 'package:spend_trends/features/owned_assets/owned_assets_providers.dart';
 import 'package:spend_trends/widgets/sync_status_nav_button.dart';
+
+import 'trends_providers.dart';
 
 class const TrendsScreen() extends ConsumerWidget {
   @override
@@ -99,7 +106,8 @@ class const TrendsScreen() extends ConsumerWidget {
     }
 
     return ListView(
-      padding: const EdgeInsets.all(ELayout.spaceLg).withOverlaidTabBar(context),
+      padding: const EdgeInsets.all(ELayout.spaceLg)
+          .withOverlaidTabBar(context),
       children: [
         if (bundle.categorySpend.isNotEmpty)
           CategoryTrendChart(

@@ -7,9 +7,10 @@ import 'package:spend_trends/domain/transaction.dart';
 import 'package:spend_trends/features/banks/banks_pull_live_session.dart';
 import 'package:spend_trends/features/banks/banks_pull_transaction_list.dart';
 import 'package:spend_trends/features/banks/pull_import_window.dart';
-import 'package:spend_trends/providers/spend_trends_providers.dart';
 import 'package:spend_trends/services/sqlite/simplefin_pull_history.dart';
 import 'package:spend_trends/theme/finance_colors.dart';
+
+import 'banks_providers.dart';
 
 /// In-screen pull history on Banks: date navigation and transaction review.
 class const BanksPullFeed({

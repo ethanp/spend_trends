@@ -8,7 +8,7 @@ import 'package:spend_trends/features/activity/contains_pattern_rematch.dart';
 import 'package:spend_trends/features/activity/existing_rule_overlaps.dart';
 import 'package:spend_trends/features/activity/overlapping_merchant_contains_rules.dart';
 import 'package:spend_trends/features/activity/rule_impact_match_row.dart';
-import 'package:spend_trends/providers/spend_trends_providers.dart';
+import 'package:spend_trends/features/categories/categories_providers.dart';
 import 'package:spend_trends/theme/finance_colors.dart';
 import 'package:spend_trends/widgets/app_primary_button.dart';
 import 'package:spend_trends/widgets/app_sheet_panel.dart';

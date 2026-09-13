@@ -5,7 +5,11 @@ import 'package:spend_trends/domain/account_kind.dart';
 import 'package:spend_trends/domain/owned_asset.dart';
 import 'package:spend_trends/domain/owned_asset_kind.dart';
 import 'package:spend_trends/features/trends/net_worth_trend.dart';
-import 'package:spend_trends/providers/spend_trends_providers.dart';
+import 'package:spend_trends/features/activity/transactions_list_provider.dart';
+import 'package:spend_trends/features/banks/banks_providers.dart';
+import 'package:spend_trends/features/categories/categories_providers.dart';
+import 'package:spend_trends/features/owned_assets/owned_assets_providers.dart';
+import 'package:spend_trends/features/trends/trends_providers.dart';
 
 void main() {
   test('net worth chart and Current use the same account snapshots', () async {

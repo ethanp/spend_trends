@@ -9,9 +9,13 @@ import 'package:spend_trends/features/banks/banks_pull_feed.dart';
 import 'package:spend_trends/features/banks/banks_pull_review_pane.dart';
 import 'package:spend_trends/features/banks/banks_source_section.dart';
 import 'package:spend_trends/features/owned_assets/owned_asset_detail_pane.dart';
-import 'package:spend_trends/providers/spend_trends_providers.dart';
+import 'package:spend_trends/features/activity/transactions_list_provider.dart';
+import 'package:spend_trends/features/owned_assets/owned_assets_providers.dart';
+import 'package:spend_trends/providers/spend_data_changed.dart';
 import 'package:spend_trends/widgets/app_browse_split_shell.dart';
 import 'package:spend_trends/widgets/sync_status_nav_button.dart';
+
+import 'connection_status.dart';
 
 /// Everyday SimpleFIN connect / accounts / sync.
 class const BanksScreen() extends ConsumerStatefulWidget {

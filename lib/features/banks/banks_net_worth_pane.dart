@@ -27,7 +27,8 @@ class const BanksNetWorthPane({
     if (selected != null) return BankAccountDetailPane(account: selected);
 
     return ListView(
-      padding: const EdgeInsets.all(ELayout.spaceLg).withOverlaidTabBar(context),
+      padding: const EdgeInsets.all(ELayout.spaceLg)
+          .withOverlaidTabBar(context),
       children: [_netWorthOverview()],
     );
   }

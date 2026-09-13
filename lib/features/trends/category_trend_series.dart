@@ -75,7 +75,8 @@ class const CategoryTrendSeries({
     if (spanSeconds <= 0) return leftPoint.smoothedCents;
     final t = sampleDate.difference(leftPoint.date).inSeconds / spanSeconds;
     return leftPoint.smoothedCents +
-        (rightPoint.smoothedCents - leftPoint.smoothedCents) * t.clamp(0.0, 1.0);
+        (rightPoint.smoothedCents - leftPoint.smoothedCents) *
+            t.clamp(0.0, 1.0);
   }
 
   CategoryTrendPoint? nearestPoint(DateTime hoverDate) {

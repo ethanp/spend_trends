@@ -5,11 +5,12 @@ import 'package:spend_trends/features/banks/bank_accounts_list.dart';
 import 'package:spend_trends/features/owned_assets/owned_assets_section.dart';
 import 'package:spend_trends/features/banks/banks_controller.dart';
 import 'package:spend_trends/features/banks/banks_pull_live_session.dart';
-import 'package:spend_trends/providers/spend_trends_providers.dart';
 import 'package:spend_trends/services/simplefin/simplefin_access_store.dart';
 import 'package:spend_trends/theme/finance_colors.dart';
 import 'package:spend_trends/widgets/app_primary_button.dart';
 import 'package:spend_trends/widgets/help_tooltip.dart';
+
+import 'connection_status.dart';
 
 /// Everyday bank UI: connect, accounts, pull bank transactions.
 class const BanksSourceSection({

@@ -6,13 +6,13 @@ import 'package:spend_trends/domain/category.dart';
 import 'package:spend_trends/domain/category_group.dart';
 import 'package:spend_trends/domain/transaction.dart';
 import 'package:spend_trends/domain/trend_spend_rate.dart';
-
-import 'bank_account_options.dart';
-
+import 'package:spend_trends/features/activity/transactions_list_provider.dart';
 import 'package:spend_trends/features/trends/category_trend_chart.dart';
 import 'package:spend_trends/features/trends/category_trend_series.dart';
 import 'package:spend_trends/features/trends/net_worth_trend.dart';
-import 'package:spend_trends/providers/spend_trends_providers.dart';
+
+import 'bank_account_options.dart';
+import 'banks_providers.dart';
 
 class const BankAccountDetailPane({required final Account account})
     extends ConsumerWidget {
@@ -25,7 +25,8 @@ class const BankAccountDetailPane({required final Account account})
       accountsMapProvider,
     );
     return ListView(
-      padding: const EdgeInsets.all(ELayout.spaceLg).withOverlaidTabBar(context),
+      padding: const EdgeInsets.all(ELayout.spaceLg)
+          .withOverlaidTabBar(context),
       children: [
         _accountSummary(),
         const SizedBox(height: ELayout.spaceLg),

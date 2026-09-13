@@ -2,12 +2,15 @@ import 'package:ethan_ui/ethan_ui.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:spend_trends/providers/spend_trends_providers.dart';
+import 'package:spend_trends/features/categories/categories_providers.dart';
+import 'package:spend_trends/providers/spend_data_changed.dart';
 import 'package:spend_trends/services/simplefin/simplefin_access_store.dart';
 import 'package:spend_trends/services/simplefin/simplefin_client.dart';
 import 'package:spend_trends/services/simplefin/simplefin_models.dart';
 import 'package:spend_trends/services/simplefin/simplefin_pull_progress.dart';
 import 'package:url_launcher/url_launcher.dart';
+
+import 'banks_providers.dart';
 
 class const BanksActionState({
   final bool busy = false,

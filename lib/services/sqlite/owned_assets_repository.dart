@@ -1,5 +1,6 @@
 import 'package:ethan_sync/ethan_sync.dart';
 import 'package:ethan_utils/ethan_utils.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:powersync/powersync.dart';
 import 'package:spend_trends/domain/owned_asset.dart';
 import 'package:spend_trends/domain/owned_asset_kind.dart';
@@ -176,3 +177,10 @@ class OwnedAssetsRepository(final PowerSyncDatabase _powerSync) {
     return trimmed.isEmpty ? null : trimmed;
   }
 }
+
+final ownedAssetsRepositoryProvider = FutureProvider<OwnedAssetsRepository>((
+  ref,
+) async {
+  final database = await ref.watch(powerSyncDatabaseProvider.future);
+  return OwnedAssetsRepository(database);
+});

@@ -257,7 +257,9 @@ class _CategoryTrendDistributionLegendState()
   }
 
   String _formatAnnualized(int annualizedCents) {
-    return formatCentsWholeDollars(widget.spendRate.displayCents(annualizedCents));
+    return formatCentsWholeDollars(
+      widget.spendRate.displayCents(annualizedCents),
+    );
   }
 
   String _pastYearTotalLabel(CategoryTrendSeries series) {
@@ -354,9 +356,7 @@ class const _DistributionColumn({
                     ),
                     if (canExpand)
                       Icon(
-                        isExpanded
-                            ? Icons.expand_more
-                            : Icons.chevron_right,
+                        isExpanded ? Icons.expand_more : Icons.chevron_right,
                         size: 16,
                         color: isHidden
                             ? EColors.textMuted

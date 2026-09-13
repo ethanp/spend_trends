@@ -9,12 +9,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 const _log = ELogger('SpendTrendsSync');
 
-bool spendTrendsSyncConfigured() {
-  final secret = dotenv.env['POWERSYNC_JWT_SECRET']?.trim() ?? '';
-  final lan = dotenv.env['SERVER_HOST_LAN']?.trim() ?? '';
-  return secret.isNotEmpty && lan.isNotEmpty;
-}
-
 /// FK graph for upload ordering (table → tables it references).
 const _fkDependencies = <String, Set<String>>{
   'accounts': {},

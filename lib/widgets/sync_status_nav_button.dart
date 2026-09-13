@@ -4,8 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:spend_trends/domain/account.dart';
 import 'package:spend_trends/features/shell/sync_status_sheet.dart';
-import 'package:spend_trends/providers/spend_trends_providers.dart';
-import 'package:spend_trends/services/sync/sync_config.dart';
+import 'package:spend_trends/features/banks/connection_status.dart';
 
 /// Collective sync indicator for navigation bars. Opens per-account detail.
 class const SyncStatusNavButton() extends ConsumerWidget {
@@ -37,7 +36,7 @@ class const SyncStatusNavButton() extends ConsumerWidget {
       return _CollectiveSyncLook.warning;
     }
 
-    if (spendTrendsSyncConfigured()) {
+    if (DotEnvSyncBootstrap.isConfigured()) {
       if (ref.watch(isOfflineProvider)) return _CollectiveSyncLook.offline;
       final phase = ref.watch(syncPhaseProvider);
       if (phase == SyncPhase.error) return _CollectiveSyncLook.warning;

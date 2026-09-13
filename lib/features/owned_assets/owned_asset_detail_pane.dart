@@ -5,9 +5,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:spend_trends/domain/owned_asset.dart';
 import 'package:spend_trends/features/owned_assets/owned_asset_form_sheet.dart';
-import 'package:spend_trends/providers/spend_trends_providers.dart';
+import 'package:spend_trends/providers/spend_data_changed.dart';
+import 'package:spend_trends/services/sqlite/owned_assets_repository.dart';
 import 'package:spend_trends/widgets/app_primary_button.dart';
 import 'package:spend_trends/widgets/app_sheet_panel.dart';
+
+import 'owned_assets_providers.dart';
 
 /// Owned-asset detail: current value, valuation history, edit / update / delete.
 class const OwnedAssetDetailPane({required final String ownedAssetId})
@@ -52,7 +55,8 @@ class const OwnedAssetDetailPane({required final String ownedAssetId})
     OwnedAssetWithValuations ownedAsset,
   ) {
     return ListView(
-      padding: const EdgeInsets.all(ELayout.spaceLg).withOverlaidTabBar(context),
+      padding: const EdgeInsets.all(ELayout.spaceLg)
+          .withOverlaidTabBar(context),
       children: [
         Text(ownedAsset.asset.name, style: EText.section),
         const SizedBox(height: ELayout.spaceXs),

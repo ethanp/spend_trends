@@ -15,7 +15,13 @@ import 'package:spend_trends/domain/special_category.dart';
 import 'package:spend_trends/domain/stay_chain.dart';
 import 'package:spend_trends/domain/transaction.dart';
 import 'package:spend_trends/features/trends/trends_screen.dart';
-import 'package:spend_trends/providers/spend_trends_providers.dart';
+import 'package:spend_trends/features/activity/transactions_list_provider.dart';
+import 'package:spend_trends/features/banks/banks_providers.dart';
+import 'package:spend_trends/features/banks/connection_status.dart';
+import 'package:spend_trends/features/categories/categories_providers.dart';
+import 'package:spend_trends/features/life_chains/life_chain_providers.dart';
+import 'package:spend_trends/features/life_events/life_events_providers.dart';
+import 'package:spend_trends/features/owned_assets/owned_assets_providers.dart';
 
 const _phoneSize = Size(390, 844);
 
@@ -32,49 +38,49 @@ void main() {
 
     final fixtures = _OverviewSpend();
     try {
-    await tester.pumpWidget(
-      ProviderScope(
-        overrides: [
-          transactionsListProvider.overrideWith(
-            (ref) async => fixtures.transactions,
-          ),
-          categoriesListProvider.overrideWith(
-            (ref) async => fixtures.categories,
-          ),
-          categoryGroupsProvider.overrideWith((ref) async => fixtures.groups),
-          accountsMapProvider.overrideWith((ref) async => fixtures.accounts),
-          ownedAssetsListProvider.overrideWith(
-            (ref) async => fixtures.ownedAssets,
-          ),
-          lifeEventsProvider.overrideWith((ref) async => fixtures.lifeEvents),
-          housingChainProvider.overrideWith(
-            (ref) async => fixtures.housingChain,
-          ),
-          jobChainProvider.overrideWith((ref) async => StayChain(const [])),
-          connectionStatusProvider.overrideWith(
-            (ref) async => ConnectionStatus(
-              isConnected: true,
-              fromEnv: false,
-              accounts: fixtures.accounts.values.toList(),
-              errors: const [],
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            transactionsListProvider.overrideWith(
+              (ref) async => fixtures.transactions,
+            ),
+            categoriesListProvider.overrideWith(
+              (ref) async => fixtures.categories,
+            ),
+            categoryGroupsProvider.overrideWith((ref) async => fixtures.groups),
+            accountsMapProvider.overrideWith((ref) async => fixtures.accounts),
+            ownedAssetsListProvider.overrideWith(
+              (ref) async => fixtures.ownedAssets,
+            ),
+            lifeEventsProvider.overrideWith((ref) async => fixtures.lifeEvents),
+            housingChainProvider.overrideWith(
+              (ref) async => fixtures.housingChain,
+            ),
+            jobChainProvider.overrideWith((ref) async => StayChain(const [])),
+            connectionStatusProvider.overrideWith(
+              (ref) async => ConnectionStatus(
+                isConnected: true,
+                fromEnv: false,
+                accounts: fixtures.accounts.values.toList(),
+                errors: const [],
+              ),
+            ),
+          ],
+          child: MaterialApp(
+            theme: ETheme.material3Dark,
+            debugShowCheckedModeBanner: false,
+            home: const Material(
+              color: EColors.background,
+              child: TrendsScreen(),
             ),
           ),
-        ],
-        child: MaterialApp(
-          theme: ETheme.material3Dark,
-          debugShowCheckedModeBanner: false,
-          home: const Material(
-            color: EColors.background,
-            child: TrendsScreen(),
-          ),
         ),
-      ),
-    );
-    await tester.pumpAndSettle();
-    await expectLater(
-      find.byType(MaterialApp),
-      matchesGoldenFile('../screenshots/trends.png'),
-    );
+      );
+      await tester.pumpAndSettle();
+      await expectLater(
+        find.byType(MaterialApp),
+        matchesGoldenFile('../screenshots/trends.png'),
+      );
     } finally {
       debugDefaultTargetPlatformOverride = null;
     }

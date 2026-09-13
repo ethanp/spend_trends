@@ -16,9 +16,10 @@ import 'package:spend_trends/features/trends/category_trend_series_legend.dart';
 import 'package:spend_trends/features/trends/trend_chart_catalog.dart';
 import 'package:spend_trends/features/trends/trend_point_contributors.dart';
 import 'package:spend_trends/features/trends/trend_point_contributors_sheet.dart';
-import 'package:spend_trends/providers/spend_trends_providers.dart';
 import 'package:spend_trends/theme/finance_colors.dart';
 import 'package:spend_trends/widgets/help_tooltip.dart';
+
+import 'trends_providers.dart';
 
 /// Labeled amount shown under a Trends chart title.
 class const ChartHeadlineFigure({

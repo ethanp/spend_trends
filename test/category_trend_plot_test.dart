@@ -42,22 +42,43 @@ void main() {
     });
 
     test('picks the closer chronological neighbor', () {
-      expect(series.nearestPoint(DateTime(2024, 1, 2))!.date, DateTime(2024, 1, 1));
-      expect(series.nearestPoint(DateTime(2024, 1, 3))!.date, DateTime(2024, 1, 4));
-      expect(series.nearestPoint(DateTime(2024, 1, 8))!.date, DateTime(2024, 1, 10));
+      expect(
+        series.nearestPoint(DateTime(2024, 1, 2))!.date,
+        DateTime(2024, 1, 1),
+      );
+      expect(
+        series.nearestPoint(DateTime(2024, 1, 3))!.date,
+        DateTime(2024, 1, 4),
+      );
+      expect(
+        series.nearestPoint(DateTime(2024, 1, 8))!.date,
+        DateTime(2024, 1, 10),
+      );
     });
 
     test('prefers the earlier point when equidistant', () {
-      expect(series.nearestPoint(DateTime(2024, 1, 7))!.date, DateTime(2024, 1, 4));
+      expect(
+        series.nearestPoint(DateTime(2024, 1, 7))!.date,
+        DateTime(2024, 1, 4),
+      );
     });
   });
 
   group('PaceLineSamples.percentileRank', () {
     test('matches the midrank formula on a sorted list', () {
       const sortedValues = [10.0, 20.0, 20.0, 40.0];
-      expect(PaceLineSamples.percentileRank(sortedValues, 10), closeTo(0.125, 1e-9));
-      expect(PaceLineSamples.percentileRank(sortedValues, 20), closeTo(0.5, 1e-9));
-      expect(PaceLineSamples.percentileRank(sortedValues, 40), closeTo(0.875, 1e-9));
+      expect(
+        PaceLineSamples.percentileRank(sortedValues, 10),
+        closeTo(0.125, 1e-9),
+      );
+      expect(
+        PaceLineSamples.percentileRank(sortedValues, 20),
+        closeTo(0.5, 1e-9),
+      );
+      expect(
+        PaceLineSamples.percentileRank(sortedValues, 40),
+        closeTo(0.875, 1e-9),
+      );
       expect(PaceLineSamples.percentileRank(sortedValues, 0), 0);
       expect(PaceLineSamples.percentileRank(sortedValues, 50), 1);
     });

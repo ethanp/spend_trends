@@ -5,9 +5,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:spend_trends/domain/account.dart';
 import 'package:spend_trends/features/banks/bank_pull_history_sheet.dart';
-import 'package:spend_trends/providers/spend_trends_providers.dart';
+import 'package:spend_trends/features/banks/connection_status.dart';
 import 'package:spend_trends/services/sqlite/simplefin_pull_history.dart';
-import 'package:spend_trends/services/sync/sync_config.dart';
 import 'package:spend_trends/widgets/app_sheet_panel.dart';
 
 class const SyncStatusSheet() extends ConsumerWidget {
@@ -94,7 +93,7 @@ class const _SyncStatusBody({required final ConnectionStatus status})
   }
 
   Widget _deviceSyncSection(WidgetRef ref) {
-    if (!spendTrendsSyncConfigured()) {
+    if (!DotEnvSyncBootstrap.isConfigured()) {
       return _statusLine(label: 'Device sync', value: 'Not configured');
     }
     final offline = ref.watch(isOfflineProvider);

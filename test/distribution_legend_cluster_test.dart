@@ -6,37 +6,40 @@ import 'package:spend_trends/features/trends/distribution_legend_cluster.dart';
 import 'package:spend_trends/features/trends/trend_chart_catalog.dart';
 
 void main() {
-  test('rolls member series under their group and leaves standalones rolled up', () {
-    final wants = _series(id: 'group:wants', name: 'Wants');
-    final dining = _series(
-      id: 'cat_dining',
-      name: 'Dining',
-      memberOfGroupSeriesId: 'group:wants',
-    );
-    final travel = _series(
-      id: 'cat_travel',
-      name: 'Travel',
-      memberOfGroupSeriesId: 'group:wants',
-    );
-    final housing = _series(id: 'cat_housing', name: 'Housing');
+  test(
+    'rolls member series under their group and leaves standalones rolled up',
+    () {
+      final wants = _series(id: 'group:wants', name: 'Wants');
+      final dining = _series(
+        id: 'cat_dining',
+        name: 'Dining',
+        memberOfGroupSeriesId: 'group:wants',
+      );
+      final travel = _series(
+        id: 'cat_travel',
+        name: 'Travel',
+        memberOfGroupSeriesId: 'group:wants',
+      );
+      final housing = _series(id: 'cat_housing', name: 'Housing');
 
-    final clusters = DistributionLegendCluster.fromSeries([
-      wants,
-      dining,
-      travel,
-      housing,
-    ]);
+      final clusters = DistributionLegendCluster.fromSeries([
+        wants,
+        dining,
+        travel,
+        housing,
+      ]);
 
-    expect(clusters, hasLength(2));
-    expect(clusters.first.rollup.id, 'group:wants');
-    expect(clusters.first.canExpand, isTrue);
-    expect(
-      clusters.first.members.map((series) => series.id),
-      ['cat_dining', 'cat_travel'],
-    );
-    expect(clusters.last.rollup.id, 'cat_housing');
-    expect(clusters.last.canExpand, isFalse);
-  });
+      expect(clusters, hasLength(2));
+      expect(clusters.first.rollup.id, 'group:wants');
+      expect(clusters.first.canExpand, isTrue);
+      expect(clusters.first.members.map((series) => series.id), [
+        'cat_dining',
+        'cat_travel',
+      ]);
+      expect(clusters.last.rollup.id, 'cat_housing');
+      expect(clusters.last.canExpand, isFalse);
+    },
+  );
 
   test('left legend is totals and guides, not Other', () {
     expect(

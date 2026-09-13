@@ -3,6 +3,7 @@ import 'package:spend_trends/domain/category_group.dart';
 import 'package:spend_trends/domain/special_category.dart';
 import 'package:ethan_sync/ethan_sync.dart';
 import 'package:ethan_utils/ethan_utils.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:powersync/powersync.dart';
 import 'package:uuid/uuid.dart';
 
@@ -307,3 +308,10 @@ class CategoriesRepository(final PowerSyncDatabase _powerSync) {
     );
   }
 }
+
+final categoriesRepositoryProvider = FutureProvider<CategoriesRepository>((
+  ref,
+) async {
+  final database = await ref.watch(powerSyncDatabaseProvider.future);
+  return CategoriesRepository(database);
+});

@@ -1,7 +1,7 @@
 import 'package:spend_trends/domain/account.dart';
 import 'package:spend_trends/domain/canceling_merchant_pairs.dart';
-import 'package:spend_trends/domain/categorizer.dart';
 import 'package:spend_trends/domain/category.dart';
+import 'package:spend_trends/domain/rule_match_index.dart';
 import 'package:spend_trends/domain/transaction.dart';
 import 'package:spend_trends/features/activity/activity_search.dart';
 

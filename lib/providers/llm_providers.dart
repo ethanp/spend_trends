@@ -1,6 +1,7 @@
 import 'package:spend_trends/services/llm/suggest_merchant_categories.dart';
-import 'package:spend_trends/providers/spend_trends_providers.dart';
-import 'package:spend_trends/services/sync/sync_config.dart';
+import 'package:spend_trends/services/sqlite/accounts_repository.dart';
+import 'package:spend_trends/services/sqlite/categories_repository.dart';
+import 'package:spend_trends/services/sqlite/transactions_repository.dart';
 import 'package:ethan_sync/ethan_sync.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -11,7 +12,7 @@ final suggestMerchantCategoriesProvider =
       if (secret == null || secret.isEmpty) return null;
 
       String? proxyUrl;
-      if (spendTrendsSyncConfigured()) {
+      if (DotEnvSyncBootstrap.isConfigured()) {
         try {
           proxyUrl = ref.watch(backendEndpointsProvider).llmProxyUrl;
         } catch (_) {}

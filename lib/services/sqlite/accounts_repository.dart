@@ -2,6 +2,7 @@ import 'package:spend_trends/domain/account.dart';
 import 'package:spend_trends/domain/account_kind.dart';
 import 'package:ethan_sync/ethan_sync.dart';
 import 'package:ethan_utils/ethan_utils.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:powersync/powersync.dart';
 
 class AccountsRepository(final PowerSyncDatabase _powerSync) {
@@ -186,3 +187,10 @@ WHERE conn_name = ?
     );
   }
 }
+
+final accountsRepositoryProvider = FutureProvider<AccountsRepository>((
+  ref,
+) async {
+  final database = await ref.watch(powerSyncDatabaseProvider.future);
+  return AccountsRepository(database);
+});

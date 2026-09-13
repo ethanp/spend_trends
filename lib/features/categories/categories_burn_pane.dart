@@ -5,8 +5,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:spend_trends/domain/category.dart';
 import 'package:spend_trends/domain/month_summary.dart';
 import 'package:spend_trends/domain/special_category.dart';
-import 'package:spend_trends/providers/spend_trends_providers.dart';
 import 'package:spend_trends/widgets/app_primary_button.dart';
+
+import 'categories_providers.dart';
 
 class const CategoriesBurnPane({
   required final String? selectedCategoryId,
@@ -20,7 +21,8 @@ class const CategoriesBurnPane({
         ? null
         : categoriesById[selectedCategoryId];
     return ListView(
-      padding: const EdgeInsets.all(ELayout.spaceLg).withOverlaidTabBar(context),
+      padding: const EdgeInsets.all(ELayout.spaceLg)
+          .withOverlaidTabBar(context),
       children: [
         if (selected == null)
           _burnOverview()

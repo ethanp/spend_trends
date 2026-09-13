@@ -6,7 +6,8 @@ import 'package:spend_trends/domain/account.dart';
 import 'package:spend_trends/domain/owned_asset.dart';
 import 'package:spend_trends/domain/transaction.dart';
 import 'package:spend_trends/features/banks/banks_net_worth_pane.dart';
-import 'package:spend_trends/providers/spend_trends_providers.dart';
+import 'package:spend_trends/features/activity/transactions_list_provider.dart';
+import 'package:spend_trends/features/banks/banks_providers.dart';
 
 void main() {
   testWidgets('selected bank account shows its reconstructed balance history', (

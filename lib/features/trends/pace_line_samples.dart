@@ -42,10 +42,7 @@ class PaceLineSamples._({
         sampleDate: sampleDate,
       );
       offsets.add(
-        Offset(
-          columnX + columnWidth / 2,
-          scale.yForCents(sampleCents, layout),
-        ),
+        Offset(columnX + columnWidth / 2, scale.yForCents(sampleCents, layout)),
       );
       if (series.percentileAreaFill) {
         percentileRanks.add(percentileRank(sortedValues, sampleCents));
@@ -76,7 +73,8 @@ class PaceLineSamples._({
     if (spanSeconds <= 0) return leftPoint.smoothedCents;
     final t = sampleDate.difference(leftPoint.date).inSeconds / spanSeconds;
     return leftPoint.smoothedCents +
-        (rightPoint.smoothedCents - leftPoint.smoothedCents) * t.clamp(0.0, 1.0);
+        (rightPoint.smoothedCents - leftPoint.smoothedCents) *
+            t.clamp(0.0, 1.0);
   }
 
   /// Empirical percentile rank in [0, 1] for [value] among [sortedValues].

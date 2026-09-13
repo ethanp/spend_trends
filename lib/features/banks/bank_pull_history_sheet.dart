@@ -2,9 +2,10 @@ import 'package:ethan_ui/ethan_ui.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
-import 'package:spend_trends/providers/spend_trends_providers.dart';
 import 'package:spend_trends/services/sqlite/simplefin_pull_history.dart';
 import 'package:spend_trends/widgets/app_sheet_panel.dart';
+
+import 'banks_providers.dart';
 
 /// Browse recent SimpleFIN pulls and per-account outage outcomes.
 class const BankPullHistorySheet() extends ConsumerStatefulWidget {

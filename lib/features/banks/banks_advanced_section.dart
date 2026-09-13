@@ -5,8 +5,9 @@ import 'package:spend_trends/features/banks/bank_pull_history_sheet.dart';
 import 'package:spend_trends/features/banks/banks_controller.dart';
 import 'package:spend_trends/features/banks/banks_pull_live_session.dart';
 import 'package:spend_trends/features/settings/settings_section.dart';
-import 'package:spend_trends/providers/spend_trends_providers.dart';
 import 'package:spend_trends/services/simplefin/simplefin_access_store.dart';
+
+import 'connection_status.dart';
 
 /// Settings-only bank maintenance: full history re-fetch and disconnect.
 class const BanksAdvancedSection() extends ConsumerWidget {

@@ -6,11 +6,14 @@ import 'package:spend_trends/domain/category.dart';
 import 'package:spend_trends/domain/category_group.dart';
 import 'package:spend_trends/domain/month_summary.dart';
 import 'package:spend_trends/domain/special_category.dart';
-import 'package:spend_trends/providers/spend_trends_providers.dart';
+import 'package:spend_trends/providers/spend_data_changed.dart';
 import 'package:spend_trends/services/sqlite/categories_repository.dart';
-import 'package:spend_trends/theme/finance_colors.dart';
 import 'package:spend_trends/widgets/app_primary_button.dart';
 import 'package:spend_trends/widgets/app_sheet_panel.dart';
+
+import 'categories_providers.dart';
+import 'category_editor_identity.dart';
+import 'category_editor_merge.dart';
 
 /// Create or edit a category name (and optional group membership).
 class const CategoryEditorSheet({final SpendCategory? category})
@@ -116,6 +119,19 @@ class _CategoryEditorSheetState() extends ConsumerState<CategoryEditorSheet> {
     );
   }
 
+  Widget _identityFields({required bool autofocus}) {
+    final groups =
+        ref.watch(categoryGroupsProvider).asData?.value ??
+        const <CategoryGroup>[];
+    return CategoryEditorIdentityFields(
+      nameController: _nameController,
+      autofocus: autofocus,
+      groups: groups,
+      selectedGroupId: _selectedGroupId,
+      onGroupSelected: (groupId) => setState(() => _selectedGroupId = groupId),
+    );
+  }
+
   Widget _createBody() {
     return Column(
       mainAxisSize: MainAxisSize.min,
@@ -123,9 +139,7 @@ class _CategoryEditorSheetState() extends ConsumerState<CategoryEditorSheet> {
       children: [
         Text('New category', style: EText.section),
         const SizedBox(height: ELayout.spaceMd),
-        _nameField(autofocus: true),
-        const SizedBox(height: ELayout.spaceMd),
-        _groupPicker(),
+        _identityFields(autofocus: true),
         if (_error != null) ...[
           const SizedBox(height: ELayout.spaceSm),
           _errorMessage(),
@@ -174,9 +188,7 @@ class _CategoryEditorSheetState() extends ConsumerState<CategoryEditorSheet> {
           style: EText.caption.copyWith(fontWeight: FontWeight.w600),
         ),
         const SizedBox(height: ELayout.spaceSm),
-        _nameField(autofocus: false),
-        const SizedBox(height: ELayout.spaceMd),
-        _groupPicker(),
+        _identityFields(autofocus: false),
         const SizedBox(height: ELayout.spaceLg),
         Text(
           'This month',
@@ -203,7 +215,9 @@ class _CategoryEditorSheetState() extends ConsumerState<CategoryEditorSheet> {
         ),
         if (!category.isHousing) ...[
           const SizedBox(height: ELayout.spaceMd),
-          _retireSection(),
+          CategoryEditorRetireSection(
+            onMergeStarted: _busy ? null : _startMergeAndDelete,
+          ),
         ],
       ],
     );
@@ -258,91 +272,6 @@ class _CategoryEditorSheetState() extends ConsumerState<CategoryEditorSheet> {
       RuleMatchType.merchantExact => 'exact',
     };
     return '$matchLabel “${rule.pattern}”';
-  }
-
-  Widget _retireSection() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Text(
-          'Retire',
-          style: EText.caption.copyWith(fontWeight: FontWeight.w600),
-        ),
-        const SizedBox(height: ELayout.spaceXs),
-        Text(
-          'Merge this category into another. Transactions and rules move '
-          'to the survivor, then this category is removed.',
-          style: EText.caption,
-        ),
-        const SizedBox(height: ELayout.spaceSm),
-        TextButton(
-          onPressed: _busy ? null : _startMergeAndDelete,
-          style: TextButton.styleFrom(
-            alignment: Alignment.centerLeft,
-            foregroundColor: EColors.danger,
-          ),
-          child: const Text('Merge into…'),
-        ),
-      ],
-    );
-  }
-
-  Widget _nameField({required bool autofocus}) {
-    return TextField(
-      controller: _nameController,
-      autofocus: autofocus,
-      style: EText.body.medium.copyWith(color: EColors.textPrimary),
-      decoration: EInput.filled(hintText: 'Name'),
-    );
-  }
-
-  Widget _groupPicker() {
-    final groups =
-        ref.watch(categoryGroupsProvider).asData?.value ??
-        const <CategoryGroup>[];
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text('Group', style: EText.caption),
-        const SizedBox(height: ELayout.spaceXs),
-        Wrap(
-          spacing: ELayout.spaceSm,
-          runSpacing: ELayout.spaceSm,
-          children: [
-            _groupChip(label: 'None', groupId: null),
-            for (final group in groups)
-              _groupChip(label: group.name, groupId: group.id),
-          ],
-        ),
-      ],
-    );
-  }
-
-  Widget _groupChip({required String label, required String? groupId}) {
-    final isSelected = _selectedGroupId == groupId;
-    return GestureDetector(
-      onTap: () => setState(() => _selectedGroupId = groupId),
-      child: Container(
-        padding: const EdgeInsets.symmetric(
-          horizontal: ELayout.spaceMd,
-          vertical: ELayout.spaceSm,
-        ),
-        decoration: BoxDecoration(
-          color: isSelected ? FinanceColors.accentPrimary : EColors.surface,
-          borderRadius: ELayout.borderRadiusSm,
-          border: Border.all(
-            color: isSelected ? FinanceColors.accentPrimary : EColors.border,
-          ),
-        ),
-        child: Text(
-          label,
-          style: EText.caption.copyWith(
-            color: isSelected ? EColors.textPrimary : EColors.textSecondary,
-            fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
-          ),
-        ),
-      ),
-    );
   }
 
   Widget _errorMessage() {
@@ -416,62 +345,14 @@ class _CategoryEditorSheetState() extends ConsumerState<CategoryEditorSheet> {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (pickerContext) =>
-          _mergeTargetPicker(pickerContext, category, mergeTargets),
-    );
-  }
-
-  Widget _mergeTargetPicker(
-    BuildContext pickerContext,
-    SpendCategory category,
-    List<SpendCategory> mergeTargets,
-  ) {
-    return AppSheetPanel(
-      heightFraction: 0.5,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          _mergePickerHeader(category),
-          Expanded(child: _mergeTargetList(pickerContext, mergeTargets)),
-        ],
+      builder: (pickerContext) => CategoryMergeTargetPicker(
+        category: category,
+        mergeTargets: mergeTargets,
+        onTargetSelected: (target) {
+          Navigator.of(pickerContext).pop();
+          _confirmMerge(target);
+        },
       ),
-    );
-  }
-
-  Widget _mergePickerHeader(SpendCategory category) {
-    return Padding(
-      padding: const EdgeInsets.all(ELayout.spaceLg),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text('Retire ${category.name} into…', style: EText.section),
-          const SizedBox(height: ELayout.spaceXs),
-          Text(
-            'Retire ${category.name} into the survivor · moves transactions '
-            'and rules, then removes ${category.name}.',
-            style: EText.caption,
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _mergeTargetList(
-    BuildContext pickerContext,
-    List<SpendCategory> mergeTargets,
-  ) {
-    return ListView.builder(
-      itemCount: mergeTargets.length,
-      itemBuilder: (context, index) {
-        final target = mergeTargets[index];
-        return ListTile(
-          title: Text(target.name, style: EText.section),
-          onTap: () {
-            Navigator.of(pickerContext).pop();
-            _confirmMerge(target);
-          },
-        );
-      },
     );
   }
 
@@ -479,7 +360,11 @@ class _CategoryEditorSheetState() extends ConsumerState<CategoryEditorSheet> {
     final category = widget.category;
     if (category == null) return;
 
-    final shouldMerge = await _mergeConfirmationDialog(category, target);
+    final shouldMerge = await CategoryMergeConfirmation.show(
+      context: context,
+      category: category,
+      target: target,
+    );
     if (shouldMerge != true || !mounted) return;
 
     setState(() {
@@ -499,34 +384,5 @@ class _CategoryEditorSheetState() extends ConsumerState<CategoryEditorSheet> {
     } finally {
       if (mounted) setState(() => _busy = false);
     }
-  }
-
-  Future<bool?> _mergeConfirmationDialog(
-    SpendCategory category,
-    SpendCategory target,
-  ) {
-    return showDialog<bool>(
-      context: context,
-      builder: (dialogContext) {
-        return AlertDialog(
-          title: Text('Retire ${category.name} into ${target.name}?'),
-          content: Text(
-            'Retire ${category.name} into ${target.name} · moves transactions '
-            'and rules. ${category.name} is then deleted.',
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(dialogContext).pop(false),
-              child: const Text('Cancel'),
-            ),
-            TextButton(
-              onPressed: () => Navigator.of(dialogContext).pop(true),
-              style: TextButton.styleFrom(foregroundColor: EColors.danger),
-              child: const Text('Merge & delete'),
-            ),
-          ],
-        );
-      },
-    );
   }
 }

@@ -3,7 +3,7 @@ import 'package:ethan_utils/ethan_utils.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:spend_trends/domain/stay_chain.dart';
-import 'package:spend_trends/providers/spend_trends_providers.dart';
+import 'package:spend_trends/providers/spend_data_changed.dart';
 import 'package:spend_trends/services/sqlite/chain_stays_repository.dart';
 import 'package:spend_trends/widgets/app_date_field.dart';
 import 'package:spend_trends/widgets/app_date_picker.dart';

@@ -3,17 +3,19 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:spend_trends/domain/account.dart';
 import 'package:spend_trends/domain/canceling_merchant_pairs.dart';
-import 'package:spend_trends/domain/categorizer.dart';
 import 'package:spend_trends/domain/category.dart';
+import 'package:spend_trends/domain/rule_match_index.dart';
 import 'package:spend_trends/domain/transaction.dart';
 import 'package:spend_trends/features/activity/activity_column_widths.dart';
 import 'package:spend_trends/features/activity/activity_day_list.dart';
 import 'package:spend_trends/features/activity/activity_transaction_tile.dart';
 import 'package:spend_trends/features/activity/manage_rule_sheet.dart';
 import 'package:spend_trends/features/activity/recategorize_sheet.dart';
-import 'package:spend_trends/providers/spend_trends_providers.dart';
+import 'package:spend_trends/features/categories/categories_providers.dart';
 import 'package:spend_trends/widgets/app_browse_split_shell.dart';
 import 'package:spend_trends/widgets/app_card.dart';
+
+import 'banks_providers.dart';
 
 /// Interactive transaction list for one pull import window.
 class const BanksPullTransactionList({

@@ -2,7 +2,8 @@ import 'package:ethan_ui/ethan_ui.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:spend_trends/domain/account.dart';
-import 'package:spend_trends/providers/spend_trends_providers.dart';
+import 'package:spend_trends/providers/spend_data_changed.dart';
+import 'package:spend_trends/services/sqlite/accounts_repository.dart';
 import 'package:spend_trends/theme/finance_colors.dart';
 
 class const BankAccountBalanceRow({

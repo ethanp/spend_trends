@@ -13,9 +13,10 @@ Future<void> main() async {
 
   await loadAppDotEnv();
 
-  if (!spendTrendsSyncConfigured()) {
+  if (!DotEnvSyncBootstrap.isConfigured()) {
     throw StateError(
-      'Set POWERSYNC_JWT_SECRET and SERVER_HOST_LAN in .env '
+      'Set POWERSYNC_JWT_SECRET and SERVER_HOST_LAN or '
+      'SERVER_HOST_TAILSCALE in .env '
       '(ethan_sync is required for local storage).',
     );
   }

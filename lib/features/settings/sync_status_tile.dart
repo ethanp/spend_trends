@@ -6,7 +6,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:spend_trends/features/settings/settings_section.dart';
 import 'package:spend_trends/providers/sync_ui_provider.dart';
-import 'package:spend_trends/services/sync/sync_config.dart';
 
 /// PowerSync connection: status, Home LAN vs Tailscale reachability, Probe/Switch.
 class const SyncStatusTile() extends ConsumerStatefulWidget {
@@ -21,19 +20,21 @@ class _SyncStatusTileState() extends ConsumerState<SyncStatusTile> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted || !spendTrendsSyncConfigured()) return;
+      if (!mounted || !DotEnvSyncBootstrap.isConfigured()) return;
       unawaited(ref.read(syncEnsureProvider).ensureConnected());
     });
   }
 
   @override
   Widget build(BuildContext context) {
-    if (!spendTrendsSyncConfigured()) {
+    if (!DotEnvSyncBootstrap.isConfigured()) {
       return const SettingsSectionHeader(
         icon: Icons.cloud,
         title: 'Sync',
         style: _style,
-        caption: 'Set POWERSYNC_JWT_SECRET and SERVER_HOST_LAN in .env to enable sync.',
+        caption:
+            'Set POWERSYNC_JWT_SECRET and SERVER_HOST_LAN or '
+            'SERVER_HOST_TAILSCALE in .env to enable sync.',
       );
     }
 

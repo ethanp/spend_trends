@@ -2,6 +2,7 @@ import 'package:spend_trends/domain/month_summary.dart';
 import 'package:spend_trends/domain/transaction.dart';
 import 'package:ethan_sync/ethan_sync.dart';
 import 'package:ethan_utils/ethan_utils.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:powersync/powersync.dart';
 
 class const TransactionPresence({
@@ -366,3 +367,10 @@ class TransactionsRepository(final PowerSyncDatabase _powerSync) {
     );
   }
 }
+
+final transactionsRepositoryProvider = FutureProvider<TransactionsRepository>((
+  ref,
+) async {
+  final database = await ref.watch(powerSyncDatabaseProvider.future);
+  return TransactionsRepository(database);
+});

@@ -3,9 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:spend_trends/features/trends/category_trend_plot.dart';
 
 /// Inspected calendar day on a Trends chart (hairline + legend as-of).
-class const CategoryTrendInspect({
-  required final DateTime date,
-}) {
+class const CategoryTrendInspect({required final DateTime date}) {
   @override
   bool operator ==(Object other) =>
       other is CategoryTrendInspect && other.date == date;
