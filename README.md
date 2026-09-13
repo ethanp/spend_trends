@@ -4,6 +4,10 @@ Personal **categorical spend trend analysis** for **macOS and iPhone** only. Con
 
 This is a personal app (not a product). The repo is public-safe: bank Access URLs, Setup Tokens, JWT secrets, and LLM tokens live only in a local `.env` (gitignored) and the device keychain — never in git.
 
+### Screenshots
+
+![Trends](screenshots/trends.png)
+
 ## What it does
 
 - **See whether a category is drifting up or down** — smoothed trailing-year spend lines (total + per category) so long-term shape is readable, not drowned in daily noise.
