@@ -1,3 +1,4 @@
+import 'package:ethan_sync/ethan_sync.dart';
 import 'package:ethan_ui/ethan_ui.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -9,8 +10,6 @@ import 'package:spend_trends/features/settings/remove_duplicate_transactions_til
 import 'package:spend_trends/features/settings/unlock_copilot_categories_tile.dart';
 import 'package:spend_trends/features/settings/settings_section.dart';
 import 'package:spend_trends/features/settings/sync_status_tile.dart';
-import 'package:spend_trends/widgets/sync_status_nav_button.dart';
-
 class const SettingsScreen() extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -19,7 +18,7 @@ class const SettingsScreen() extends ConsumerWidget {
       appBar: const EAppHeader(
         eyebrow: AppIdentity.displayName,
         title: 'Settings',
-        leading: SyncStatusNavButton(),
+        leading: ESyncPhaseIcon(),
         automaticallyImplyLeading: false,
       ),
       body: SafeArea(

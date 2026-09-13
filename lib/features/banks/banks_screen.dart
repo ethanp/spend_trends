@@ -1,3 +1,4 @@
+import 'package:ethan_sync/ethan_sync.dart';
 import 'package:ethan_ui/ethan_ui.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -13,8 +14,6 @@ import 'package:spend_trends/features/activity/transactions_list_provider.dart';
 import 'package:spend_trends/features/owned_assets/owned_assets_providers.dart';
 import 'package:spend_trends/providers/spend_data_changed.dart';
 import 'package:spend_trends/widgets/app_browse_split_shell.dart';
-import 'package:spend_trends/widgets/sync_status_nav_button.dart';
-
 import 'connection_status.dart';
 
 /// Everyday SimpleFIN connect / accounts / sync.
@@ -44,7 +43,7 @@ class _BanksScreenState() extends ConsumerState<BanksScreen> {
       appBar: const EAppHeader(
         eyebrow: AppIdentity.displayName,
         title: 'Banks',
-        leading: SyncStatusNavButton(),
+        leading: ESyncPhaseIcon(),
         automaticallyImplyLeading: false,
       ),
       body: SafeArea(

@@ -1,3 +1,4 @@
+import 'package:ethan_sync/ethan_sync.dart';
 import 'package:ethan_ui/ethan_ui.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -21,8 +22,6 @@ import 'package:spend_trends/features/categories/categories_providers.dart';
 import 'package:spend_trends/features/life_chains/life_chain_providers.dart';
 import 'package:spend_trends/features/life_events/life_events_providers.dart';
 import 'package:spend_trends/features/owned_assets/owned_assets_providers.dart';
-import 'package:spend_trends/widgets/sync_status_nav_button.dart';
-
 import 'trends_providers.dart';
 
 class const TrendsScreen() extends ConsumerWidget {
@@ -43,7 +42,7 @@ class const TrendsScreen() extends ConsumerWidget {
       appBar: const EAppHeader(
         eyebrow: AppIdentity.displayName,
         title: 'Trends',
-        leading: SyncStatusNavButton(),
+        leading: ESyncPhaseIcon(),
         automaticallyImplyLeading: false,
       ),
       body: SafeArea(

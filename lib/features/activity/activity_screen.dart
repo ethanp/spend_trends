@@ -1,3 +1,4 @@
+import 'package:ethan_sync/ethan_sync.dart';
 import 'package:ethan_ui/ethan_ui.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -21,8 +22,6 @@ import 'package:spend_trends/features/categories/categories_providers.dart';
 import 'package:spend_trends/providers/spend_data_changed.dart';
 import 'package:spend_trends/widgets/app_browse_split_shell.dart';
 import 'package:spend_trends/widgets/app_card.dart';
-import 'package:spend_trends/widgets/sync_status_nav_button.dart';
-
 import 'transactions_list_provider.dart';
 
 class const ActivityScreen() extends ConsumerStatefulWidget {
@@ -74,7 +73,7 @@ class _ActivityScreenState() extends ConsumerState<ActivityScreen> {
       appBar: EAppHeader(
         eyebrow: AppIdentity.displayName,
         title: 'Activity',
-        leading: const SyncStatusNavButton(),
+        leading: const ESyncPhaseIcon(),
         automaticallyImplyLeading: false,
         actions: [
           TextButton(

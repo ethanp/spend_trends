@@ -1,3 +1,4 @@
+import 'package:ethan_sync/ethan_sync.dart';
 import 'package:ethan_ui/ethan_ui.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -14,8 +15,6 @@ import 'package:spend_trends/features/categories/group_editor_sheet.dart';
 import 'package:spend_trends/widgets/app_browse_split_shell.dart';
 import 'package:spend_trends/widgets/app_primary_button.dart';
 import 'package:spend_trends/widgets/app_sheet_panel.dart';
-import 'package:spend_trends/widgets/sync_status_nav_button.dart';
-
 import 'categories_providers.dart';
 
 class const CategoriesScreen() extends ConsumerStatefulWidget {
@@ -41,7 +40,7 @@ class _CategoriesScreenState() extends ConsumerState<CategoriesScreen> {
       appBar: EAppHeader(
         eyebrow: AppIdentity.displayName,
         title: 'Categories',
-        leading: const SyncStatusNavButton(),
+        leading: const ESyncPhaseIcon(),
         automaticallyImplyLeading: false,
         actions: [
           IconButton(

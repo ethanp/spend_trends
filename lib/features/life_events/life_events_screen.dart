@@ -1,3 +1,4 @@
+import 'package:ethan_sync/ethan_sync.dart';
 import 'package:ethan_ui/ethan_ui.dart';
 import 'package:ethan_utils/ethan_utils.dart';
 import 'package:flutter/material.dart';
@@ -11,8 +12,6 @@ import 'package:spend_trends/features/life_events/life_event_form_sheet.dart';
 import 'package:spend_trends/features/life_chains/life_chain_providers.dart';
 import 'package:spend_trends/widgets/app_card.dart';
 import 'package:spend_trends/widgets/app_primary_button.dart';
-import 'package:spend_trends/widgets/sync_status_nav_button.dart';
-
 import 'life_events_providers.dart';
 
 const _logger = ELogger('LifeEventsScreen');
@@ -29,7 +28,7 @@ class const LifeEventsScreen() extends ConsumerWidget {
       appBar: EAppHeader(
         eyebrow: AppIdentity.displayName,
         title: 'Life Events',
-        leading: const SyncStatusNavButton(),
+        leading: const ESyncPhaseIcon(),
         automaticallyImplyLeading: false,
         actions: [
           IconButton(
