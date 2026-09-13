@@ -44,6 +44,7 @@ class _BanksScreenState() extends ConsumerState<BanksScreen> {
         automaticallyImplyLeading: false,
       ),
       body: SafeArea(
+        bottom: false,
         child: connectionAsync.when(
           skipLoadingOnReload: true,
           loading: () => const Center(child: CircularProgressIndicator()),
@@ -97,6 +98,9 @@ class _BanksScreenState() extends ConsumerState<BanksScreen> {
                     ),
                   ),
                 ],
+                SliverToBoxAdapter(
+                  child: SizedBox(height: context.overlaidTabBarInset),
+                ),
               ],
             );
             if (!status.isConnected) return scroll;

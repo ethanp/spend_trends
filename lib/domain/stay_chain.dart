@@ -1,5 +1,4 @@
 import 'package:spend_trends/theme/finance_colors.dart';
-import 'package:ethan_ui/ethan_ui.dart';
 import 'package:ethan_utils/ethan_utils.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
@@ -32,7 +31,7 @@ enum LifeChainKind({
     labelPlaceholder: 'Employer or role',
     startDateLabel: 'Started',
     icon: Icons.work,
-    trendBandColor: EColors.success,
+    trendBandColor: FinanceColors.job,
   );
 
   String get screenTitle => nameAsCapitalizedWords;

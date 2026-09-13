@@ -33,12 +33,12 @@ class const ActivityDetailPane({
             visibleTransactions: visibleTransactions,
           ),
         ),
-        Expanded(child: _detailBody()),
+        Expanded(child: _detailBody(context)),
       ],
     );
   }
 
-  Widget _detailBody() {
+  Widget _detailBody(BuildContext context) {
     if (selected != null) {
       return KeyedSubtree(
         key: ValueKey(selected!.id),
@@ -57,7 +57,7 @@ class const ActivityDetailPane({
         ELayout.spaceSm,
         ELayout.spaceLg,
         ELayout.spaceLg,
-      ),
+      ).withOverlaidTabBar(context),
       children: [_uncategorizedOverview()],
     );
   }

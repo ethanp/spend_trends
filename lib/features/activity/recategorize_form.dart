@@ -119,7 +119,7 @@ class _RecategorizeFormState() extends ConsumerState<RecategorizeForm> {
         ELayout.spaceLg,
         ELayout.spaceLg,
         ELayout.spaceMd,
-      ),
+      ).withOverlaidTabBar(context),
       children: [
         _formHeader(),
         const SizedBox(height: ELayout.spaceMd),

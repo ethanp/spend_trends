@@ -80,7 +80,7 @@ class const CategoryBrowseList({
       rowsById: rowsById,
     );
     return ListView(
-      padding: const EdgeInsets.all(ELayout.spaceLg),
+      padding: const EdgeInsets.all(ELayout.spaceLg).withOverlaidTabBar(context),
       children: [
         _columnHeader(columnWidths),
         const SizedBox(height: ELayout.spaceMd),

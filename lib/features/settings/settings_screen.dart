@@ -23,13 +23,14 @@ class const SettingsScreen() extends ConsumerWidget {
         automaticallyImplyLeading: false,
       ),
       body: SafeArea(
+        bottom: false,
         child: ListView(
           padding: const EdgeInsets.fromLTRB(
             ELayout.spaceLg,
             ELayout.spaceMd,
             ELayout.spaceLg,
             32,
-          ),
+          ).withOverlaidTabBar(context),
           children: [
             const BanksAdvancedSection(),
             const SizedBox(height: ELayout.spaceXl),

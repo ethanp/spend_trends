@@ -37,6 +37,7 @@ class const LifeEventsScreen() extends ConsumerWidget {
         ],
       ),
       body: SafeArea(
+        bottom: false,
         child: lifeEventsAsync.when(
           loading: () => const Center(child: CircularProgressIndicator()),
           error: (error, stackTrace) {
@@ -70,7 +71,7 @@ class const _LifeEventsBody({
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return ListView(
-      padding: const EdgeInsets.all(ELayout.spaceLg),
+      padding: const EdgeInsets.all(ELayout.spaceLg).withOverlaidTabBar(context),
       children: [
         _LifeChainHeroCard(kind: LifeChainKind.housing, chain: housingChain),
         const SizedBox(height: ELayout.spaceSm),

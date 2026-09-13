@@ -52,7 +52,7 @@ class const OwnedAssetDetailPane({required final String ownedAssetId})
     OwnedAssetWithValuations ownedAsset,
   ) {
     return ListView(
-      padding: const EdgeInsets.all(ELayout.spaceLg),
+      padding: const EdgeInsets.all(ELayout.spaceLg).withOverlaidTabBar(context),
       children: [
         Text(ownedAsset.asset.name, style: EText.section),
         const SizedBox(height: ELayout.spaceXs),

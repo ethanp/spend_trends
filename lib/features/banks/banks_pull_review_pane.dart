@@ -12,7 +12,7 @@ class const BanksPullReviewPane({
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return ListView(
-      padding: const EdgeInsets.all(ELayout.spaceLg),
+      padding: const EdgeInsets.all(ELayout.spaceLg).withOverlaidTabBar(context),
       children: [
         Text('Review transaction', style: EText.section),
         const SizedBox(height: ELayout.spaceMd),

@@ -83,6 +83,7 @@ class _ActivityScreenState() extends ConsumerState<ActivityScreen> {
         ],
       ),
       body: SafeArea(
+        bottom: false,
         child: transactionsAsync.when(
           skipLoadingOnReload: true,
           loading: () => const Center(child: CircularProgressIndicator()),
@@ -286,7 +287,9 @@ class _ActivityScreenState() extends ConsumerState<ActivityScreen> {
         : 'All loaded transactions are already categorized. '
               'Turn off the filter to see them.';
     return SliverPadding(
-      padding: const EdgeInsets.symmetric(horizontal: ELayout.spaceLg),
+      padding: const EdgeInsets.symmetric(
+        horizontal: ELayout.spaceLg,
+      ).withOverlaidTabBar(context),
       sliver: SliverToBoxAdapter(
         child: AppCard(child: Text(message, style: EText.body.medium)),
       ),
@@ -297,7 +300,7 @@ class _ActivityScreenState() extends ConsumerState<ActivityScreen> {
     final connected =
         ref.watch(connectionStatusProvider).asData?.value.isConnected ?? false;
     return ListView(
-      padding: const EdgeInsets.all(ELayout.spaceLg),
+      padding: const EdgeInsets.all(ELayout.spaceLg).withOverlaidTabBar(context),
       children: [
         AppCard(
           child: Text(

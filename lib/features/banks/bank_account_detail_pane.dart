@@ -25,7 +25,7 @@ class const BankAccountDetailPane({required final Account account})
       accountsMapProvider,
     );
     return ListView(
-      padding: const EdgeInsets.all(ELayout.spaceLg),
+      padding: const EdgeInsets.all(ELayout.spaceLg).withOverlaidTabBar(context),
       children: [
         _accountSummary(),
         const SizedBox(height: ELayout.spaceLg),

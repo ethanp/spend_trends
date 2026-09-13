@@ -40,6 +40,7 @@ class const TrendsScreen() extends ConsumerWidget {
         automaticallyImplyLeading: false,
       ),
       body: SafeArea(
+        bottom: false,
         child: trendsAsync.when(
           loading: () => const Center(child: CircularProgressIndicator()),
           error: (error, _) => Center(
@@ -52,6 +53,7 @@ class const TrendsScreen() extends ConsumerWidget {
             ),
           ),
           data: (bundle) => _trendsBody(
+            context,
             bundle,
             currentNetWorthCents: _sumNetWorthCents(
               accountsAsync,
@@ -72,6 +74,7 @@ class const TrendsScreen() extends ConsumerWidget {
   }
 
   Widget _trendsBody(
+    BuildContext context,
     TrendsChartBundle bundle, {
     required int? currentNetWorthCents,
     required List<BankTransaction> transactions,
@@ -96,7 +99,7 @@ class const TrendsScreen() extends ConsumerWidget {
     }
 
     return ListView(
-      padding: const EdgeInsets.all(ELayout.spaceLg),
+      padding: const EdgeInsets.all(ELayout.spaceLg).withOverlaidTabBar(context),
       children: [
         if (bundle.categorySpend.isNotEmpty)
           CategoryTrendChart(

@@ -31,7 +31,7 @@ class const ActivityDayListSliver({
         0,
         ELayout.spaceLg,
         ELayout.spaceLg,
-      ),
+      ).withOverlaidTabBar(context),
       sliver: SliverList(
         delegate: SliverChildBuilderDelegate((context, index) {
           final listItem = listItems[index];

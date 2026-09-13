@@ -51,7 +51,7 @@ class const _ChainBody({
         ELayout.spaceMd,
         ELayout.spaceLg,
         ELayout.spaceXl,
-      ),
+      ).withOverlaidTabBar(context),
       children: [
         Text(
           kind == LifeChainKind.housing

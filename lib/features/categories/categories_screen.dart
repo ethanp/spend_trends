@@ -50,6 +50,7 @@ class _CategoriesScreenState() extends ConsumerState<CategoriesScreen> {
         ],
       ),
       body: SafeArea(
+        bottom: false,
         child: _body(
           yearMonth: yearMonth,
           categoriesAsync: categoriesAsync,
