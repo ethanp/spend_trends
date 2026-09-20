@@ -1,3 +1,4 @@
+import 'package:ethan_sync/ethan_sync.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 /// App-wide spend-data invalidation bus.
@@ -10,7 +11,12 @@ final spendDataChangedProvider = NotifierProvider<SpendDataChanged, int>(
 
 class SpendDataChanged() extends Notifier<int> {
   @override
-  int build() => 0;
+  int build() {
+    ref.listen(localDataRevisionProvider, (_, _) {
+      state = state + 1;
+    });
+    return 0;
+  }
 
   void notify() => state = state + 1;
 }
