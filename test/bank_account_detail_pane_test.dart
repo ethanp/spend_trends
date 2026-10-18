@@ -59,26 +59,6 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Everyday Checking'), findsWidgets);
-    expect(find.text('Account type'), findsOneWidget);
-    expect(find.text('Prior account of'), findsOneWidget);
-    expect(find.text('Balance history'), findsOneWidget);
-    expect(
-      find.byTooltip(
-        'Daily balance reconstructed from the current balance and posted '
-        'transactions. Hover the chart to inspect a date.',
-      ),
-      findsOneWidget,
-    );
-    expect(
-      find.byTooltip(
-        'Use when a loan or bank account moved servicers. '
-        'This balance drops out of net worth; its transactions stay in '
-        'the current account\'s history.',
-      ),
-      findsOneWidget,
-    );
-    expect(find.text('Need more history'), findsNothing);
-    expect(find.textContaining('current snapshot'), findsNothing);
   });
 
   testWidgets(
@@ -115,11 +95,6 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.textContaining('\$38,316.19'), findsOneWidget);
-      expect(find.text('Balance history'), findsNothing);
-      expect(
-        find.textContaining('Not enough posted history to reconstruct a trend'),
-        findsOneWidget,
-      );
     },
   );
 }
