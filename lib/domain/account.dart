@@ -64,6 +64,12 @@ class const Account({
   /// Stable key for grouping accounts under one bank (prefers [connId]).
   String get institutionGroupKey {
     if (isCopilot) return 'copilot';
+    return Account.institutionGroupKeyFor(connId: connId, connName: connName);
+  }
+
+  /// Same grouping as [institutionGroupKey] for a SimpleFIN connection that
+  /// is not a Copilot import.
+  static String institutionGroupKeyFor({String? connId, String? connName}) {
     final id = connId?.trim();
     if (id != null && id.isNotEmpty) return 'id:$id';
     final official = connName?.trim();

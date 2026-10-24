@@ -28,6 +28,7 @@ class Categorizer({
     required String categoryId,
     required bool createRule,
     String? containsPattern,
+    String? ruleAccountId,
     Set<String> alsoApplyToTransactionIds = const {},
   }) async {
     await _transactionsRepository.setUserCategory(
@@ -41,7 +42,11 @@ class Categorizer({
       throw ArgumentError('Rule pattern is required when creating a rule.');
     }
 
-    await _upsertContainsRule(pattern: pattern, categoryId: categoryId);
+    await _upsertContainsRule(
+      pattern: pattern,
+      categoryId: categoryId,
+      accountId: ruleAccountId,
+    );
     for (final otherTransactionId in alsoApplyToTransactionIds) {
       if (otherTransactionId == transactionId) continue;
       await _transactionsRepository.setUserCategory(
@@ -52,8 +57,9 @@ class Categorizer({
   }
 
   Future<List<BankTransaction>> transactionsMatchingContains(
-    String pattern,
-  ) async {
+    String pattern, {
+    String? accountId,
+  }) async {
     final normalizedPattern = pattern.trim();
     final proposedRule = CategorizationRule(
       id: '_proposed_',
@@ -61,6 +67,7 @@ class Categorizer({
       pattern: normalizedPattern,
       categoryId: '_proposed_',
       priority: CategorizationRule.userCreatedPriority,
+      accountId: accountId,
     );
     final transactions = await _transactionsRepository.listAll();
     final existingRules = await _categoriesRepository.listRules();
@@ -105,12 +112,14 @@ class Categorizer({
   Future<void> _upsertContainsRule({
     required String pattern,
     required String categoryId,
+    String? accountId,
   }) async {
     final normalizedPattern = pattern.trim().toLowerCase();
     final rules = await _categoriesRepository.listRules();
     for (final rule in rules) {
       if (rule.matchType != RuleMatchType.merchantContains) continue;
       if (rule.pattern.trim().toLowerCase() != normalizedPattern) continue;
+      if (rule.accountId != accountId) continue;
       await _categoriesRepository.upsertRule(
         CategorizationRule(
           id: rule.id,
@@ -118,6 +127,7 @@ class Categorizer({
           pattern: normalizedPattern,
           categoryId: categoryId,
           priority: rule.priority,
+          accountId: accountId,
         ),
       );
       return;
@@ -130,6 +140,7 @@ class Categorizer({
         pattern: normalizedPattern,
         categoryId: categoryId,
         priority: CategorizationRule.userCreatedPriority,
+        accountId: accountId,
       ),
     );
   }
@@ -224,6 +235,7 @@ class Categorizer({
         pattern: rule.pattern,
         categoryId: categoryId,
         priority: rule.priority,
+        accountId: rule.accountId,
       ),
     );
 

@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 import 'package:spend_trends/domain/category.dart';
 import 'package:spend_trends/domain/category_group.dart';
 import 'package:spend_trends/domain/transaction.dart';
+import 'package:spend_trends/features/banks/banks_providers.dart';
 import 'package:spend_trends/features/categories/categories_providers.dart';
 import 'package:spend_trends/providers/spend_data_changed.dart';
 import 'package:spend_trends/theme/finance_colors.dart';
@@ -83,6 +84,9 @@ class _ManageRuleSheetState() extends ConsumerState<ManageRuleSheet> {
   }
 
   Widget _header(String categoryName) {
+    final accountsById =
+        ref.watch(accountsMapProvider).asData?.value ?? const {};
+    final scopeLabel = _rule.accountScopeLabel(accountsById);
     return Padding(
       padding: const EdgeInsets.fromLTRB(
         ELayout.spaceLg,
@@ -101,6 +105,11 @@ class _ManageRuleSheetState() extends ConsumerState<ManageRuleSheet> {
               fontWeight: FontWeight.w600,
               color: FinanceColors.accentPrimary,
             ),
+          ),
+          const SizedBox(height: ELayout.spaceXs),
+          Text(
+            _rule.isLimitedToOneAccount ? '$scopeLabel only' : scopeLabel,
+            style: EText.caption,
           ),
           const SizedBox(height: ELayout.spaceXs),
           TextButton(
@@ -284,6 +293,7 @@ class _ManageRuleSheetState() extends ConsumerState<ManageRuleSheet> {
           pattern: _rule.pattern,
           categoryId: selected.id,
           priority: _rule.priority,
+          accountId: _rule.accountId,
         );
         _busy = false;
         _primaryMatches = null;

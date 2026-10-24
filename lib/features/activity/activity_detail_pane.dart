@@ -52,12 +52,15 @@ class const ActivityDetailPane({
     }
 
     return ListView(
-      padding: const EdgeInsets.fromLTRB(
-        ELayout.spaceLg,
-        ELayout.spaceSm,
-        ELayout.spaceLg,
-        ELayout.spaceLg,
-      ).withOverlaidTabBar(context),
+      padding: ETabBarOverlay.paddingOf(
+        context,
+        contentPadding: const EdgeInsets.fromLTRB(
+          ELayout.spaceLg,
+          ELayout.spaceSm,
+          ELayout.spaceLg,
+          ELayout.spaceLg,
+        ),
+      ),
       children: [_uncategorizedOverview()],
     );
   }

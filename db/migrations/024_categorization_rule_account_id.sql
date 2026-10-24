@@ -1,0 +1,2 @@
+ALTER TABLE categorization_rules
+ADD COLUMN IF NOT EXISTS account_id TEXT REFERENCES accounts(id) ON DELETE CASCADE;

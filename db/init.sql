@@ -30,7 +30,11 @@ CREATE TABLE IF NOT EXISTS categories (
     sort_order INTEGER NOT NULL,
     archived INTEGER NOT NULL DEFAULT 0,
     color_token TEXT,
-    group_id TEXT REFERENCES category_groups(id)
+    group_id TEXT REFERENCES category_groups(id),
+    conscious_spending_area TEXT CHECK (
+        conscious_spending_area IS NULL OR
+        conscious_spending_area IN ('fixedCosts', 'investments', 'savings', 'guiltFree')
+    )
 );
 
 CREATE TABLE IF NOT EXISTS transactions (
@@ -57,7 +61,8 @@ CREATE TABLE IF NOT EXISTS categorization_rules (
     match_type TEXT NOT NULL,
     pattern TEXT NOT NULL,
     category_id TEXT NOT NULL REFERENCES categories(id) ON DELETE CASCADE,
-    priority INTEGER NOT NULL DEFAULT 0
+    priority INTEGER NOT NULL DEFAULT 0,
+    account_id TEXT REFERENCES accounts(id) ON DELETE CASCADE
 );
 
 CREATE TABLE IF NOT EXISTS life_events (
@@ -115,7 +120,8 @@ CREATE TABLE IF NOT EXISTS owned_assets (
     id TEXT PRIMARY KEY,
     name TEXT NOT NULL,
     asset_kind TEXT NOT NULL,
-    note TEXT
+    note TEXT,
+    sold_on BIGINT
 );
 
 CREATE TABLE IF NOT EXISTS owned_asset_valuations (

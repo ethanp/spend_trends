@@ -13,6 +13,7 @@ import 'package:spend_trends/domain/transaction.dart';
 import 'package:spend_trends/domain/trend_spend_rate.dart';
 import 'package:spend_trends/features/trends/category_trend_chart.dart';
 import 'package:spend_trends/features/trends/category_trend_series.dart';
+import 'package:spend_trends/features/trends/four_numbers_card.dart';
 import 'package:spend_trends/features/trends/net_worth_trend.dart';
 import 'package:spend_trends/features/trends/trend_chart_catalog.dart';
 import 'package:spend_trends/features/trends/trends_chart_bundle.dart';
@@ -22,6 +23,7 @@ import 'package:spend_trends/features/categories/categories_providers.dart';
 import 'package:spend_trends/features/life_chains/life_chain_providers.dart';
 import 'package:spend_trends/features/life_events/life_events_providers.dart';
 import 'package:spend_trends/features/owned_assets/owned_assets_providers.dart';
+
 import 'trends_providers.dart';
 
 class const TrendsScreen() extends ConsumerWidget {
@@ -91,24 +93,27 @@ class const TrendsScreen() extends ConsumerWidget {
     required StayChain? jobChain,
   }) {
     if (bundle.isEmpty) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(ELayout.spaceXl),
-          child: Text(
+      return ListView(
+        padding: ETabBarOverlay.paddingOf(context),
+        children: [
+          FourNumbersCard(cashFlows: bundle.cashFlows),
+          const SizedBox(height: ELayout.spaceXl),
+          Text(
             'Connect a bank on the Banks tab and sync, or import CSV in '
             'Settings, to see long-term trends.',
             style: EText.body.medium,
             textAlign: TextAlign.center,
           ),
-        ),
+        ],
       );
     }
 
     return ListView(
-      padding: const EdgeInsets.all(ELayout.spaceLg)
-          .withOverlaidTabBar(context),
+      padding: ETabBarOverlay.paddingOf(context),
       children: [
-        if (bundle.categorySpend.isNotEmpty)
+        FourNumbersCard(cashFlows: bundle.cashFlows),
+        if (bundle.categorySpend.isNotEmpty) ...[
+          const SizedBox(height: ELayout.spaceLg),
           CategoryTrendChart(
             title: 'Category spend',
             seriesList: bundle.categorySpend,
@@ -121,9 +126,9 @@ class const TrendsScreen() extends ConsumerWidget {
             showSpendRateToggle: true,
             useDistributionLegend: true,
           ),
-        if (bundle.categorySpend.isNotEmpty && bundle.cashFlows.isNotEmpty)
+        ],
+        if (bundle.cashFlows.isNotEmpty) ...[
           const SizedBox(height: ELayout.spaceLg),
-        if (bundle.cashFlows.isNotEmpty)
           CategoryTrendChart(
             title: 'Income · Spending · Savings',
             subtitle: null,
@@ -139,9 +144,9 @@ class const TrendsScreen() extends ConsumerWidget {
               TrendChartCatalog.transferSeriesId,
             },
           ),
+        ],
         if (bundle.netWorth.isNotEmpty) ...[
-          if (bundle.categorySpend.isNotEmpty || bundle.cashFlows.isNotEmpty)
-            const SizedBox(height: ELayout.spaceLg),
+          const SizedBox(height: ELayout.spaceLg),
           CategoryTrendChart(
             title: 'Net worth',
             headlineFigures: _netWorthHeadlines(

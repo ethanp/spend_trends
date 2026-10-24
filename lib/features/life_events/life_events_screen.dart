@@ -12,6 +12,7 @@ import 'package:spend_trends/features/life_events/life_event_form_sheet.dart';
 import 'package:spend_trends/features/life_chains/life_chain_providers.dart';
 import 'package:spend_trends/widgets/app_card.dart';
 import 'package:spend_trends/widgets/app_primary_button.dart';
+
 import 'life_events_providers.dart';
 
 const _logger = ELogger('LifeEventsScreen');
@@ -72,8 +73,7 @@ class const _LifeEventsBody({
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return ListView(
-      padding: const EdgeInsets.all(ELayout.spaceLg)
-          .withOverlaidTabBar(context),
+      padding: ETabBarOverlay.paddingOf(context),
       children: [
         _LifeChainHeroCard(kind: LifeChainKind.housing, chain: housingChain),
         const SizedBox(height: ELayout.spaceSm),

@@ -1,5 +1,6 @@
 import 'package:spend_trends/domain/category.dart';
 import 'package:spend_trends/domain/category_group.dart';
+import 'package:spend_trends/domain/conscious_spending_area.dart';
 import 'package:spend_trends/domain/special_category.dart';
 import 'package:ethan_sync/ethan_sync.dart';
 import 'package:ethan_utils/ethan_utils.dart';
@@ -42,6 +43,7 @@ class CategoriesRepository(final PowerSyncDatabase _powerSync) {
       'archived': category.archived ? 1 : 0,
       'color_token': category.colorToken,
       'group_id': category.groupId,
+      'conscious_spending_area': category.consciousSpendingArea?.storageValue,
     });
   }
 
@@ -154,6 +156,19 @@ class CategoriesRepository(final PowerSyncDatabase _powerSync) {
     );
   }
 
+  Future<void> setConsciousSpendingArea({
+    required String categoryId,
+    ConsciousSpendingArea? area,
+  }) async {
+    final existing = await _requireCategory(categoryId);
+    await upsertCategory(
+      existing.copyWith(
+        consciousSpendingArea: area,
+        clearConsciousSpendingArea: area == null,
+      ),
+    );
+  }
+
   /// Deletes the group and clears membership on its categories.
   Future<void> deleteGroup(String groupId) async {
     if (SpecialCategory.isIncomeGroupId(groupId)) {
@@ -245,6 +260,7 @@ class CategoriesRepository(final PowerSyncDatabase _powerSync) {
       'pattern': rule.pattern,
       'category_id': rule.categoryId,
       'priority': rule.priority,
+      'account_id': rule.accountId,
     });
   }
 
@@ -285,6 +301,9 @@ class CategoriesRepository(final PowerSyncDatabase _powerSync) {
       archived: columns['archived'].asInt() == 1,
       colorToken: columns['color_token'] as String?,
       groupId: columns['group_id'] as String?,
+      consciousSpendingArea: ConsciousSpendingArea.fromStorage(
+        columns['conscious_spending_area'] as String?,
+      ),
     );
   }
 
@@ -305,6 +324,7 @@ class CategoriesRepository(final PowerSyncDatabase _powerSync) {
       pattern: columns['pattern'] as String,
       categoryId: columns['category_id'] as String,
       priority: columns['priority'].asInt(),
+      accountId: columns['account_id'] as String?,
     );
   }
 }

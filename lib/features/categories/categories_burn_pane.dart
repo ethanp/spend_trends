@@ -21,8 +21,7 @@ class const CategoriesBurnPane({
         ? null
         : categoriesById[selectedCategoryId];
     return ListView(
-      padding: const EdgeInsets.all(ELayout.spaceLg)
-          .withOverlaidTabBar(context),
+      padding: ETabBarOverlay.paddingOf(context),
       children: [
         if (selected == null)
           _burnOverview()

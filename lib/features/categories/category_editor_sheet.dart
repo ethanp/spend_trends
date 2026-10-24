@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:spend_trends/domain/category.dart';
 import 'package:spend_trends/domain/category_group.dart';
+import 'package:spend_trends/domain/conscious_spending_area.dart';
 import 'package:spend_trends/domain/month_summary.dart';
 import 'package:spend_trends/domain/special_category.dart';
 import 'package:spend_trends/providers/spend_data_changed.dart';
@@ -39,6 +40,7 @@ class const CategoryEditorSheet({final SpendCategory? category})
 class _CategoryEditorSheetState() extends ConsumerState<CategoryEditorSheet> {
   late final TextEditingController _nameController;
   String? _selectedGroupId;
+  ConsciousSpendingArea? _selectedArea;
   bool _busy = false;
   String? _error;
 
@@ -54,6 +56,7 @@ class _CategoryEditorSheetState() extends ConsumerState<CategoryEditorSheet> {
     super.initState();
     _nameController = TextEditingController(text: widget.category?.name ?? '');
     _selectedGroupId = widget.category?.groupId;
+    _selectedArea = widget.category?.consciousSpendingArea;
   }
 
   @override
@@ -129,6 +132,8 @@ class _CategoryEditorSheetState() extends ConsumerState<CategoryEditorSheet> {
       groups: groups,
       selectedGroupId: _selectedGroupId,
       onGroupSelected: (groupId) => setState(() => _selectedGroupId = groupId),
+      selectedArea: _selectedArea,
+      onAreaSelected: (area) => setState(() => _selectedArea = area),
     );
   }
 
@@ -313,6 +318,10 @@ class _CategoryEditorSheetState() extends ConsumerState<CategoryEditorSheet> {
         categoryId: categoryId,
         groupId: _selectedGroupId,
       );
+      await repository.setConsciousSpendingArea(
+        categoryId: categoryId,
+        area: _selectedArea,
+      );
       return;
     }
     final created = await repository.createCategory(name: name);
@@ -320,6 +329,12 @@ class _CategoryEditorSheetState() extends ConsumerState<CategoryEditorSheet> {
       await repository.setCategoryGroup(
         categoryId: created.id,
         groupId: _selectedGroupId,
+      );
+    }
+    if (_selectedArea != null) {
+      await repository.setConsciousSpendingArea(
+        categoryId: created.id,
+        area: _selectedArea,
       );
     }
   }

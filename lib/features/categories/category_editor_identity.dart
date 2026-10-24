@@ -1,6 +1,7 @@
 import 'package:ethan_ui/ethan_ui.dart';
 import 'package:flutter/material.dart';
 import 'package:spend_trends/domain/category_group.dart';
+import 'package:spend_trends/domain/conscious_spending_area.dart';
 import 'package:spend_trends/theme/finance_colors.dart';
 
 class const CategoryEditorIdentityFields({
@@ -9,6 +10,8 @@ class const CategoryEditorIdentityFields({
   required final List<CategoryGroup> groups,
   required final String? selectedGroupId,
   required final ValueChanged<String?> onGroupSelected,
+  required final ConsciousSpendingArea? selectedArea,
+  required final ValueChanged<ConsciousSpendingArea?> onAreaSelected,
 }) extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
@@ -24,6 +27,11 @@ class const CategoryEditorIdentityFields({
           groups: groups,
           selectedGroupId: selectedGroupId,
           onGroupSelected: onGroupSelected,
+        ),
+        const SizedBox(height: ELayout.spaceMd),
+        CategoryEditorAreaPicker(
+          selectedArea: selectedArea,
+          onAreaSelected: onAreaSelected,
         ),
       ],
     );
@@ -71,6 +79,39 @@ class const CategoryEditorGroupPicker({
                 label: group.name,
                 isSelected: selectedGroupId == group.id,
                 onActivated: () => onGroupSelected(group.id),
+              ),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+class const CategoryEditorAreaPicker({
+  required final ConsciousSpendingArea? selectedArea,
+  required final ValueChanged<ConsciousSpendingArea?> onAreaSelected,
+}) extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('Area', style: EText.caption),
+        const SizedBox(height: ELayout.spaceXs),
+        Wrap(
+          spacing: ELayout.spaceSm,
+          runSpacing: ELayout.spaceSm,
+          children: [
+            CategoryEditorGroupChip(
+              label: 'None',
+              isSelected: selectedArea == null,
+              onActivated: () => onAreaSelected(null),
+            ),
+            for (final area in ConsciousSpendingArea.values)
+              CategoryEditorGroupChip(
+                label: area.displayName,
+                isSelected: selectedArea == area,
+                onActivated: () => onAreaSelected(area),
               ),
           ],
         ),

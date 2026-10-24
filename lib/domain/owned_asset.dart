@@ -6,19 +6,32 @@ class const OwnedAsset({
   required final String name,
   required final OwnedAssetKind kind,
   final String? note,
+  final DateTime? soldOn,
 }) {
+  /// True when [soldOn] is on or before [day] (you no longer hold the asset).
+  bool isSoldAsOf(DateTime day) {
+    final soldOn = this.soldOn;
+    if (soldOn == null) return false;
+    return !soldOn.startOfDay.isAfter(day.startOfDay);
+  }
+
+  bool get isSold => isSoldAsOf(DateTime.now());
+
   OwnedAsset copyWith({
     String? id,
     String? name,
     OwnedAssetKind? kind,
     String? note,
     bool clearNote = false,
+    DateTime? soldOn,
+    bool clearSoldOn = false,
   }) {
     return OwnedAsset(
       id: id ?? this.id,
       name: name ?? this.name,
       kind: kind ?? this.kind,
       note: clearNote ? null : (note ?? this.note),
+      soldOn: clearSoldOn ? null : (soldOn ?? this.soldOn),
     );
   }
 }
@@ -37,14 +50,21 @@ class OwnedAssetWithValuations({
 }) {
   final List<OwnedAssetValuation> valuations = _newestFirst(valuations);
 
-  int get currentValueCents {
+  /// Newest snapshot, ignoring [OwnedAsset.soldOn].
+  int get latestValueCents {
     if (valuations.isEmpty) return 0;
     return valuations.first.valueCents;
   }
 
-  DateTime? get currentValuedOn {
+  DateTime? get latestValuedOn {
     if (valuations.isEmpty) return null;
     return valuations.first.valuedOn;
+  }
+
+  /// Today's contribution to net worth: 0 once the asset is sold.
+  int get currentValueCents {
+    if (asset.isSold) return 0;
+    return latestValueCents;
   }
 
   DateTime? get firstValuedOn {
@@ -52,9 +72,11 @@ class OwnedAssetWithValuations({
     return valuations.last.valuedOn;
   }
 
-  /// Latest snapshot on or before [day]; 0 before the first valuation.
+  /// Latest snapshot on or before [day]; 0 before the first valuation and on or
+  /// after [OwnedAsset.soldOn].
   int valueCentsOn(DateTime day) {
     final target = day.startOfDay;
+    if (asset.isSoldAsOf(target)) return 0;
     for (final valuation in valuations) {
       if (!valuation.valuedOn.startOfDay.isAfter(target)) {
         return valuation.valueCents;

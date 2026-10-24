@@ -3,6 +3,7 @@ import 'package:ethan_utils/ethan_utils.dart';
 import 'dart:convert';
 
 import 'package:spend_trends/services/simplefin/simplefin_client.dart';
+import 'package:spend_trends/services/simplefin/simplefin_models.dart';
 import 'package:spend_trends/util/merchant_normalize.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
@@ -55,8 +56,31 @@ void main() {
 
       expect(accountSet.errors, hasLength(1));
       expect(accountSet.errors.first.isAuthFailure, isTrue);
+      expect(accountSet.errors.first.asksToReauthenticate, isTrue);
+      expect(accountSet.errors.first.attentionConnectionName, isNull);
       expect(accountSet.accounts, hasLength(1));
       expect(accountSet.accounts.first.transactions.single.amount, '-12.34');
+    });
+
+    test('groups repeated auth warnings by bank', () {
+      const m1 = SimpleFinError(
+        code: 'conn.auth',
+        message: 'Connection to M1 may need attention. Auth required',
+      );
+      const provident = SimpleFinError(
+        code: 'conn.auth',
+        message:
+            'Connection to Provident Funding may need attention. Auth required',
+      );
+      final banks = SimpleFinAuthConnections.fromErrors([
+        m1,
+        m1,
+        provident,
+        provident,
+      ]);
+      expect(banks.names, ['M1', 'Provident Funding']);
+      expect(m1.asksToReauthenticate, isTrue);
+      expect(m1.attentionConnectionName, 'M1');
     });
 
     test('fills conn_name from connections when account omits it', () {

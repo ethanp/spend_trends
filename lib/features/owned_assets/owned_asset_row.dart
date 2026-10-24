@@ -1,6 +1,7 @@
 import 'package:ethan_ui/ethan_ui.dart';
 import 'package:ethan_utils/ethan_utils.dart';
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:spend_trends/domain/owned_asset.dart';
 
 /// Name, kind, and current value for one owned asset in the Banks list.
@@ -30,7 +31,7 @@ class const OwnedAssetRow({
               ),
               const SizedBox(height: ELayout.spaceXs),
               Text(
-                ownedAsset.asset.kind.legendLabel,
+                _caption,
                 style: EText.caption.copyWith(color: EColors.textMuted),
               ),
             ],
@@ -73,5 +74,15 @@ class const OwnedAssetRow({
       onTap: onActivated,
       child: decorated,
     );
+  }
+
+  String get _caption {
+    final kindLabel = ownedAsset.asset.kind.legendLabel;
+    final soldOn = ownedAsset.asset.soldOn;
+    if (soldOn == null) return kindLabel;
+    final soldLabel = DateFormat.yMMMd().format(soldOn);
+    return ownedAsset.asset.isSold
+        ? '$kindLabel · sold $soldLabel'
+        : '$kindLabel · sells $soldLabel';
   }
 }

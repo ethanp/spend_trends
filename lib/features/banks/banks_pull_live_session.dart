@@ -25,6 +25,9 @@ class const BanksPullLiveSessionState({
   required final String statusLine,
   final String? queryWindowLine,
   final List<BanksPullAccountProgress> accounts = const [],
+  final List<SimpleFinBankLoad> banks = const [],
+  final int? windowIndex,
+  final int? windowCount,
   final bool finished = false,
   final bool failed = false,
   final bool categorizationReady = false,
@@ -39,6 +42,9 @@ class const BanksPullLiveSessionState({
     String? statusLine,
     String? queryWindowLine,
     List<BanksPullAccountProgress>? accounts,
+    List<SimpleFinBankLoad>? banks,
+    int? windowIndex,
+    int? windowCount,
     bool? finished,
     bool? failed,
     bool? categorizationReady,
@@ -54,6 +60,9 @@ class const BanksPullLiveSessionState({
       statusLine: statusLine ?? this.statusLine,
       queryWindowLine: queryWindowLine ?? this.queryWindowLine,
       accounts: accounts ?? this.accounts,
+      banks: banks ?? this.banks,
+      windowIndex: windowIndex ?? this.windowIndex,
+      windowCount: windowCount ?? this.windowCount,
       finished: finished ?? this.finished,
       failed: failed ?? this.failed,
       categorizationReady: categorizationReady ?? this.categorizationReady,
@@ -75,6 +84,7 @@ final banksPullLiveSessionProvider =
 /// Ephemeral live state for the in-progress or just-finished pull on Banks.
 class BanksPullLiveSession() extends Notifier<BanksPullLiveSessionState?> {
   final Stopwatch _elapsed = Stopwatch();
+  final Map<String, DateTime> _lastBankByteEmit = {};
   Timer? _ticker;
 
   @override
@@ -87,6 +97,7 @@ class BanksPullLiveSession() extends Notifier<BanksPullLiveSessionState?> {
     action,
   ) async {
     _ticker?.cancel();
+    _lastBankByteEmit.clear();
     _elapsed
       ..reset()
       ..start();
@@ -142,11 +153,14 @@ class BanksPullLiveSession() extends Notifier<BanksPullLiveSessionState?> {
     if (session == null) return;
 
     final accounts = [...session.accounts];
+    var banks = [...session.banks];
     var statusLine = session.statusLine;
     String? queryWindowLine = session.queryWindowLine;
     int? overallAccounts = session.overallAccounts;
     int? overallTransactions = session.overallTransactions;
     var bridgeWarningCount = session.bridgeWarningCount;
+    var windowIndex = session.windowIndex;
+    var windowCount = session.windowCount;
 
     switch (progress.phase) {
       case SimpleFinPullProgressPhase.fetching:
@@ -154,15 +168,31 @@ class BanksPullLiveSession() extends Notifier<BanksPullLiveSessionState?> {
           start: progress.windowStart!,
           end: progress.windowEnd!,
         );
-        if (progress.windowIndex != null && progress.windowCount != null) {
-          statusLine =
-              'Fetching from SimpleFIN — window ${progress.windowIndex} of '
-              '${progress.windowCount}…';
-        } else {
-          statusLine = 'Fetching from SimpleFIN…';
+        windowIndex = progress.windowIndex ?? windowIndex;
+        windowCount = progress.windowCount ?? windowCount;
+        if (banks.isEmpty) statusLine = 'Finding banks…';
+        if (windowIndex != null && windowCount != null) {
+          statusLine = banks.isEmpty
+              ? 'Finding banks — window $windowIndex of $windowCount…'
+              : '${_pullingStatus(banks)} Window $windowIndex of $windowCount.';
         }
         for (final account in accounts) {
           account.done = false;
+        }
+      case SimpleFinPullProgressPhase.banksWaiting:
+        banks = [...progress.banks];
+        statusLine = _pullingStatus(banks);
+        if (windowIndex != null && windowCount != null) {
+          statusLine =
+              '${_pullingStatus(banks)} Window $windowIndex of $windowCount.';
+        }
+      case SimpleFinPullProgressPhase.bankLoad:
+        final load = progress.banks.single;
+        if (_shouldSkipBankBytes(load)) return;
+        banks = _withBankLoad(banks, load);
+        statusLine = _pullingStatus(banks);
+        if (windowIndex != null && windowCount != null) {
+          statusLine = '$statusLine Window $windowIndex of $windowCount.';
         }
       case SimpleFinPullProgressPhase.accountLoaded:
         final externalId = progress.accountExternalId!;
@@ -183,9 +213,6 @@ class BanksPullLiveSession() extends Notifier<BanksPullLiveSessionState?> {
             ),
           );
         }
-        statusLine =
-            'Saving ${progress.accountsDone} of ${progress.accountsTotal} '
-            'accounts…';
       case SimpleFinPullProgressPhase.finished:
         overallAccounts = progress.finishedAccountCount;
         overallTransactions = progress.finishedTransactionCount;
@@ -197,10 +224,58 @@ class BanksPullLiveSession() extends Notifier<BanksPullLiveSessionState?> {
       statusLine: statusLine,
       queryWindowLine: queryWindowLine,
       accounts: accounts,
+      banks: banks,
+      windowIndex: windowIndex,
+      windowCount: windowCount,
       overallAccounts: overallAccounts,
       overallTransactions: overallTransactions,
       bridgeWarningCount: bridgeWarningCount,
     );
+  }
+
+  bool _shouldSkipBankBytes(SimpleFinBankLoad bank) {
+    if (bank.phase != SimpleFinBankLoadPhase.receiving) return false;
+    if (bank.bytesReceived == 0) return false;
+    final now = DateTime.now();
+    final lastEmit = _lastBankByteEmit[bank.connectionId];
+    if (lastEmit != null && now.difference(lastEmit).inMilliseconds < 80) {
+      return true;
+    }
+    _lastBankByteEmit[bank.connectionId] = now;
+    return false;
+  }
+
+  List<SimpleFinBankLoad> _withBankLoad(
+    List<SimpleFinBankLoad> banks,
+    SimpleFinBankLoad load,
+  ) {
+    final next = [...banks];
+    final existingIndex = next.indexWhere(
+      (bank) => bank.connectionId == load.connectionId,
+    );
+    if (existingIndex >= 0) {
+      next[existingIndex] = load;
+      return next;
+    }
+    next.add(load);
+    next.sort(
+      (left, right) =>
+          left.name.toLowerCase().compareTo(right.name.toLowerCase()),
+    );
+    return next;
+  }
+
+  static String _pullingStatus(List<SimpleFinBankLoad> banks) {
+    if (banks.isEmpty) return 'Finding banks…';
+    final stillPulling = banks
+        .where(
+          (bank) =>
+              bank.phase != SimpleFinBankLoadPhase.done &&
+              bank.phase != SimpleFinBankLoadPhase.failed,
+        )
+        .length;
+    final bankWord = banks.length == 1 ? 'bank' : 'banks';
+    return 'Still pulling $stillPulling of ${banks.length} $bankWord';
   }
 
   Future<void> _enrichCategorization() async {

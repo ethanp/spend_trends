@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:spend_trends/services/simplefin/simplefin_models.dart';
 import 'package:ethan_utils/ethan_utils.dart';
@@ -92,6 +93,9 @@ class SimpleFinClient({http.Client? httpClient}) {
     DateTime? start,
     DateTime? end,
     bool pending = true,
+    bool balancesOnly = false,
+    List<String> accountIds = const [],
+    void Function(int bytesReceived, int? contentLength)? onBytes,
   }) async {
     if (accessUrl.scheme != 'https') {
       throw SimpleFinFetchException('Access URL must use HTTPS.');
@@ -104,10 +108,13 @@ class SimpleFinClient({http.Client? httpClient}) {
       accessUrl: accessUrl,
       window: window,
       pending: pending,
+      balancesOnly: balancesOnly,
+      accountIds: accountIds,
     );
     final response = await _getAccountsResponse(
       accessUrl: accessUrl,
       requestUrl: requestUrl,
+      onBytes: onBytes,
     );
     return _accountSetFromResponse(response);
   }
@@ -143,13 +150,20 @@ class SimpleFinClient({http.Client? httpClient}) {
     required Uri accessUrl,
     required _FetchWindow window,
     required bool pending,
+    required bool balancesOnly,
+    required List<String> accountIds,
   }) {
-    final queryParameters = <String, String>{
-      'version': '2',
-      if (pending) 'pending': '1',
-      if (window.startUnix != null) 'start-date': '${window.startUnix}',
-      if (window.endUnix != null) 'end-date': '${window.endUnix}',
-    };
+    final queryParts = <String>['version=2'];
+    if (pending) queryParts.add('pending=1');
+    if (balancesOnly) queryParts.add('balances-only=1');
+    if (window.startUnix != null) {
+      queryParts.add('start-date=${window.startUnix}');
+    }
+    if (window.endUnix != null) queryParts.add('end-date=${window.endUnix}');
+    for (final accountId in accountIds) {
+      if (accountId.isEmpty) continue;
+      queryParts.add('account=${Uri.encodeQueryComponent(accountId)}');
+    }
 
     final accountsPath = _joinPath(accessUrl.path, 'accounts');
     return Uri(
@@ -157,21 +171,38 @@ class SimpleFinClient({http.Client? httpClient}) {
       host: accessUrl.host,
       port: accessUrl.hasPort ? accessUrl.port : null,
       path: accountsPath,
-      queryParameters: queryParameters,
+      query: queryParts.join('&'),
     );
   }
 
   Future<http.Response> _getAccountsResponse({
     required Uri accessUrl,
     required Uri requestUrl,
+    void Function(int bytesReceived, int? contentLength)? onBytes,
   }) async {
     final headers = _accountsRequestHeaders(accessUrl);
     _logger.log(
       'GET ${_redactUri(requestUrl)} auth=${headers.containsKey('Authorization')}',
     );
 
+    final request = http.Request('GET', requestUrl);
+    request.headers.addAll(headers);
     try {
-      return await _httpClient.get(requestUrl, headers: headers);
+      final streamed = await _httpClient.send(request);
+      final contentLength = streamed.contentLength;
+      final body = BytesBuilder(copy: false);
+      var received = 0;
+      await for (final chunk in streamed.stream) {
+        body.add(chunk);
+        received += chunk.length;
+        onBytes?.call(received, contentLength);
+      }
+      return http.Response.bytes(
+        body.takeBytes(),
+        streamed.statusCode,
+        headers: streamed.headers,
+        request: request,
+      );
     } catch (error, stackTrace) {
       _logger.error('Fetch request failed', error, stackTrace);
       rethrow;

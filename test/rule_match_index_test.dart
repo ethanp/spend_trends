@@ -31,6 +31,36 @@ void main() {
       expect(index.bestMatchingRule(groceryTxn)?.categoryId, 'groceries');
     });
 
+    test('account-scoped rule beats global rule at same priority', () {
+      const globalBuy = CategorizationRule(
+        id: 'global-buy',
+        matchType: RuleMatchType.merchantContains,
+        pattern: 'buy',
+        categoryId: 'shopping',
+        priority: 10,
+      );
+      const wealthfrontBuy = CategorizationRule(
+        id: 'wf-buy',
+        matchType: RuleMatchType.merchantContains,
+        pattern: 'buy',
+        categoryId: 'transfer',
+        priority: 10,
+        accountId: 'wealthfront',
+      );
+      final index = RuleMatchIndex([globalBuy, wealthfrontBuy]);
+
+      expect(
+        index.bestMatchingRule(_txn(merchant: 'BUY STOCK', accountId: 'wealthfront'))
+            ?.categoryId,
+        'transfer',
+      );
+      expect(
+        index.bestMatchingRule(_txn(merchant: 'BUY COFFEE', accountId: 'checking'))
+            ?.categoryId,
+        'shopping',
+      );
+    });
+
     test('higher priority still beats a longer pattern', () {
       final rules = [
         const CategorizationRule(
@@ -201,12 +231,13 @@ void main() {
 BankTransaction _txn({
   required String merchant,
   String id = 't1',
+  String accountId = 'a1',
   String? userCategoryId,
   String? suggestedCategoryId,
 }) {
   return BankTransaction(
     id: id,
-    accountId: 'a1',
+    accountId: accountId,
     externalId: 'e1',
     postedAt: DateTime(2024, 1, 1),
     amountCents: -1000,

@@ -3,6 +3,7 @@ import 'package:ethan_utils/ethan_utils.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import 'package:spend_trends/domain/account.dart';
 import 'package:spend_trends/domain/category.dart';
 import 'package:spend_trends/domain/category_group.dart';
 import 'package:spend_trends/domain/transaction.dart';
@@ -11,6 +12,7 @@ import 'package:spend_trends/features/activity/default_contains_pattern.dart';
 import 'package:spend_trends/features/activity/existing_rule_overlaps.dart';
 import 'package:spend_trends/features/activity/overlapping_merchant_contains_rules.dart';
 import 'package:spend_trends/features/activity/rule_impact_match_row.dart';
+import 'package:spend_trends/features/banks/banks_providers.dart';
 import 'package:spend_trends/features/categories/categories_providers.dart';
 import 'package:spend_trends/providers/spend_data_changed.dart';
 import 'package:spend_trends/services/sqlite/transactions_repository.dart';
@@ -31,6 +33,7 @@ class const RecategorizeForm({
 
 class _RecategorizeFormState() extends ConsumerState<RecategorizeForm> {
   bool _createRule = true;
+  bool _limitRuleToThisAccount = false;
   bool _savingNote = false;
   late final TextEditingController _patternController;
   late final TextEditingController _noteController;
@@ -53,7 +56,10 @@ class _RecategorizeFormState() extends ConsumerState<RecategorizeForm> {
     _patternRematch = ContainsPatternRematch(
       fetchMatches: (pattern) async {
         final categorizer = await ref.read(categorizerProvider.future);
-        return categorizer.transactionsMatchingContains(pattern);
+        return categorizer.transactionsMatchingContains(
+          pattern,
+          accountId: _ruleAccountIdForNewRule(),
+        );
       },
       notify: _selectRematchedTransactions,
     );
@@ -116,12 +122,15 @@ class _RecategorizeFormState() extends ConsumerState<RecategorizeForm> {
     final groups = groupsAsync.asData?.value ?? const <CategoryGroup>[];
     return ListView(
       keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-      padding: const EdgeInsets.fromLTRB(
-        ELayout.spaceLg,
-        ELayout.spaceLg,
-        ELayout.spaceLg,
-        ELayout.spaceMd,
-      ).withOverlaidTabBar(context),
+      padding: ETabBarOverlay.paddingOf(
+        context,
+        contentPadding: const EdgeInsets.fromLTRB(
+          ELayout.spaceLg,
+          ELayout.spaceLg,
+          ELayout.spaceLg,
+          ELayout.spaceMd,
+        ),
+      ),
       children: [
         _formHeader(),
         const SizedBox(height: ELayout.spaceMd),
@@ -129,6 +138,10 @@ class _RecategorizeFormState() extends ConsumerState<RecategorizeForm> {
         const SizedBox(height: ELayout.spaceMd),
         _createRuleToggle(),
         if (_createRule) ...[
+          const SizedBox(height: ELayout.spaceSm),
+          _ruleAccountScopeToggle(
+            ref.watch(accountsMapProvider).asData?.value ?? const {},
+          ),
           const SizedBox(height: ELayout.spaceSm),
           _patternAndImpactPreview(),
         ],
@@ -216,6 +229,45 @@ class _RecategorizeFormState() extends ConsumerState<RecategorizeForm> {
         Expanded(child: Text('Also create a rule', style: EText.body.medium)),
       ],
     );
+  }
+
+  Widget _ruleAccountScopeToggle(Map<String, Account> accountsById) {
+    final account = accountsById[widget.transaction.accountId];
+    final accountLabel =
+        account?.displayNameWithInstitution ?? 'This account';
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Switch(
+          value: _limitRuleToThisAccount,
+          onChanged: (limited) {
+            setState(() => _limitRuleToThisAccount = limited);
+            _patternRematch.rematch(_patternController.text);
+          },
+        ),
+        const SizedBox(width: ELayout.spaceSm),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Limit rule to one account', style: EText.body.medium),
+              const SizedBox(height: ELayout.spaceXs),
+              Text(
+                _limitRuleToThisAccount
+                    ? 'Only $accountLabel'
+                    : 'Every account — turn on to scope (e.g. brokerage buy/sell).',
+                style: EText.caption,
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  String? _ruleAccountIdForNewRule() {
+    if (!_createRule || !_limitRuleToThisAccount) return null;
+    return widget.transaction.accountId;
   }
 
   Widget _patternAndImpactPreview() {
@@ -360,6 +412,7 @@ class _RecategorizeFormState() extends ConsumerState<RecategorizeForm> {
       categoryId: categoryId,
       createRule: _createRule,
       containsPattern: _createRule ? _patternController.text.trim() : null,
+      ruleAccountId: _ruleAccountIdForNewRule(),
       alsoApplyToTransactionIds: alsoApplyToTransactionIds,
     );
     ref.read(spendDataChangedProvider.notifier).notify();

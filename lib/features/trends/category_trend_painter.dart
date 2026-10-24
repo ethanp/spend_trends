@@ -50,8 +50,8 @@ class _CategoryTrendChartFrame({
   required final StayChain? housingChain,
   required final StayChain? jobChain,
 }) {
-  static const _labelMaxWidth = 96.0;
-  static const _labelStackStep = 11.0;
+  static const _labelFontSize = 14.0;
+  static const _labelStackStep = 18.0;
   static const _labelStackGapPx = 6.0;
   static const _eraEdgeAlpha = 0.4;
   static const _eraEdgeStroke = 1.0;
@@ -62,7 +62,14 @@ class _CategoryTrendChartFrame({
   double _laneBottom(int laneIndex) =>
       _laneTop(laneIndex) + CategoryTrendPlot.overlayLaneHeight;
 
-  double _laneLabelY(int laneIndex) => _laneTop(laneIndex) + 2;
+  double _laneLabelY(int laneIndex) => _laneTop(laneIndex) + 4;
+
+  /// Room from the label's anchor to the right edge of the plot.
+  double _labelRoom(double anchorX) {
+    final room = plot.chart.right - anchorX - 4;
+    if (room < 48) return 48;
+    return room;
+  }
 
   int? _laneForKind(LifeChainKind kind) => switch (kind) {
     LifeChainKind.housing => plot.housingLane,
@@ -190,6 +197,10 @@ class _CategoryTrendChartFrame({
       final segment = segments[index];
       final eraIndex = eraIndexByStayId[segment.stay.id] ?? index;
       final eraAccent = kind.trendEraAccent(eraIndex);
+      final labelAnchorX = dateRangeLabelAnchorX(
+        plot: plot.chart,
+        rangeStart: segment.rangeStart,
+      );
       final textPainter = TextPainter(
         text: _stayChainLabelSpan(
           kind: kind,
@@ -199,11 +210,7 @@ class _CategoryTrendChartFrame({
         textDirection: TextDirection.ltr,
         maxLines: 1,
         ellipsis: '…',
-      )..layout(maxWidth: _labelMaxWidth);
-      final labelAnchorX = dateRangeLabelAnchorX(
-        plot: plot.chart,
-        rangeStart: segment.rangeStart,
-      );
+      )..layout(maxWidth: _labelRoom(labelAnchorX));
       final labelX = (labelAnchorX + 3).clamp(
         plot.chart.left,
         plot.chart.right - textPainter.width,
@@ -291,7 +298,7 @@ class _CategoryTrendChartFrame({
   }) {
     final labelStyle = TextStyle(
       color: color,
-      fontSize: 9,
+      fontSize: _labelFontSize,
       fontWeight: FontWeight.w600,
       height: 1,
     );
@@ -305,7 +312,7 @@ class _CategoryTrendChartFrame({
           text: String.fromCharCode(houseIcon.codePoint),
           style: TextStyle(
             color: color,
-            fontSize: 8,
+            fontSize: 13,
             fontFamily: houseIcon.fontFamily,
             package: houseIcon.fontPackage,
             height: 1,
@@ -341,23 +348,23 @@ class _CategoryTrendChartFrame({
     final labelWidths = <double>[];
     final textPainters = <TextPainter>[];
     for (final lifeEvent in markersInRange) {
+      final labelAnchorX = dateRangeLabelAnchorX(
+        plot: plot.chart,
+        rangeStart: lifeEvent.startedOn,
+      );
       final textPainter = TextPainter(
         text: TextSpan(
           text: lifeEvent.title,
           style: const TextStyle(
             color: FinanceColors.accentSecondary,
-            fontSize: 9,
+            fontSize: _labelFontSize,
             fontWeight: FontWeight.w600,
           ),
         ),
         textDirection: TextDirection.ltr,
         maxLines: 1,
         ellipsis: '…',
-      )..layout(maxWidth: _labelMaxWidth);
-      final labelAnchorX = dateRangeLabelAnchorX(
-        plot: plot.chart,
-        rangeStart: lifeEvent.startedOn,
-      );
+      )..layout(maxWidth: _labelRoom(labelAnchorX));
       final labelX = (labelAnchorX + 3).clamp(
         plot.chart.left,
         plot.chart.right - textPainter.width,

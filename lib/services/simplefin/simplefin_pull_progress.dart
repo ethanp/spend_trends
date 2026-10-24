@@ -50,6 +50,34 @@ class const SimpleFinPullResult({
   final Uri? accessUrl,
 });
 
+/// Download state for one bank during a pull.
+enum SimpleFinBankLoadPhase() { waiting, receiving, saving, done, failed }
+
+class const SimpleFinBankLoad({
+  required final String connectionId,
+  required final String name,
+  final SimpleFinBankLoadPhase phase = SimpleFinBankLoadPhase.waiting,
+  final int bytesReceived = 0,
+  final int? contentLength,
+  final String? errorMessage,
+}) {
+  /// Fraction of this bank's current response, or null while the size is unknown.
+  double? get receivedFraction {
+    switch (phase) {
+      case SimpleFinBankLoadPhase.waiting:
+        return 0;
+      case SimpleFinBankLoadPhase.receiving:
+        final expected = contentLength;
+        if (expected == null || expected <= 0) return null;
+        return (bytesReceived / expected).clamp(0.0, 1.0);
+      case SimpleFinBankLoadPhase.saving:
+      case SimpleFinBankLoadPhase.done:
+      case SimpleFinBankLoadPhase.failed:
+        return 1;
+    }
+  }
+}
+
 /// Live updates while a SimpleFIN pull runs.
 class const SimpleFinPullProgress._({
   required final SimpleFinPullProgressPhase phase,
@@ -66,6 +94,7 @@ class const SimpleFinPullProgress._({
   final int? finishedAccountCount,
   final int? finishedTransactionCount,
   final List<SimpleFinError> errors = const [],
+  final List<SimpleFinBankLoad> banks = const [],
 }) {
   factory fetching({
     required DateTime windowStart,
@@ -97,6 +126,18 @@ class const SimpleFinPullProgress._({
     accountsTotal: accountsTotal,
   );
 
+  factory banksWaiting({required List<SimpleFinBankLoad> banks}) =>
+      SimpleFinPullProgress._(
+        phase: SimpleFinPullProgressPhase.banksWaiting,
+        banks: banks,
+      );
+
+  factory bankLoad({required SimpleFinBankLoad bank}) =>
+      SimpleFinPullProgress._(
+        phase: SimpleFinPullProgressPhase.bankLoad,
+        banks: [bank],
+      );
+
   factory finished({
     required int accountCount,
     required int transactionCount,
@@ -111,6 +152,8 @@ class const SimpleFinPullProgress._({
 
 enum SimpleFinPullProgressPhase() {
   fetching,
+  banksWaiting,
+  bankLoad,
   accountLoaded,
   finished,
 }

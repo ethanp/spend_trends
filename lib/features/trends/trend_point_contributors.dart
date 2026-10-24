@@ -1,5 +1,6 @@
 import 'package:spend_trends/domain/category.dart';
 import 'package:spend_trends/domain/category_group.dart';
+import 'package:spend_trends/domain/conscious_spending_area.dart';
 import 'package:spend_trends/domain/special_category.dart';
 import 'package:spend_trends/domain/transaction.dart';
 import 'package:spend_trends/features/trends/annual_pace_smoother.dart';
@@ -155,6 +156,21 @@ class TrendPointContributors._() {
       if (memberIds.isEmpty) return null;
       return _SeriesMembership.categorySpend(categoryIds: memberIds);
     }
+    if (seriesId.startsWith(
+      TrendChartCatalog.consciousSpendingAreaSeriesIdPrefix,
+    )) {
+      final areaName = seriesId.substring(
+        TrendChartCatalog.consciousSpendingAreaSeriesIdPrefix.length,
+      );
+      final area = ConsciousSpendingArea.fromStorage(areaName);
+      if (area == null) return null;
+      final memberIds = {
+        for (final category in categories)
+          if (category.consciousSpendingArea == area) category.id,
+      };
+      if (memberIds.isEmpty) return null;
+      return _SeriesMembership.cashFlowSpending(categoryIds: memberIds);
+    }
     if (seriesId.startsWith('__')) return null;
     return _SeriesMembership.categorySpend(categoryIds: {seriesId});
   }
@@ -180,7 +196,8 @@ class const _SeriesMembership._({
 
   const new income() : this._(kind: _MembershipKind.income);
 
-  const new cashFlowSpending() : this._(kind: _MembershipKind.cashFlowSpending);
+  const new cashFlowSpending({Set<String>? categoryIds})
+    : this._(kind: _MembershipKind.cashFlowSpending, categoryIds: categoryIds);
 
   const new transfer() : this._(kind: _MembershipKind.transfer);
 
@@ -208,7 +225,8 @@ class const _SeriesMembership._({
         if (SpecialCategory.isTransferId(categoryId)) return false;
         if (SpecialCategory.isIncomeId(categoryId)) return false;
         if (transaction.excluded) return false;
-        return true;
+        if (categoryIds == null) return true;
+        return categoryId != null && categoryIds!.contains(categoryId);
       case _MembershipKind.transfer:
         return SpecialCategory.isTransferId(categoryId);
       case _MembershipKind.savings:

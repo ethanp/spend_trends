@@ -10,6 +10,7 @@ import 'package:spend_trends/features/settings/remove_duplicate_transactions_til
 import 'package:spend_trends/features/settings/unlock_copilot_categories_tile.dart';
 import 'package:spend_trends/features/settings/settings_section.dart';
 import 'package:spend_trends/features/settings/sync_status_tile.dart';
+
 class const SettingsScreen() extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -24,12 +25,15 @@ class const SettingsScreen() extends ConsumerWidget {
       body: SafeArea(
         bottom: false,
         child: ListView(
-          padding: const EdgeInsets.fromLTRB(
-            ELayout.spaceLg,
-            ELayout.spaceMd,
-            ELayout.spaceLg,
-            32,
-          ).withOverlaidTabBar(context),
+          padding: ETabBarOverlay.paddingOf(
+            context,
+            contentPadding: const EdgeInsets.fromLTRB(
+              ELayout.spaceLg,
+              ELayout.spaceMd,
+              ELayout.spaceLg,
+              32,
+            ),
+          ),
           children: [
             const BanksAdvancedSection(),
             const SizedBox(height: ELayout.spaceXl),

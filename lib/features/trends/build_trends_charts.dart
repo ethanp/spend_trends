@@ -39,6 +39,7 @@ class const BuildTrendsCharts() {
     );
     final cashFlowMaps = CashFlowDailyMaps.fromTransactions(
       inRangeTransactions,
+      categories: categories,
     );
 
     final chartRange = _resolveChartRange(

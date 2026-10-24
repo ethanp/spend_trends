@@ -25,6 +25,7 @@ const Schema spendTrendsSchema = Schema([
     Column.integer('archived'),
     Column.text('color_token'),
     Column.text('group_id'),
+    Column.text('conscious_spending_area'),
   ]),
   Table('transactions', [
     Column.text('account_id'),
@@ -47,6 +48,7 @@ const Schema spendTrendsSchema = Schema([
     Column.text('pattern'),
     Column.text('category_id'),
     Column.integer('priority'),
+    Column.text('account_id'),
   ]),
   Table('life_events', [
     Column.text('title'),
@@ -88,6 +90,7 @@ const Schema spendTrendsSchema = Schema([
     Column.text('name'),
     Column.text('asset_kind'),
     Column.text('note'),
+    Column.integer('sold_on'),
   ]),
   Table('owned_asset_valuations', [
     Column.text('owned_asset_id'),

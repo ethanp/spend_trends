@@ -43,10 +43,11 @@ Future<void> ensureIncomeCategoryGroup(PowerSyncDatabase database) async {
 Future<void> _upsertSpecialCategories(PowerSyncDatabase database) async {
   for (final special in SpecialCategory.values) {
     final existing = await database.getOptional(
-      'SELECT group_id FROM categories WHERE id = ?',
+      'SELECT group_id, conscious_spending_area FROM categories WHERE id = ?',
       [special.id],
     );
     final existingGroupId = existing?['group_id'] as String?;
+    final existingArea = existing?['conscious_spending_area'] as String?;
     await database.upsert('categories', {
       'id': special.id,
       'name': special.name,
@@ -54,6 +55,8 @@ Future<void> _upsertSpecialCategories(PowerSyncDatabase database) async {
       'archived': 0,
       'color_token': null,
       'group_id': existingGroupId ?? special.defaultGroupId,
+      'conscious_spending_area':
+          existingArea ?? special.defaultConsciousSpendingArea?.storageValue,
     });
   }
 }

@@ -1,8 +1,11 @@
+import 'package:spend_trends/domain/category.dart';
+import 'package:spend_trends/domain/conscious_spending_area.dart';
 import 'package:spend_trends/domain/special_category.dart';
 import 'package:spend_trends/domain/transaction.dart';
 import 'package:spend_trends/features/trends/category_trend_series.dart';
 import 'package:spend_trends/features/trends/annual_pace_smoother.dart';
 import 'package:spend_trends/features/trends/trend_chart_catalog.dart';
+import 'package:spend_trends/theme/finance_colors.dart';
 import 'package:ethan_utils/ethan_utils.dart';
 import 'package:flutter/material.dart';
 
@@ -11,13 +14,24 @@ class const CashFlowDailyMaps({
   required final Map<DateTime, double> incomeByDay,
   required final Map<DateTime, double> spendingByDay,
   required final Map<DateTime, double> transferByDay,
+  final Map<ConsciousSpendingArea, Map<DateTime, double>>
+  consciousSpendingByArea = const {},
 }) {
   static CashFlowDailyMaps fromTransactions(
-    List<BankTransaction> transactions,
-  ) {
+    List<BankTransaction> transactions, {
+    List<SpendCategory> categories = const [],
+  }) {
     final incomeByDay = <DateTime, double>{};
     final spendingByDay = <DateTime, double>{};
     final transferByDay = <DateTime, double>{};
+    final consciousSpendingByArea = {
+      for (final area in ConsciousSpendingArea.values) area: <DateTime, double>{},
+    };
+    final areaByCategoryId = {
+      for (final category in categories)
+        if (category.consciousSpendingArea != null)
+          category.id: category.consciousSpendingArea!,
+    };
 
     for (final transaction in transactions) {
       if (!transaction.isInflow && !transaction.isOutflow) continue;
@@ -61,12 +75,22 @@ class const CashFlowDailyMaps({
         (priorCents) => priorCents + magnitudeCents,
         ifAbsent: () => magnitudeCents,
       );
+
+      final area = categoryId == null ? null : areaByCategoryId[categoryId];
+      if (area != null) {
+        consciousSpendingByArea[area]!.update(
+          day,
+          (priorCents) => priorCents + magnitudeCents,
+          ifAbsent: () => magnitudeCents,
+        );
+      }
     }
 
     return CashFlowDailyMaps(
       incomeByDay: incomeByDay,
       spendingByDay: spendingByDay,
       transferByDay: transferByDay,
+      consciousSpendingByArea: consciousSpendingByArea,
     );
   }
 }
@@ -109,6 +133,14 @@ class const CashFlowTrendBuilder({
         legendCaption: 'Income − Spending',
         dailyCents: savingsByDay,
       ),
+      for (final area in ConsciousSpendingArea.values)
+        _paceSeries(
+          id: TrendChartCatalog.consciousSpendingAreaSeriesId(area),
+          name: area.chartSeriesName,
+          lineColor: area.color,
+          dailyCents:
+              cashFlowMaps.consciousSpendingByArea[area] ?? const {},
+        ),
       _paceSeries(
         id: TrendChartCatalog.fireSavingsGuideSeriesId,
         name: '25% of income',

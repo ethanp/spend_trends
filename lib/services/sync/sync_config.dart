@@ -21,7 +21,7 @@ const _fkDependencies = <String, Set<String>>{
   'housing_stays': {},
   'job_stays': {},
   'transactions': {'accounts', 'categories'},
-  'categorization_rules': {'categories'},
+  'categorization_rules': {'categories', 'accounts'},
 };
 
 /// Non-PK unique constraints for PostgREST `on_conflict`.

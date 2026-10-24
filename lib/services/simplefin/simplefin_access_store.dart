@@ -17,7 +17,7 @@ class SimpleFinAccessStore({FlutterSecureStorage? storage}) {
       const FlutterSecureStorage(
         // Legacy macOS keychain — avoids Data Protection Keychain
         // entitlement / provisioning issues during local debug runs.
-        mOptions: MacOsOptions(useDataProtectionKeyChain: false),
+        mOptions: MacOsOptions(usesDataProtectionKeychain: false),
       );
 
   Future<void> save(Uri accessUrl) async {

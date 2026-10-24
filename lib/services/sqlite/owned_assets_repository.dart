@@ -45,6 +45,7 @@ class OwnedAssetsRepository(final PowerSyncDatabase _powerSync) {
     required int valueCents,
     required DateTime valuedOn,
     String? note,
+    DateTime? soldOn,
   }) async {
     final trimmedName = name.trim();
     if (trimmedName.isEmpty) {
@@ -55,6 +56,7 @@ class OwnedAssetsRepository(final PowerSyncDatabase _powerSync) {
       name: trimmedName,
       kind: kind,
       note: _normalizedNote(note),
+      soldOn: soldOn?.startOfDay,
     );
     await _upsertAssetRow(asset);
     await appendValuation(
@@ -74,12 +76,13 @@ class OwnedAssetsRepository(final PowerSyncDatabase _powerSync) {
     if (trimmedName.isEmpty) {
       throw ArgumentError('Name is required.');
     }
+    final note = _normalizedNote(asset.note);
     await _upsertAssetRow(
-      OwnedAsset(
-        id: asset.id,
+      asset.copyWith(
         name: trimmedName,
-        kind: asset.kind,
-        note: _normalizedNote(asset.note),
+        note: note,
+        clearNote: note == null,
+        soldOn: asset.soldOn?.startOfDay,
       ),
     );
   }
@@ -145,6 +148,7 @@ class OwnedAssetsRepository(final PowerSyncDatabase _powerSync) {
       'name': asset.name,
       'asset_kind': asset.kind.storageValue,
       'note': asset.note,
+      'sold_on': asset.soldOn?.millisecondsSinceEpoch,
     });
   }
 
@@ -159,6 +163,7 @@ class OwnedAssetsRepository(final PowerSyncDatabase _powerSync) {
       name: columns['name'] as String,
       kind: OwnedAssetKind.fromStorage(columns['asset_kind'] as String),
       note: columns['note'] as String?,
+      soldOn: columns['sold_on'].asIntOrNull()?.dateTimeFromMillis.startOfDay,
     );
   }
 

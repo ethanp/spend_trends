@@ -111,11 +111,11 @@ class _CsvImportSheetState() extends ConsumerState<CsvImportSheet> {
   }
 
   Future<String?> _pickCsvPath() async {
-    final result = await FilePicker.platform.pickFiles(
+    final pickedFile = await FilePicker.pickFile(
       type: FileType.custom,
       allowedExtensions: const ['csv', 'txt'],
     );
-    return result?.files.single.path;
+    return pickedFile?.path;
   }
 
   Future<CsvImportResult> _importCsvFile(String path) async {

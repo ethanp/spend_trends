@@ -19,7 +19,7 @@ class CategoryTrendPlot._({
   static const leftPadding = 48.0;
   static const rightPadding = 12.0;
   static const bottomPadding = 24.0;
-  static const overlayLaneHeight = 34.0;
+  static const overlayLaneHeight = 44.0;
   static const _plotTopInset = 12.0;
 
   factory from({

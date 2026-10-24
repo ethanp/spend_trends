@@ -25,7 +25,7 @@ class const BanksScreen() extends ConsumerStatefulWidget {
 class _BanksScreenState() extends ConsumerState<BanksScreen> {
   String? _selectedAccountId;
   String? _selectedOwnedAssetId;
-  String? _selectedPullTransactionId;
+  BankTransaction? _selectedPullTransaction;
 
   static const _horizontalPadding = EdgeInsets.fromLTRB(
     ELayout.spaceLg,
@@ -59,7 +59,7 @@ class _BanksScreenState() extends ConsumerState<BanksScreen> {
           ),
           data: (status) {
             final BankTransaction? selectedPullTransaction =
-                _pullTransactionById(_selectedPullTransactionId);
+                _resolvedPullTransaction();
             final scroll = CustomScrollView(
               slivers: [
                 SliverPadding(
@@ -73,7 +73,7 @@ class _BanksScreenState() extends ConsumerState<BanksScreen> {
                         setState(() {
                           _selectedAccountId = accountId;
                           _selectedOwnedAssetId = null;
-                          _selectedPullTransactionId = null;
+                          _selectedPullTransaction = null;
                         });
                       },
                       onOwnedAssetSelected: (ownedAssetId) {
@@ -81,7 +81,7 @@ class _BanksScreenState() extends ConsumerState<BanksScreen> {
                         setState(() {
                           _selectedOwnedAssetId = ownedAssetId;
                           _selectedAccountId = null;
-                          _selectedPullTransactionId = null;
+                          _selectedPullTransaction = null;
                         });
                       },
                     ),
@@ -95,7 +95,7 @@ class _BanksScreenState() extends ConsumerState<BanksScreen> {
                     padding: _horizontalPadding,
                     sliver: SliverToBoxAdapter(
                       child: BanksPullFeed(
-                        selectedTransactionId: _selectedPullTransactionId,
+                        selectedTransactionId: _selectedPullTransaction?.id,
                         onPullTransactionSelected: _selectPullTransaction,
                       ),
                     ),
@@ -128,7 +128,7 @@ class _BanksScreenState() extends ConsumerState<BanksScreen> {
       return BanksPullReviewPane(
         transaction: selectedPullTransaction,
         onCategorized: () {
-          setState(() => _selectedPullTransactionId = null);
+          setState(() => _selectedPullTransaction = null);
           ref.read(spendDataChangedProvider.notifier).notify();
         },
       );
@@ -146,14 +146,20 @@ class _BanksScreenState() extends ConsumerState<BanksScreen> {
   void _selectPullTransaction(BankTransaction transaction) {
     if (!AppBrowseSplitShell.isSplit(context)) return;
     setState(() {
-      _selectedPullTransactionId = transaction.id;
+      _selectedPullTransaction = transaction;
       _selectedAccountId = null;
       _selectedOwnedAssetId = null;
     });
   }
 
-  BankTransaction? _pullTransactionById(String? transactionId) {
-    if (transactionId == null) return null;
+  /// Prefer the live list row when loaded; keep the pull-list row until then.
+  BankTransaction? _resolvedPullTransaction() {
+    final selected = _selectedPullTransaction;
+    if (selected == null) return null;
+    return _pullTransactionById(selected.id) ?? selected;
+  }
+
+  BankTransaction? _pullTransactionById(String transactionId) {
     final transactions =
         ref.watch(transactionsListProvider).asData?.value ?? const [];
     for (final transaction in transactions) {

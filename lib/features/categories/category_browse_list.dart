@@ -80,8 +80,7 @@ class const CategoryBrowseList({
       rowsById: rowsById,
     );
     return ListView(
-      padding: const EdgeInsets.all(ELayout.spaceLg)
-          .withOverlaidTabBar(context),
+      padding: ETabBarOverlay.paddingOf(context),
       children: [
         _columnHeader(columnWidths),
         const SizedBox(height: ELayout.spaceMd),
@@ -213,8 +212,12 @@ class const CategoryBrowseFactRow({
     final builtInCaption = category.builtInCaption;
     if (builtInCaption != null) return builtInCaption;
     final annual = row?.annualizedSpendCents ?? 0;
-    if (annual == 0) return 'No annual pace yet';
-    return '${formatCents(annual)} / yr';
+    final String paceCaption = annual == 0
+        ? 'No annual pace yet'
+        : '${formatCents(annual)} / yr';
+    final area = category.consciousSpendingArea;
+    if (area == null) return paceCaption;
+    return '${area.displayName} · $paceCaption';
   }
 
   @override

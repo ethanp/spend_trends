@@ -47,12 +47,15 @@ class const _ChainBody({
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return ListView(
-      padding: const EdgeInsets.fromLTRB(
-        ELayout.spaceLg,
-        ELayout.spaceMd,
-        ELayout.spaceLg,
-        ELayout.spaceXl,
-      ).withOverlaidTabBar(context),
+      padding: ETabBarOverlay.paddingOf(
+        context,
+        contentPadding: const EdgeInsets.fromLTRB(
+          ELayout.spaceLg,
+          ELayout.spaceMd,
+          ELayout.spaceLg,
+          ELayout.spaceXl,
+        ),
+      ),
       children: [
         Text(
           kind == LifeChainKind.housing

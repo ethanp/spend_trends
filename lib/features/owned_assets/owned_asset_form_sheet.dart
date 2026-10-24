@@ -2,6 +2,7 @@ import 'package:ethan_ui/ethan_ui.dart';
 import 'package:ethan_utils/ethan_utils.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
 import 'package:spend_trends/domain/owned_asset.dart';
 import 'package:spend_trends/domain/owned_asset_kind.dart';
 import 'package:spend_trends/providers/spend_data_changed.dart';
@@ -42,6 +43,7 @@ class _OwnedAssetFormSheetState() extends ConsumerState<OwnedAssetFormSheet> {
   late final TextEditingController _noteController;
   late OwnedAssetKind _kind;
   late DateTime _valuedOn;
+  DateTime? _soldOn;
   bool _busy = false;
   String? _error;
 
@@ -54,11 +56,12 @@ class _OwnedAssetFormSheetState() extends ConsumerState<OwnedAssetFormSheet> {
     _nameController = TextEditingController(text: existing?.asset.name ?? '');
     _noteController = TextEditingController(text: existing?.asset.note ?? '');
     _kind = existing?.asset.kind ?? OwnedAssetKind.home;
-    _valuedOn = (existing?.currentValuedOn ?? DateTime.now()).startOfDay;
+    _soldOn = existing?.asset.soldOn?.startOfDay;
+    _valuedOn = (existing?.latestValuedOn ?? DateTime.now()).startOfDay;
     _valueController = TextEditingController(
       text: existing == null
           ? ''
-          : (existing.currentValueCents / 100).toStringAsFixed(2),
+          : (existing.latestValueCents / 100).toStringAsFixed(2),
     );
   }
 
@@ -99,6 +102,8 @@ class _OwnedAssetFormSheetState() extends ConsumerState<OwnedAssetFormSheet> {
               if (!widget.updateValueOnly) ...[
                 const SizedBox(height: ELayout.spaceMd),
                 _noteField(),
+                const SizedBox(height: ELayout.spaceMd),
+                _soldOnField(),
               ],
               if (_error != null) ...[
                 const SizedBox(height: ELayout.spaceSm),
@@ -168,6 +173,61 @@ class _OwnedAssetFormSheetState() extends ConsumerState<OwnedAssetFormSheet> {
     );
   }
 
+  Widget _soldOnField() {
+    final soldOn = _soldOn;
+    return Container(
+      padding: const EdgeInsets.only(left: ELayout.spaceMd),
+      decoration: BoxDecoration(
+        color: EColors.surface,
+        borderRadius: ELayout.borderRadiusSm,
+        border: Border.all(color: EColors.border),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: _pickSoldOn,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: ELayout.spaceMd),
+                child: Row(
+                  children: [
+                    Text('Sold on', style: EText.body.medium),
+                    const Spacer(),
+                    Text(
+                      soldOn == null
+                          ? 'Still owned'
+                          : DateFormat.yMMMd().format(soldOn),
+                      style: EText.body.medium.copyWith(
+                        fontWeight: soldOn == null ? null : FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(width: ELayout.spaceSm),
+                    if (soldOn == null)
+                      const Icon(
+                        Icons.calendar_today,
+                        size: 18,
+                        color: EColors.textMuted,
+                      ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          if (soldOn != null)
+            IconButton(
+              tooltip: 'Clear sold date',
+              visualDensity: VisualDensity.compact,
+              onPressed: () => setState(() => _soldOn = null),
+              icon: const Icon(Icons.close, size: 18),
+            )
+          else
+            const SizedBox(width: ELayout.spaceMd),
+        ],
+      ),
+    );
+  }
+
   Widget _saveButton() {
     return AppPrimaryButton(
       busy: _busy,
@@ -180,6 +240,15 @@ class _OwnedAssetFormSheetState() extends ConsumerState<OwnedAssetFormSheet> {
     final picked = await pickAppDate(context, initialDate: _valuedOn);
     if (picked == null || !mounted) return;
     setState(() => _valuedOn = picked);
+  }
+
+  Future<void> _pickSoldOn() async {
+    final picked = await pickAppDate(
+      context,
+      initialDate: _soldOn ?? DateTime.now(),
+    );
+    if (picked == null || !mounted) return;
+    setState(() => _soldOn = picked.startOfDay);
   }
 
   Future<void> _save() async {
@@ -211,6 +280,7 @@ class _OwnedAssetFormSheetState() extends ConsumerState<OwnedAssetFormSheet> {
           valueCents: valueCents,
           valuedOn: _valuedOn,
           note: _noteController.text,
+          soldOn: _soldOn,
         );
       } else {
         await _saveExisting(
@@ -241,12 +311,14 @@ class _OwnedAssetFormSheetState() extends ConsumerState<OwnedAssetFormSheet> {
           kind: _kind,
           note: _noteController.text,
           clearNote: _noteController.text.trim().isEmpty,
+          soldOn: _soldOn,
+          clearSoldOn: _soldOn == null,
         ),
       );
     }
-    final valueChanged = valueCents != existing.currentValueCents;
+    final valueChanged = valueCents != existing.latestValueCents;
     final dateChanged =
-        _valuedOn.startOfDay != existing.currentValuedOn?.startOfDay;
+        _valuedOn.startOfDay != existing.latestValuedOn?.startOfDay;
     if (valueChanged || dateChanged) {
       await repository.appendValuation(
         ownedAssetId: existing.asset.id,

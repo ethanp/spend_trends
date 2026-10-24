@@ -13,6 +13,7 @@ class RuleMatchIndex(List<CategorizationRule> rules) {
 
     _PreparedRule? bestPrepared;
     for (final prepared in _preparedRules) {
+      if (!prepared.rule.appliesToTransaction(transaction)) continue;
       if (!_preparedRuleMatches(
         matchType: prepared.rule.matchType,
         pattern: prepared.pattern,
@@ -53,6 +54,7 @@ class RuleMatchIndex(List<CategorizationRule> rules) {
     BankTransaction transaction,
     CategorizationRule rule,
   ) {
+    if (!rule.appliesToTransaction(transaction)) return false;
     final pattern = rule.pattern.trim().toLowerCase();
     if (pattern.isEmpty) return false;
     final merchantLower = transaction.normalizedMerchant.toLowerCase();
@@ -124,6 +126,10 @@ class RuleMatchIndex(List<CategorizationRule> rules) {
     if (candidate.rule.priority != incumbent.rule.priority) {
       return candidate.rule.priority > incumbent.rule.priority;
     }
+    if (candidate.rule.isLimitedToOneAccount !=
+        incumbent.rule.isLimitedToOneAccount) {
+      return candidate.rule.isLimitedToOneAccount;
+    }
     if (candidate.patternLength != incumbent.patternLength) {
       return candidate.patternLength > incumbent.patternLength;
     }
@@ -138,6 +144,7 @@ class RuleMatchIndex(List<CategorizationRule> rules) {
     CategorizationRule proposedRule,
   ) {
     if (rule.matchType != proposedRule.matchType) return false;
+    if (rule.accountId != proposedRule.accountId) return false;
     return rule.pattern.trim().toLowerCase() ==
         proposedRule.pattern.trim().toLowerCase();
   }

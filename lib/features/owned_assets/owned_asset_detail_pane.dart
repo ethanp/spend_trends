@@ -55,8 +55,7 @@ class const OwnedAssetDetailPane({required final String ownedAssetId})
     OwnedAssetWithValuations ownedAsset,
   ) {
     return ListView(
-      padding: const EdgeInsets.all(ELayout.spaceLg)
-          .withOverlaidTabBar(context),
+      padding: ETabBarOverlay.paddingOf(context),
       children: [
         Text(ownedAsset.asset.name, style: EText.section),
         const SizedBox(height: ELayout.spaceXs),
@@ -68,10 +67,16 @@ class const OwnedAssetDetailPane({required final String ownedAssetId})
         ),
         const SizedBox(height: ELayout.spaceXs),
         Text(formatCents(ownedAsset.currentValueCents), style: EText.title),
-        if (ownedAsset.currentValuedOn != null) ...[
+        if (ownedAsset.asset.soldOn != null) ...[
+          const SizedBox(height: ELayout.spaceXs),
+          Text(_soldCaption(ownedAsset), style: EText.caption),
+        ],
+        if (ownedAsset.latestValuedOn != null) ...[
           const SizedBox(height: ELayout.spaceXs),
           Text(
-            'Valued ${DateFormat.yMMMd().format(ownedAsset.currentValuedOn!)}',
+            ownedAsset.asset.isSold
+                ? 'Last valued ${DateFormat.yMMMd().format(ownedAsset.latestValuedOn!)}'
+                : 'Valued ${DateFormat.yMMMd().format(ownedAsset.latestValuedOn!)}',
             style: EText.caption,
           ),
         ],
@@ -91,6 +96,12 @@ class const OwnedAssetDetailPane({required final String ownedAssetId})
         ),
       ],
     );
+  }
+
+  String _soldCaption(OwnedAssetWithValuations ownedAsset) {
+    final soldOn = ownedAsset.asset.soldOn!;
+    final soldLabel = DateFormat.yMMMd().format(soldOn);
+    return ownedAsset.asset.isSold ? 'Sold $soldLabel' : 'Sells $soldLabel';
   }
 
   List<Widget> _actions(

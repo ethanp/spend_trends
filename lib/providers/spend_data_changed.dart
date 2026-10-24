@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:ethan_sync/ethan_sync.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -10,13 +12,27 @@ final spendDataChangedProvider = NotifierProvider<SpendDataChanged, int>(
 );
 
 class SpendDataChanged() extends Notifier<int> {
+  static const _coalesceWindow = Duration(milliseconds: 200);
+
+  Timer? _coalesceTimer;
+
   @override
   int build() {
+    ref.onDispose(() => _coalesceTimer?.cancel());
     ref.listen(localDataRevisionProvider, (_, _) {
-      state = state + 1;
+      _scheduleCoalescedBump();
     });
     return 0;
   }
 
-  void notify() => state = state + 1;
+  void notify() => _scheduleCoalescedBump();
+
+  /// One invalidation after a burst of writes (manual notify + PowerSync onChange).
+  void _scheduleCoalescedBump() {
+    _coalesceTimer?.cancel();
+    _coalesceTimer = Timer(_coalesceWindow, () {
+      _coalesceTimer = null;
+      state = state + 1;
+    });
+  }
 }

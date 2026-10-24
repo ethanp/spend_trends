@@ -4,9 +4,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:spend_trends/domain/transaction.dart';
+import 'package:spend_trends/features/banks/banks_pull_bank_bars.dart';
+import 'package:spend_trends/features/banks/simplefin_auth_required_card.dart';
 import 'package:spend_trends/features/banks/banks_pull_live_session.dart';
 import 'package:spend_trends/features/banks/banks_pull_transaction_list.dart';
 import 'package:spend_trends/features/banks/pull_import_window.dart';
+import 'package:spend_trends/services/simplefin/simplefin_models.dart';
 import 'package:spend_trends/services/sqlite/simplefin_pull_history.dart';
 import 'package:spend_trends/theme/finance_colors.dart';
 
@@ -45,6 +48,7 @@ class _BanksPullFeedState() extends ConsumerState<BanksPullFeed> {
     );
 
     return pullsAsync.when(
+      skipLoadingOnReload: true,
       loading: () => const SizedBox(
         height: 120,
         child: Center(child: CircularProgressIndicator()),
@@ -96,11 +100,21 @@ class _BanksPullFeedState() extends ConsumerState<BanksPullFeed> {
               selectedPull: selectedPull,
             ),
             const SizedBox(height: ELayout.spaceMd),
-            if (viewingLive) _liveStatus(liveSession),
+            if (liveSession != null && viewingLive) _liveStatus(liveSession),
             if (!viewingLive && selectedPull != null)
-              _historicalStatus(selectedPull),
-            const SizedBox(height: ELayout.spaceMd),
-            _pullTransactions(importWindow),
+              _historicalStatus(pull: selectedPull, pulls: pulls),
+            if (liveSession != null && viewingLive && !liveSession.finished) ...[
+              const SizedBox(height: ELayout.spaceMd),
+              BanksPullBankBars(
+                banks: liveSession.banks,
+                windowIndex: liveSession.windowIndex,
+                windowCount: liveSession.windowCount,
+              ),
+            ],
+            if (!viewingLive || liveSession.finished) ...[
+              const SizedBox(height: ELayout.spaceMd),
+              _pullTransactions(importWindow),
+            ],
           ],
         );
       },
@@ -112,6 +126,7 @@ class _BanksPullFeedState() extends ConsumerState<BanksPullFeed> {
       pullImportedTransactionsProvider(importWindow),
     );
     return transactionsAsync.when(
+      skipLoadingOnReload: true,
       loading: () => const Center(child: CircularProgressIndicator()),
       error: (error, _) => SelectableText(
         '$error',
@@ -277,7 +292,10 @@ class _BanksPullFeedState() extends ConsumerState<BanksPullFeed> {
     );
   }
 
-  Widget _historicalStatus(SimpleFinPullRecord pull) {
+  Widget _historicalStatus({
+    required SimpleFinPullRecord pull,
+    required List<SimpleFinPullRecord> pulls,
+  }) {
     final accountCount = pull.accountCount ?? pull.accounts.length;
     final transactionCount = pull.transactionCount ?? 0;
     return Column(
@@ -288,17 +306,7 @@ class _BanksPullFeedState() extends ConsumerState<BanksPullFeed> {
           '$transactionCount ${transactionCount == 1 ? 'transaction' : 'transactions'}',
           style: EText.body.medium.copyWith(fontWeight: FontWeight.w600),
         ),
-        if (pull.errors.isNotEmpty) ...[
-          const SizedBox(height: ELayout.spaceSm),
-          for (final error in pull.errors)
-            Padding(
-              padding: const EdgeInsets.only(bottom: ELayout.spaceXs),
-              child: SelectableText(
-                error.message,
-                style: EText.caption.copyWith(color: EColors.danger),
-              ),
-            ),
-        ],
+        ..._pullErrors(pull: pull, pulls: pulls),
         if (pull.hasAccountIssues) ...[
           const SizedBox(height: ELayout.spaceSm),
           for (final account in pull.accounts)
@@ -314,6 +322,51 @@ class _BanksPullFeedState() extends ConsumerState<BanksPullFeed> {
         ],
       ],
     );
+  }
+
+  Set<String> _authBanksOnNewestFinishedPull(List<SimpleFinPullRecord> pulls) {
+    for (final pull in pulls) {
+      if (pull.status == SimpleFinPullStatus.running) continue;
+      return {
+        for (final name
+            in SimpleFinAuthConnections.fromErrors(pull.errors).names)
+          name.toLowerCase(),
+      };
+    }
+    return const {};
+  }
+
+  List<Widget> _pullErrors({
+    required SimpleFinPullRecord pull,
+    required List<SimpleFinPullRecord> pulls,
+  }) {
+    final stillRequired = _authBanksOnNewestFinishedPull(pulls);
+    final errors = [
+      for (final error in pull.errors)
+        if (!error.asksToReauthenticate ||
+            stillRequired.contains(
+              (error.attentionConnectionName ?? error.message.trim())
+                  .toLowerCase(),
+            ))
+          error,
+    ];
+    if (errors.isEmpty) return const [];
+    final otherErrors = [
+      for (final error in errors)
+        if (!error.asksToReauthenticate) error,
+    ];
+    return [
+      const SizedBox(height: ELayout.spaceSm),
+      SimpleFinAuthRequiredCard(errors: errors),
+      for (final error in otherErrors)
+        Padding(
+          padding: const EdgeInsets.only(bottom: ELayout.spaceXs),
+          child: SelectableText(
+            error.message,
+            style: EText.caption.copyWith(color: EColors.danger),
+          ),
+        ),
+    ];
   }
 
   String _subtitle({

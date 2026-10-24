@@ -1,4 +1,5 @@
 import 'package:spend_trends/services/simplefin/simplefin_access_store.dart';
+import 'package:spend_trends/services/simplefin/simplefin_bank_target.dart';
 import 'package:spend_trends/services/simplefin/simplefin_account_mapper.dart';
 import 'package:spend_trends/services/simplefin/simplefin_client.dart';
 import 'package:spend_trends/services/simplefin/simplefin_models.dart';
@@ -75,6 +76,9 @@ class PullSimpleFinTransactions({
       kind: kind,
       startedAt: now,
     );
+    final knownBanks = SimpleFinBankTarget.fromLocalAccounts(
+      await _accountsRepository.listAccounts(),
+    );
 
     try {
       final pullResult = kind == SimpleFinPullKind.full
@@ -85,6 +89,7 @@ class PullSimpleFinTransactions({
               newlyInsertedByAccountExternalId:
                   newlyInsertedByAccountExternalId,
               outcomes: outcomes,
+              knownBanks: knownBanks,
             )
           : await _pullSinceLastPull(
               accessUrl: accessUrl,
@@ -94,6 +99,7 @@ class PullSimpleFinTransactions({
               newlyInsertedByAccountExternalId:
                   newlyInsertedByAccountExternalId,
               outcomes: outcomes,
+              knownBanks: knownBanks,
             );
 
       final accountDrafts = outcomes.drafts;
@@ -163,6 +169,7 @@ class PullSimpleFinTransactions({
     required Map<String, List<SimpleFinPulledTransaction>>
     newlyInsertedByAccountExternalId,
     required SimpleFinPullOutcomeAccumulator outcomes,
+    required List<SimpleFinBankTarget> knownBanks,
   }) async {
     final windows = SimpleFinPullWindows.fullHistory(now);
     var transactionCount = 0;
@@ -183,6 +190,7 @@ class PullSimpleFinTransactions({
         onProgress: onProgress,
         windowIndex: index + 1,
         windowCount: windows.length,
+        knownBanks: knownBanks,
       );
       transactionCount += result.transactionCount;
       aggregatedErrors.addAll(result.errors);
@@ -202,6 +210,7 @@ class PullSimpleFinTransactions({
     required Map<String, List<SimpleFinPulledTransaction>>
     newlyInsertedByAccountExternalId,
     required SimpleFinPullOutcomeAccumulator outcomes,
+    required List<SimpleFinBankTarget> knownBanks,
   }) async {
     final window = SimpleFinPullWindows.sinceLastPull(
       lastPull: lastPull,
@@ -218,6 +227,7 @@ class PullSimpleFinTransactions({
       outcomes: outcomes,
       newlyInsertedByAccountExternalId: newlyInsertedByAccountExternalId,
       onProgress: onProgress,
+      knownBanks: knownBanks,
     );
   }
 }

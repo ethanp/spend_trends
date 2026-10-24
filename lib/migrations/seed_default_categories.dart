@@ -7,6 +7,7 @@
 /// after the first seed (or after sync has already pulled categories).
 library;
 
+import 'package:spend_trends/domain/conscious_spending_area.dart';
 import 'package:spend_trends/domain/special_category.dart';
 import 'package:spend_trends/migrations/migrate_special_categories.dart';
 import 'package:ethan_sync/ethan_sync.dart';
@@ -14,6 +15,11 @@ import 'package:ethan_utils/ethan_utils.dart';
 import 'package:powersync/powersync.dart';
 
 const _log = ELogger('SeedDefaultCategories');
+
+class const _DefaultSpendCategory({
+  required final String name,
+  required final ConsciousSpendingArea area,
+});
 
 Future<void> seedDefaultCategoriesIfNeeded(PowerSyncDatabase database) async {
   final countRow = await database.getOptional(
@@ -25,25 +31,53 @@ Future<void> seedDefaultCategoriesIfNeeded(PowerSyncDatabase database) async {
   await ensureIncomeCategoryGroup(database);
 
   const spendDefaults = [
-    'Groceries',
-    'Dining',
-    'Transport',
-    'Utilities',
-    'Entertainment',
-    'Shopping',
-    'Health',
-    'Travel',
-    'Other',
+    _DefaultSpendCategory(
+      name: 'Groceries',
+      area: ConsciousSpendingArea.fixedCosts,
+    ),
+    _DefaultSpendCategory(
+      name: 'Dining',
+      area: ConsciousSpendingArea.guiltFree,
+    ),
+    _DefaultSpendCategory(
+      name: 'Transport',
+      area: ConsciousSpendingArea.fixedCosts,
+    ),
+    _DefaultSpendCategory(
+      name: 'Utilities',
+      area: ConsciousSpendingArea.fixedCosts,
+    ),
+    _DefaultSpendCategory(
+      name: 'Entertainment',
+      area: ConsciousSpendingArea.guiltFree,
+    ),
+    _DefaultSpendCategory(
+      name: 'Shopping',
+      area: ConsciousSpendingArea.guiltFree,
+    ),
+    _DefaultSpendCategory(
+      name: 'Health',
+      area: ConsciousSpendingArea.fixedCosts,
+    ),
+    _DefaultSpendCategory(
+      name: 'Travel',
+      area: ConsciousSpendingArea.guiltFree,
+    ),
+    _DefaultSpendCategory(
+      name: 'Other',
+      area: ConsciousSpendingArea.guiltFree,
+    ),
   ];
   for (var index = 0; index < spendDefaults.length; index++) {
-    final name = spendDefaults[index];
+    final seed = spendDefaults[index];
     await database.upsert('categories', {
-      'id': 'cat_${name.toLowerCase()}',
-      'name': name,
+      'id': 'cat_${seed.name.toLowerCase()}',
+      'name': seed.name,
       'sort_order': index >= 3 ? index + 1 : index,
       'archived': 0,
       'color_token': null,
       'group_id': null,
+      'conscious_spending_area': seed.area.storageValue,
     });
   }
   for (final special in SpecialCategory.values) {
@@ -54,6 +88,8 @@ Future<void> seedDefaultCategoriesIfNeeded(PowerSyncDatabase database) async {
       'archived': 0,
       'color_token': null,
       'group_id': special.defaultGroupId,
+      'conscious_spending_area':
+          special.defaultConsciousSpendingArea?.storageValue,
     });
   }
   _log.log(

@@ -74,7 +74,6 @@ class const CategoryTrendSeriesLegend({
         spendRate: spendRate,
         valueKind: valueKind,
         inspectDate: inspectDate,
-        fillAvailableWidth: true,
         onSeriesToggled: onSeriesToggled,
         onSeriesSoloed: onSeriesSoloed,
       );
@@ -100,7 +99,6 @@ class const CategoryTrendSeriesLegend({
       spendRate: spendRate,
       valueKind: valueKind,
       inspectDate: inspectDate,
-      fillAvailableWidth: stackVertically,
       onSeriesToggled: onSeriesToggled,
       onSeriesSoloed: onSeriesSoloed,
     );
@@ -138,68 +136,6 @@ class const CategoryTrendSeriesLegend({
   }
 }
 
-class const TrendLegendChip({
-  required final CategoryTrendSeries series,
-  required final bool isHidden,
-  required final TrendSpendRate spendRate,
-  required final VoidCallback onActivated,
-  required final VoidCallback onSoloActivated,
-  final TrendValueKind valueKind = TrendValueKind.pace,
-  final DateTime? inspectDate,
-  final bool expandLabel = true,
-}) extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    // Level charts (net worth): show current rolling balance, not CMA tip —
-    // the tip window averages prior days and drifts from today's Banks total.
-    final cents = CategoryTrendLegendAmount(
-      series: series,
-      valueKind: valueKind,
-      inspectDate: inspectDate,
-    ).cents;
-    final amountLabel = formatCentsWholeDollars(
-      valueKind == TrendValueKind.level ? cents : spendRate.displayCents(cents),
-    );
-    final rateSuffix = valueKind == TrendValueKind.level
-        ? ''
-        : ' ${spendRate.shortLabel}';
-    final nameStyle = isHidden
-        ? EText.caption.copyWith(color: EColors.textMuted)
-        : EText.caption;
-    final amountStyle = valueKind == TrendValueKind.level
-        ? _signedAmountStyle(cents, isHidden: isHidden)
-        : nameStyle;
-    final label = Text.rich(
-      TextSpan(
-        children: [
-          TextSpan(text: series.name, style: nameStyle),
-          TextSpan(text: ' · ', style: nameStyle),
-          TextSpan(text: '$amountLabel$rateSuffix', style: amountStyle),
-          if (series.legendCaption != null) ...[
-            TextSpan(text: ' · ', style: nameStyle),
-            TextSpan(text: series.legendCaption, style: nameStyle),
-          ],
-        ],
-      ),
-      maxLines: 1,
-      softWrap: false,
-      overflow: expandLabel ? TextOverflow.ellipsis : TextOverflow.visible,
-    );
-    return GestureDetector(
-      onTap: onActivated,
-      onDoubleTap: onSoloActivated,
-      child: Row(
-        mainAxisSize: expandLabel ? MainAxisSize.max : MainAxisSize.min,
-        children: [
-          TrendLegendSwatch(series: series, isHidden: isHidden),
-          const SizedBox(width: ELayout.spaceXs),
-          if (expandLabel) Expanded(child: label) else label,
-        ],
-      ),
-    );
-  }
-}
-
 class const _MetaLegendColumn({
   required final List<CategoryTrendSeries> metaSeries,
   required final Set<String> hiddenSeriesIds,
@@ -208,27 +144,19 @@ class const _MetaLegendColumn({
   required final DateTime? inspectDate,
   required final ValueChanged<String> onSeriesToggled,
   required final ValueChanged<String> onSeriesSoloed,
-  final bool fillAvailableWidth = false,
 }) extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    final chips = Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        for (var index = 0; index < metaSeries.length; index++) ...[
-          if (index > 0) const SizedBox(height: ELayout.spaceSm),
-          TrendLegendChip(
-            series: metaSeries[index],
-            isHidden: hiddenSeriesIds.contains(metaSeries[index].id),
-            spendRate: spendRate,
-            valueKind: valueKind,
-            inspectDate: inspectDate,
-            expandLabel: fillAvailableWidth,
-            onActivated: () => onSeriesToggled(metaSeries[index].id),
-            onSoloActivated: () => onSeriesSoloed(metaSeries[index].id),
-          ),
-        ],
-      ],
+    final legend = EChartLegend(
+      entries: _SeriesLegendEntries(
+        seriesList: metaSeries,
+        hiddenSeriesIds: hiddenSeriesIds,
+        spendRate: spendRate,
+        valueKind: valueKind,
+        inspectDate: inspectDate,
+        onSeriesToggled: onSeriesToggled,
+        onSeriesSoloed: onSeriesSoloed,
+      ).entries,
     );
     return Container(
       padding: const EdgeInsets.symmetric(
@@ -240,7 +168,7 @@ class const _MetaLegendColumn({
         borderRadius: ELayout.borderRadiusSm,
         border: Border.all(color: EColors.border.withValues(alpha: 0.7)),
       ),
-      child: fillAvailableWidth ? chips : IntrinsicWidth(child: chips),
+      child: legend,
     );
   }
 }
@@ -256,22 +184,54 @@ class const _WrappingLegend({
 }) extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    return Wrap(
-      spacing: ELayout.spaceMd,
-      runSpacing: ELayout.spaceSm,
-      children: [
-        for (final series in seriesList)
-          TrendLegendChip(
-            series: series,
-            isHidden: hiddenSeriesIds.contains(series.id),
-            spendRate: spendRate,
-            valueKind: valueKind,
-            inspectDate: inspectDate,
-            expandLabel: false,
-            onActivated: () => onSeriesToggled(series.id),
-            onSoloActivated: () => onSeriesSoloed(series.id),
-          ),
-      ],
+    return EChartLegend(
+      entries: _SeriesLegendEntries(
+        seriesList: seriesList,
+        hiddenSeriesIds: hiddenSeriesIds,
+        spendRate: spendRate,
+        valueKind: valueKind,
+        inspectDate: inspectDate,
+        onSeriesToggled: onSeriesToggled,
+        onSeriesSoloed: onSeriesSoloed,
+      ).entries,
+    );
+  }
+}
+
+class const _SeriesLegendEntries({
+  required final List<CategoryTrendSeries> seriesList,
+  required final Set<String> hiddenSeriesIds,
+  required final TrendSpendRate spendRate,
+  required final TrendValueKind valueKind,
+  required final DateTime? inspectDate,
+  required final ValueChanged<String> onSeriesToggled,
+  required final ValueChanged<String> onSeriesSoloed,
+}) {
+  List<EChartLegendEntry> get entries => [
+    for (final series in seriesList) _entry(series),
+  ];
+
+  EChartLegendEntry _entry(CategoryTrendSeries series) {
+    final isHidden = hiddenSeriesIds.contains(series.id);
+    final amount = CategoryTrendLegendAmount(
+      series: series,
+      valueKind: valueKind,
+      inspectDate: inspectDate,
+    );
+    return EChartLegendEntry(
+      swatch: TrendLegendSwatch(series: series, isHidden: isHidden),
+      label: series.name,
+      labelStyle: isHidden ? _hiddenLegendText : null,
+      value: amount.formatted(spendRate),
+      valueStyle: _legendValueStyle(
+        cents: amount.cents,
+        isHidden: isHidden,
+        valueKind: valueKind,
+      ),
+      caption: series.legendCaption,
+      dimmed: isHidden,
+      onActivated: () => onSeriesToggled(series.id),
+      onDoubleActivated: () => onSeriesSoloed(series.id),
     );
   }
 }
@@ -470,6 +430,8 @@ class const CategoryTrendLegendAmount({
   int get cents {
     final inspectDay = inspectDate;
     final point = inspectDay == null ? null : series.nearestPoint(inspectDay);
+    // Level charts show the rolling balance. The smoothed tip averages prior
+    // days and drifts from today's total.
     final raw = valueKind == TrendValueKind.level
         ? (point?.rollingCents ?? series.latestRollingCents)
         : (point?.smoothedCents ?? series.latestSmoothedCents);
@@ -482,12 +444,36 @@ class const CategoryTrendLegendAmount({
     return cents;
   }
 
+  String formatted(TrendSpendRate spendRate) {
+    final shownCents = valueKind == TrendValueKind.level
+        ? cents
+        : spendRate.displayCents(cents);
+    final amountLabel = formatCentsWholeDollars(shownCents);
+    if (valueKind == TrendValueKind.level) return amountLabel;
+    return '$amountLabel ${spendRate.shortLabel}';
+  }
+
   bool get _isLiability {
     if (series.dotted) return true;
     final group = series.legendGroup;
     return group == AccountKind.creditCard.legendLabel ||
         group == AccountKind.loans.legendLabel;
   }
+}
+
+const _hiddenLegendText = TextStyle(decoration: TextDecoration.lineThrough);
+
+TextStyle? _legendValueStyle({
+  required int cents,
+  required bool isHidden,
+  required TrendValueKind valueKind,
+}) {
+  final TextStyle? signed = valueKind == TrendValueKind.level
+      ? _signedAmountStyle(cents, isHidden: isHidden)
+      : null;
+  if (!isHidden) return signed;
+  final shown = signed ?? EText.caption.copyWith(fontWeight: FontWeight.w600);
+  return shown.merge(_hiddenLegendText);
 }
 
 TextStyle _signedAmountStyle(int cents, {required bool isHidden}) {

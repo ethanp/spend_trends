@@ -26,12 +26,15 @@ class const ActivityDayListSliver({
   Widget build(BuildContext context) {
     final listItems = ActivityDayGrouping.items(transactions);
     return SliverPadding(
-      padding: const EdgeInsets.fromLTRB(
-        ELayout.spaceLg,
-        0,
-        ELayout.spaceLg,
-        ELayout.spaceLg,
-      ).withOverlaidTabBar(context),
+      padding: ETabBarOverlay.paddingOf(
+        context,
+        contentPadding: const EdgeInsets.fromLTRB(
+          ELayout.spaceLg,
+          0,
+          ELayout.spaceLg,
+          ELayout.spaceLg,
+        ),
+      ),
       sliver: SliverList(
         delegate: SliverChildBuilderDelegate((context, index) {
           final listItem = listItems[index];

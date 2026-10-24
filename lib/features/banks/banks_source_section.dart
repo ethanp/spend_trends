@@ -1,11 +1,13 @@
 import 'package:ethan_ui/ethan_ui.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
 import 'package:spend_trends/features/banks/bank_accounts_list.dart';
 import 'package:spend_trends/features/owned_assets/owned_assets_section.dart';
 import 'package:spend_trends/features/banks/banks_controller.dart';
 import 'package:spend_trends/features/banks/banks_pull_live_session.dart';
 import 'package:spend_trends/services/simplefin/simplefin_access_store.dart';
+import 'package:spend_trends/services/simplefin/simplefin_pull_windows.dart';
 import 'package:spend_trends/theme/finance_colors.dart';
 import 'package:spend_trends/widgets/app_primary_button.dart';
 import 'package:spend_trends/widgets/help_tooltip.dart';
@@ -142,26 +144,58 @@ class _BanksSourceSectionState() extends ConsumerState<BanksSourceSection> {
                     (onProgress) =>
                         controller.syncLatest(onProgress: onProgress),
                   ),
-              child: const Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(Icons.sync, size: 18),
-                  SizedBox(width: ELayout.spaceSm),
-                  Text('Pull bank transactions'),
-                ],
-              ),
+              child: _pullButtonLabel(status.lastSyncedAt),
             ),
             const SizedBox(width: ELayout.spaceSm),
-            const HelpTooltip(
-              message:
-                  'Since the last SimpleFIN update. Window starts 2 days '
-                  'before that pull so late posts aren\'t missed. '
-                  'Already-saved rows are updated, not duplicated.',
-            ),
+            HelpTooltip(message: _pullHelp(status.lastSyncedAt)),
           ],
         ),
       ],
     );
+  }
+
+  Widget _pullButtonLabel(DateTime? lastSuccessfulPull) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        const Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.sync, size: 18),
+            SizedBox(width: ELayout.spaceSm),
+            Text('Pull bank transactions'),
+          ],
+        ),
+        Text(
+          _pullSinceLine(lastSuccessfulPull),
+          style: const TextStyle(fontSize: 11, height: 1.2),
+        ),
+      ],
+    );
+  }
+
+  /// One start for every bank: 2 days before the last successful pull, or the
+  /// past 2 years when nothing has been pulled yet.
+  String _pullSinceLine(DateTime? lastSuccessfulPull) {
+    if (lastSuccessfulPull == null) {
+      return 'Past 2 years · same for every bank';
+    }
+    final since = SimpleFinPullWindows.sinceLastPull(
+      lastPull: lastSuccessfulPull,
+      now: DateTime.now().toUtc(),
+    ).start.toLocal();
+    return 'Since ${DateFormat.yMMMd().format(since)} · same for every bank';
+  }
+
+  String _pullHelp(DateTime? lastSuccessfulPull) {
+    if (lastSuccessfulPull == null) {
+      return 'Nothing has been pulled yet, so this loads about 2 years. '
+          'Every bank uses that same window.';
+    }
+    return 'Starts 2 days before the last successful pull so late posts '
+        'aren’t missed. Every bank uses that same start. '
+        'Already-saved rows are updated, not duplicated.';
   }
 
   Future<void> _connect() async {

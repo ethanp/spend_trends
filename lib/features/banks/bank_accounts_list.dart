@@ -35,10 +35,7 @@ class _BankAccountsListState() extends ConsumerState<BankAccountsList> {
         Text(_caption, style: EText.caption),
         const SizedBox(height: ELayout.spaceMd),
         ..._institutionGroups(),
-        if (widget.status.errors.isNotEmpty) ...[
-          const SizedBox(height: ELayout.spaceMd),
-          ...widget.status.errors.map(_bridgeError),
-        ],
+        ..._otherBridgeErrors(),
         if (widget.actionError != null) ...[
           const SizedBox(height: ELayout.spaceSm),
           SelectableText(
@@ -190,6 +187,18 @@ class _BankAccountsListState() extends ConsumerState<BankAccountsList> {
         ],
       ),
     );
+  }
+
+  List<Widget> _otherBridgeErrors() {
+    final otherErrors = [
+      for (final error in widget.status.errors)
+        if (!error.asksToReauthenticate) error,
+    ];
+    if (otherErrors.isEmpty) return const [];
+    return [
+      const SizedBox(height: ELayout.spaceMd),
+      for (final error in otherErrors) _bridgeError(error),
+    ];
   }
 
   Widget _bridgeError(SimpleFinError error) {

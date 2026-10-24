@@ -1,5 +1,6 @@
 import 'package:spend_trends/domain/category.dart';
 import 'package:spend_trends/domain/category_group.dart';
+import 'package:spend_trends/domain/conscious_spending_area.dart';
 
 /// Built-in categories with stable ids.
 ///
@@ -13,8 +14,14 @@ enum SpecialCategory({
   required final int sortOrder,
   final bool countsAsIncome = false,
   final String? defaultGroupId,
+  final ConsciousSpendingArea? defaultConsciousSpendingArea,
 }) {
-  housing(id: 'cat_housing', name: 'Housing', sortOrder: 3),
+  housing(
+    id: 'cat_housing',
+    name: 'Housing',
+    sortOrder: 3,
+    defaultConsciousSpendingArea: ConsciousSpendingArea.fixedCosts,
+  ),
   income(
     id: 'cat_income',
     name: 'Income',
@@ -102,6 +109,7 @@ enum SpecialCategory({
     sortOrder: sortOrder,
     archived: archived,
     groupId: defaultGroupId,
+    consciousSpendingArea: defaultConsciousSpendingArea,
   );
 }
 

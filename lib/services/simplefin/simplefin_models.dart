@@ -4,8 +4,31 @@ class const SimpleFinError({
   final String? connId,
   final String? accountId,
 }) {
+  static final _connectionAttention = RegExp(
+    r'^Connection to (.+?) may need attention\b',
+    caseSensitive: false,
+  );
+
   bool get isAuthFailure =>
       code == 'con.auth' || code.startsWith('con.auth') || code == 'gen.auth';
+
+  /// SimpleFIN is asking for new bank credentials.
+  bool get asksToReauthenticate {
+    if (isAuthFailure) return true;
+    final lower = message.toLowerCase();
+    return lower.contains('auth required') ||
+        lower.contains('authentication required');
+  }
+
+  /// Bank name inside "Connection to {name} may need attention".
+  String? get attentionConnectionName {
+    final name = _connectionAttention
+        .firstMatch(message.trim())
+        ?.group(1)
+        ?.trim();
+    if (name == null || name.isEmpty) return null;
+    return name;
+  }
 
   factory fromJson(Map<String, dynamic> json) {
     return SimpleFinError(
@@ -14,6 +37,25 @@ class const SimpleFinError({
       connId: json['conn_id'] as String?,
       accountId: json['account_id'] as String?,
     );
+  }
+}
+
+/// Unique banks whose credentials SimpleFIN asked us to fix.
+class SimpleFinAuthConnections.fromErrors(List<SimpleFinError> errors) {
+  final List<String> names = _uniqueNames(errors);
+
+  bool get isEmpty => names.isEmpty;
+
+  static List<String> _uniqueNames(List<SimpleFinError> errors) {
+    final names = <String>[];
+    final seen = <String>{};
+    for (final error in errors) {
+      if (!error.asksToReauthenticate) continue;
+      final name = error.attentionConnectionName ?? error.message.trim();
+      if (name.isEmpty || !seen.add(name.toLowerCase())) continue;
+      names.add(name);
+    }
+    return names;
   }
 }
 

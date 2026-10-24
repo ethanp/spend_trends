@@ -1,5 +1,6 @@
 import 'package:ethan_ui/ethan_ui.dart';
 import 'package:flutter/material.dart';
+import 'package:spend_trends/domain/conscious_spending_area.dart';
 import 'package:spend_trends/theme/finance_colors.dart';
 
 /// Series ids, colors, and shared Trends chart constants.
@@ -14,10 +15,14 @@ class TrendChartCatalog._() {
   static const housingAffordabilitySeriesId = '__housing_30__';
   static const fireSavingsGuideSeriesId = '__savings_25__';
   static const groupSeriesIdPrefix = 'group:';
+  static const consciousSpendingAreaSeriesIdPrefix = 'area:';
   static const accountSeriesIdPrefix = 'account:';
   static const ownedAssetSeriesIdPrefix = 'owned_asset:';
 
   static String groupSeriesId(String groupId) => '$groupSeriesIdPrefix$groupId';
+
+  static String consciousSpendingAreaSeriesId(ConsciousSpendingArea area) =>
+      '$consciousSpendingAreaSeriesIdPrefix${area.name}';
 
   static String accountSeriesId(String accountId) =>
       '$accountSeriesIdPrefix$accountId';
