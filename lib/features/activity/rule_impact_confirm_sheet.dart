@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:spend_trends/domain/category.dart';
 import 'package:spend_trends/domain/category_group.dart';
+import 'package:spend_trends/domain/rule_change_plan.dart';
 import 'package:spend_trends/domain/transaction.dart';
 import 'package:spend_trends/features/activity/contains_pattern_rematch.dart';
 import 'package:spend_trends/features/activity/existing_rule_overlaps.dart';
@@ -13,7 +14,6 @@ import 'package:spend_trends/theme/finance_colors.dart';
 import 'package:spend_trends/widgets/app_primary_button.dart';
 import 'package:spend_trends/widgets/app_sheet_panel.dart';
 import 'package:spend_trends/widgets/category_picker.dart';
-import 'package:spend_trends/widgets/select_all_none_row.dart';
 
 export 'package:spend_trends/features/activity/overlapping_merchant_contains_rules.dart';
 
@@ -39,30 +39,22 @@ class const RuleImpactGroup({
   }
 }
 
-/// Confirmed selection plus final (possibly edited) rule groups.
-class const RuleImpactConfirmResult({
-  required final Set<String> selectedTransactionIds,
-  required final List<RuleImpactGroup> groups,
-});
-
-/// Confirms which matching transactions should receive the new rule’s category.
+/// Confirms proposed contains-rules before they are created.
 ///
-/// Lets you edit the contains pattern; rematches live and reveals existing
-/// rules that are a substring or superstring of the candidate.
+/// Each rule takes every transaction it matches unless a more specific rule
+/// wins; the list shows exactly those. Lets you edit the pattern (rematches
+/// live) and reveals existing rules that overlap the candidate.
 class const RuleImpactConfirmSheet({
   required final List<RuleImpactGroup> groups,
 }) extends ConsumerStatefulWidget {
-  static Future<RuleImpactConfirmResult?> show(
+  /// The confirmed (possibly edited) groups, or null when cancelled.
+  static Future<List<RuleImpactGroup>?> show(
     BuildContext context, {
     required List<RuleImpactGroup> groups,
   }) {
-    if (groups.isEmpty) {
-      return Future.value(
-        const RuleImpactConfirmResult(selectedTransactionIds: {}, groups: []),
-      );
-    }
+    if (groups.isEmpty) return Future.value(const []);
 
-    return showModalBottomSheet<RuleImpactConfirmResult>(
+    return showModalBottomSheet<List<RuleImpactGroup>>(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
@@ -81,7 +73,6 @@ class _RuleImpactConfirmSheetState()
   late final List<FocusNode> _patternFocusNodes;
   late final List<ContainsPatternRematch> _rematches;
   late List<RuleImpactGroup> _groups;
-  late final Set<String> _selectedIds;
 
   @override
   void initState() {
@@ -91,16 +82,17 @@ class _RuleImpactConfirmSheetState()
       for (final group in _groups) TextEditingController(text: group.pattern),
     ];
     _patternFocusNodes = [for (final _ in _groups) FocusNode()];
-    _selectedIds = {
-      for (final group in _groups)
-        for (final transaction in group.transactions) transaction.id,
-    };
     _rematches = [
       for (var groupIndex = 0; groupIndex < _groups.length; groupIndex++)
         ContainsPatternRematch(
           fetchMatches: (pattern) async {
             final categorizer = await ref.read(categorizerProvider.future);
-            return categorizer.transactionsMatchingContains(pattern);
+            return categorizer.transactionsClaimedBy(
+              RuleDraft(
+                pattern: pattern,
+                categoryId: _groups[groupIndex].categoryId,
+              ),
+            );
           },
           notify: () => _replaceGroupWithRematch(groupIndex),
         ),
@@ -113,20 +105,10 @@ class _RuleImpactConfirmSheetState()
   void _replaceGroupWithRematch(int groupIndex) {
     if (!mounted) return;
     setState(() {
-      final rematch = _rematches[groupIndex];
-      final previousIds = {
-        for (final transaction in _groups[groupIndex].transactions)
-          transaction.id,
-      };
       _groups[groupIndex] = _groups[groupIndex].copyWith(
         pattern: _patternControllers[groupIndex].text.trim(),
-        transactions: rematch.matches,
+        transactions: _rematches[groupIndex].matches,
       );
-      if (rematch.rematching) return;
-      _selectedIds.removeAll(previousIds);
-      _selectedIds.addAll([
-        for (final transaction in rematch.matches) transaction.id,
-      ]);
     });
   }
 
@@ -192,28 +174,18 @@ class _RuleImpactConfirmSheetState()
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Apply rule to existing?', style: EText.section),
+          Text('Create rules?', style: EText.section),
           const SizedBox(height: ELayout.spaceXs),
           Text(
             _matchCount == 0
-                ? 'Edit the contains pattern below. Matching transactions '
-                      'appear as you type. The rule still applies to future matches.'
-                : 'These $_matchCount existing transactions match. '
-                      'Edit the pattern to refine, turn off any that should stay, '
-                      'and the rule will still apply to future matches.',
+                ? 'Edit the contains pattern below. Transactions it would '
+                      'take appear as you type; it also applies to future ones.'
+                : 'These $_matchCount existing transactions move to the '
+                      'rule’s category. Narrow the pattern to leave any out.',
             style: EText.caption,
           ),
-          const SizedBox(height: ELayout.spaceMd),
-          _selectionShortcuts(),
         ],
       ),
-    );
-  }
-
-  Widget _selectionShortcuts() {
-    return SelectAllNoneRow(
-      onAllSelected: _selectAll,
-      onNoneSelected: _selectNone,
     );
   }
 
@@ -302,9 +274,6 @@ class _RuleImpactConfirmSheetState()
             transaction,
             categoryNameById,
           ),
-          selected: _selectedIds.contains(transaction.id),
-          onSelectionChanged: (selected) =>
-              _setSelected(transaction.id, selected),
         ),
       const SizedBox(height: ELayout.spaceLg),
     ];
@@ -351,9 +320,9 @@ class _RuleImpactConfirmSheetState()
             child: AppPrimaryButton(
               onPressed: _confirm,
               child: Text(
-                _selectedIds.isEmpty
-                    ? 'Create rule only'
-                    : 'Apply to ${_selectedIds.length}',
+                _groups.length == 1
+                    ? 'Create rule'
+                    : 'Create ${_groups.length} rules',
               ),
             ),
           ),
@@ -372,37 +341,7 @@ class _RuleImpactConfirmSheetState()
     for (final group in finalizedGroups) {
       if (group.pattern.isEmpty) return;
     }
-    Navigator.of(context).pop(
-      RuleImpactConfirmResult(
-        selectedTransactionIds: Set<String>.from(_selectedIds),
-        groups: finalizedGroups,
-      ),
-    );
-  }
-
-  void _setSelected(String transactionId, bool selected) {
-    setState(() {
-      if (selected) {
-        _selectedIds.add(transactionId);
-      } else {
-        _selectedIds.remove(transactionId);
-      }
-    });
-  }
-
-  void _selectAll() {
-    setState(() {
-      _selectedIds
-        ..clear()
-        ..addAll([
-          for (final group in _groups)
-            for (final transaction in group.transactions) transaction.id,
-        ]);
-    });
-  }
-
-  void _selectNone() {
-    setState(_selectedIds.clear);
+    Navigator.of(context).pop(finalizedGroups);
   }
 }
 

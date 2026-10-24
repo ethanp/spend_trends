@@ -32,7 +32,7 @@ void main() {
           rawDescription: 'Seed',
           normalizedMerchant: 'SEED',
           pending: false,
-          userCategoryId: 'cat_dining',
+          categoryId: 'cat_dining',
         ),
         for (final spike in spikeSpecs)
           BankTransaction(
@@ -44,7 +44,7 @@ void main() {
             rawDescription: spike.merchant,
             normalizedMerchant: spike.merchant,
             pending: false,
-            userCategoryId: 'cat_dining',
+            categoryId: 'cat_dining',
           ),
       ];
 
@@ -143,7 +143,7 @@ void main() {
         rawDescription: 'Seed',
         normalizedMerchant: 'SEED',
         pending: false,
-        userCategoryId: 'cat_housing',
+        categoryId: 'cat_housing',
       ),
       BankTransaction(
         id: 'rent',
@@ -154,7 +154,7 @@ void main() {
         rawDescription: 'Rent',
         normalizedMerchant: 'RENT',
         pending: false,
-        userCategoryId: 'cat_housing',
+        categoryId: 'cat_housing',
       ),
       BankTransaction(
         id: 'earnest',
@@ -165,7 +165,7 @@ void main() {
         rawDescription: 'Incoming wire - earnest money',
         normalizedMerchant: 'EARNEST MONEY',
         pending: false,
-        userCategoryId: 'cat_housing',
+        categoryId: 'cat_housing',
       ),
     ];
 
@@ -210,7 +210,7 @@ void main() {
         rawDescription: 'Pay',
         normalizedMerchant: 'PAY',
         pending: false,
-        userCategoryId: 'cat_income',
+        categoryId: 'cat_income',
       ),
     ];
     final bundle = const BuildTrendsCharts().build(

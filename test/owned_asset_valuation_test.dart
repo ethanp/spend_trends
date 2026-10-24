@@ -112,10 +112,10 @@ void main() {
     expect(owned.valueCentsOn(DateTime(2024, 1, 5)), 0);
     expect(owned.currentValueCents, 0);
     expect(owned.latestValueCents, 25000000);
-    expect(
-      owned.dailyCents([DateTime(2024, 1, 3), DateTime(2024, 1, 4)]),
-      [25000000.0, 0.0],
-    );
+    expect(owned.dailyCents([DateTime(2024, 1, 3), DateTime(2024, 1, 4)]), [
+      25000000.0,
+      0.0,
+    ]);
   });
 
   test('a future sold date still counts the latest value today', () {

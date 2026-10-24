@@ -3,28 +3,6 @@ import 'package:spend_trends/domain/special_category.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  group('SpecialCategory.fromTransactionType', () {
-    test('maps income and transfer types', () {
-      expect(
-        SpecialCategory.fromTransactionType('income'),
-        SpecialCategory.income,
-      );
-      expect(
-        SpecialCategory.fromTransactionType('Internal Transfer'),
-        SpecialCategory.transfer,
-      );
-      expect(
-        SpecialCategory.fromTransactionType('transfer'),
-        SpecialCategory.transfer,
-      );
-      expect(SpecialCategory.fromTransactionType('regular'), isNull);
-    });
-
-    test('does not map housing from transaction type', () {
-      expect(SpecialCategory.fromTransactionType('housing'), isNull);
-    });
-  });
-
   group('SpecialCategory ids', () {
     test('are stable built-in ids', () {
       expect(SpecialCategory.housing.id, 'cat_housing');
@@ -70,15 +48,19 @@ void main() {
       );
     });
 
-    test('income ids include investments and exclude transfer', () {
+    test('income ids are paychecks only, not investments or transfer', () {
       expect(SpecialCategory.isIncomeId(SpecialCategory.income.id), isTrue);
       expect(
         SpecialCategory.isIncomeId(SpecialCategory.investments.id),
-        isTrue,
+        isFalse,
       );
       expect(SpecialCategory.isIncomeId(SpecialCategory.transfer.id), isFalse);
       expect(SpecialCategory.isInvestmentsName('Investments'), isTrue);
-      expect(SpecialCategory.investments.asSpendCategory().isIncome, isTrue);
+      expect(SpecialCategory.investments.asSpendCategory().isIncome, isFalse);
+      expect(
+        SpecialCategory.investments.asSpendCategory().isInvestments,
+        isTrue,
+      );
       expect(SpecialCategory.transfer.asSpendCategory().isIncome, isFalse);
     });
   });

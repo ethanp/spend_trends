@@ -107,8 +107,7 @@ class CategoriesRepository(final PowerSyncDatabase _powerSync) {
     required String categoryId,
     required String name,
   }) async {
-    if (categoryId == SpecialCategory.income.id ||
-        categoryId == SpecialCategory.transfer.id) {
+    if (SpecialCategory.lockedIds.contains(categoryId)) {
       throw StateError('Built-in categories cannot be renamed.');
     }
     final trimmedName = name.trim();
@@ -229,15 +228,7 @@ class CategoriesRepository(final PowerSyncDatabase _powerSync) {
     required String intoCategoryId,
   }) async {
     await _powerSync.execute(
-      'UPDATE transactions SET user_category_id = ? WHERE user_category_id = ?',
-      [intoCategoryId, fromCategoryId],
-    );
-    await _powerSync.execute(
-      '''
-      UPDATE transactions
-      SET suggested_category_id = ?
-      WHERE suggested_category_id = ?
-      ''',
+      'UPDATE transactions SET category_id = ? WHERE category_id = ?',
       [intoCategoryId, fromCategoryId],
     );
     await _powerSync.execute(
@@ -248,26 +239,58 @@ class CategoriesRepository(final PowerSyncDatabase _powerSync) {
 
   Future<List<CategorizationRule>> listRules() async {
     final rows = await _powerSync.getAll(
-      'SELECT * FROM categorization_rules ORDER BY priority DESC, pattern',
+      'SELECT * FROM categorization_rules ORDER BY pattern',
     );
     return rows.map(_ruleFromRow).toList();
   }
 
-  Future<void> upsertRule(CategorizationRule rule) async {
-    await _powerSync.upsert('categorization_rules', {
-      'id': rule.id,
-      'match_type': rule.matchType.storageValue,
-      'pattern': rule.pattern,
-      'category_id': rule.categoryId,
-      'priority': rule.priority,
-      'account_id': rule.accountId,
+  /// Upserts and deletes rules in one write. Use [Categorizer.applyRuleChanges]
+  /// so the transactions the rules move are rewritten too.
+  Future<void> writeRuleChanges({
+    required List<CategorizationRule> upserts,
+    required Set<String> deletedRuleIds,
+  }) async {
+    await _powerSync.writeTransaction((tx) async {
+      for (final rule in upserts) {
+        final ruleColumns = [
+          rule.matchType.storageValue,
+          rule.pattern,
+          rule.categoryId,
+          rule.accountId,
+          rule.note,
+        ];
+        final existingRow = await tx.getOptional(
+          'SELECT id FROM categorization_rules WHERE id = ?',
+          [rule.id],
+        );
+        // UPDATE vs INSERT (not REPLACE) so PowerSync uploads the right op.
+        if (existingRow != null) {
+          await tx.execute(
+            '''
+            UPDATE categorization_rules
+            SET match_type = ?, pattern = ?, category_id = ?, account_id = ?,
+                note = ?
+            WHERE id = ?
+            ''',
+            [...ruleColumns, rule.id],
+          );
+          continue;
+        }
+        await tx.execute(
+          '''
+          INSERT INTO categorization_rules
+            (id, match_type, pattern, category_id, account_id, note)
+          VALUES (?, ?, ?, ?, ?, ?)
+          ''',
+          [rule.id, ...ruleColumns],
+        );
+      }
+      for (final ruleId in deletedRuleIds) {
+        await tx.execute('DELETE FROM categorization_rules WHERE id = ?', [
+          ruleId,
+        ]);
+      }
     });
-  }
-
-  Future<void> deleteRule(String ruleId) async {
-    await _powerSync.execute('DELETE FROM categorization_rules WHERE id = ?', [
-      ruleId,
-    ]);
   }
 
   Future<SpendCategory> _requireCategory(String categoryId) async {
@@ -323,8 +346,8 @@ class CategoriesRepository(final PowerSyncDatabase _powerSync) {
       matchType: RuleMatchType.fromStorage(columns['match_type'] as String),
       pattern: columns['pattern'] as String,
       categoryId: columns['category_id'] as String,
-      priority: columns['priority'].asInt(),
       accountId: columns['account_id'] as String?,
+      note: columns['note'] as String?,
     );
   }
 }

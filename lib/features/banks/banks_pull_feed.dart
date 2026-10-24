@@ -103,7 +103,9 @@ class _BanksPullFeedState() extends ConsumerState<BanksPullFeed> {
             if (liveSession != null && viewingLive) _liveStatus(liveSession),
             if (!viewingLive && selectedPull != null)
               _historicalStatus(pull: selectedPull, pulls: pulls),
-            if (liveSession != null && viewingLive && !liveSession.finished) ...[
+            if (liveSession != null &&
+                viewingLive &&
+                !liveSession.finished) ...[
               const SizedBox(height: ELayout.spaceMd),
               BanksPullBankBars(
                 banks: liveSession.banks,
@@ -328,8 +330,9 @@ class _BanksPullFeedState() extends ConsumerState<BanksPullFeed> {
     for (final pull in pulls) {
       if (pull.status == SimpleFinPullStatus.running) continue;
       return {
-        for (final name
-            in SimpleFinAuthConnections.fromErrors(pull.errors).names)
+        for (final name in SimpleFinAuthConnections.fromErrors(
+          pull.errors,
+        ).names)
           name.toLowerCase(),
       };
     }

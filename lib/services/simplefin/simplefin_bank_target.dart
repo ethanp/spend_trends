@@ -10,7 +10,7 @@ class const SimpleFinBankTarget({
   static List<SimpleFinBankTarget> fromLocalAccounts(List<Account> accounts) {
     final grouped = <String, List<Account>>{};
     for (final account in accounts) {
-      if (account.isCopilot || account.externalId.isEmpty) continue;
+      if (!account.isFromSimpleFin) continue;
       grouped.putIfAbsent(account.institutionGroupKey, () => []).add(account);
     }
     return _sorted([
@@ -18,14 +18,14 @@ class const SimpleFinBankTarget({
         SimpleFinBankTarget(
           connectionId: group.first.institutionGroupKey,
           name: group.first.institutionDisplayName,
-          accountIds: [
-            for (final account in group) account.externalId,
-          ],
+          accountIds: [for (final account in group) account.externalId],
         ),
     ]);
   }
 
-  static List<SimpleFinBankTarget> fromAccountSet(SimpleFinAccountSet accountSet) {
+  static List<SimpleFinBankTarget> fromAccountSet(
+    SimpleFinAccountSet accountSet,
+  ) {
     return _groupedTargets(accountSet.accounts);
   }
 

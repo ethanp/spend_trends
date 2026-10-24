@@ -329,26 +329,12 @@ class BanksPullLiveSession() extends Notifier<BanksPullLiveSessionState?> {
     required RuleMatchIndex ruleMatchIndex,
   }) {
     if (bankTransaction == null) return pulled;
-    final explaining = ruleMatchIndex.explainingRule(bankTransaction);
-    if (explaining != null) {
-      return pulled.withCategorization(
-        categoryId: explaining.categoryId,
-        categoryName: categoryNameById[explaining.categoryId],
-        matchedRulePattern: explaining.pattern,
-      );
-    }
-    final categoryId = bankTransaction.effectiveCategoryId;
-    if (categoryId == null) {
-      return pulled.withCategorization(
-        categoryId: null,
-        categoryName: null,
-        matchedRulePattern: null,
-      );
-    }
+    final categoryId = bankTransaction.categoryId;
     return pulled.withCategorization(
       categoryId: categoryId,
       categoryName: categoryNameById[categoryId],
-      matchedRulePattern: null,
+      matchedRulePattern:
+          ruleMatchIndex.rulesById[bankTransaction.categoryRuleId]?.pattern,
     );
   }
 

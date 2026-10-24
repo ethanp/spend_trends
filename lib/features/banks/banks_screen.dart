@@ -14,6 +14,7 @@ import 'package:spend_trends/features/activity/transactions_list_provider.dart';
 import 'package:spend_trends/features/owned_assets/owned_assets_providers.dart';
 import 'package:spend_trends/providers/spend_data_changed.dart';
 import 'package:spend_trends/widgets/app_browse_split_shell.dart';
+
 import 'connection_status.dart';
 
 /// Everyday SimpleFIN connect / accounts / sync.

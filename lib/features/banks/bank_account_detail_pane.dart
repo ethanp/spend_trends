@@ -1,7 +1,9 @@
 import 'package:ethan_ui/ethan_ui.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
 import 'package:spend_trends/domain/account.dart';
+import 'package:spend_trends/domain/account_balance_snapshot.dart';
 import 'package:spend_trends/domain/category.dart';
 import 'package:spend_trends/domain/category_group.dart';
 import 'package:spend_trends/domain/transaction.dart';
@@ -13,6 +15,7 @@ import 'package:spend_trends/features/trends/net_worth_trend.dart';
 
 import 'bank_account_options.dart';
 import 'banks_providers.dart';
+import 'manual_account_balances.dart';
 
 class const BankAccountDetailPane({required final Account account})
     extends ConsumerWidget {
@@ -24,6 +27,8 @@ class const BankAccountDetailPane({required final Account account})
     final AsyncValue<Map<String, Account>> accountsAsync = ref.watch(
       accountsMapProvider,
     );
+    final List<AccountBalanceSnapshot> balanceSnapshots =
+        ref.watch(accountBalanceSnapshotsProvider).asData?.value ?? const [];
     return ListView(
       padding: ETabBarOverlay.paddingOf(context),
       children: [
@@ -32,7 +37,15 @@ class const BankAccountDetailPane({required final Account account})
         _balanceHistorySection(
           transactionsAsync: transactionsAsync,
           accountsAsync: accountsAsync,
+          balanceSnapshots: balanceSnapshots,
         ),
+        if (account.isManual) ...[
+          const SizedBox(height: ELayout.spaceLg),
+          ManualAccountBalances(
+            account: account,
+            balanceSnapshots: balanceSnapshots,
+          ),
+        ],
       ],
     );
   }
@@ -47,6 +60,20 @@ class const BankAccountDetailPane({required final Account account})
         if (account.isCopilot) ...[
           const SizedBox(height: ELayout.spaceXs),
           Text('Copilot import', style: EText.caption),
+        ],
+        if (account.isManual) ...[
+          const SizedBox(height: ELayout.spaceXs),
+          Text(
+            account.balanceAsOf == null
+                ? 'Manual · no balance recorded'
+                : 'Manual · balance as of '
+                      '${DateFormat.yMMMd().format(account.balanceAsOf!)}',
+            style: EText.caption.copyWith(
+              color: account.isManualBalanceStale(DateTime.now())
+                  ? EColors.warning
+                  : null,
+            ),
+          ),
         ],
         const SizedBox(height: ELayout.spaceLg),
         Text(
@@ -64,6 +91,7 @@ class const BankAccountDetailPane({required final Account account})
   Widget _balanceHistorySection({
     required AsyncValue<List<BankTransaction>> transactionsAsync,
     required AsyncValue<Map<String, Account>> accountsAsync,
+    required List<AccountBalanceSnapshot> balanceSnapshots,
   }) {
     if (transactionsAsync.hasError) {
       return Text(
@@ -88,18 +116,21 @@ class const BankAccountDetailPane({required final Account account})
     return _balanceHistory(
       transactions: transactions,
       accounts: accounts.values.toList(),
+      balanceSnapshots: balanceSnapshots,
     );
   }
 
   Widget _balanceHistory({
     required List<BankTransaction> transactions,
     required List<Account> accounts,
+    required List<AccountBalanceSnapshot> balanceSnapshots,
   }) {
     final CategoryTrendSeries? accountSeries =
         NetWorthTrend.balanceHistorySeries(
           account: account,
           accounts: accounts,
           transactions: transactions,
+          balanceSnapshots: balanceSnapshots,
         );
     if (accountSeries == null || !accountSeries.canPlot) {
       return Text(
@@ -110,9 +141,11 @@ class const BankAccountDetailPane({required final Account account})
     }
     return CategoryTrendChart(
       title: 'Balance history',
-      titleHelp:
-          'Daily balance reconstructed from the current balance and posted '
-          'transactions. Hover the chart to inspect a date.',
+      titleHelp: account.isManual
+          ? 'Each recorded balance holds until the next one. '
+                'Hover the chart to inspect a date.'
+          : 'Daily balance reconstructed from the current balance and posted '
+                'transactions. Hover the chart to inspect a date.',
       subtitle: null,
       seriesList: [accountSeries],
       transactions: const <BankTransaction>[],

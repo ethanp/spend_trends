@@ -212,7 +212,7 @@ class _OverviewSpend() {
             rawDescription: 'Payroll',
             normalizedMerchant: 'PAYROLL',
             pending: false,
-            userCategoryId: incomeCategory.id,
+            categoryId: incomeCategory.id,
           ),
           BankTransaction(
             id: 'coffee-$index',
@@ -223,7 +223,7 @@ class _OverviewSpend() {
             rawDescription: 'Coffee Shop',
             normalizedMerchant: 'COFFEE SHOP',
             pending: false,
-            userCategoryId: coffee.id,
+            categoryId: coffee.id,
           ),
           BankTransaction(
             id: 'grocery-$index',
@@ -234,7 +234,7 @@ class _OverviewSpend() {
             rawDescription: 'Grocery',
             normalizedMerchant: 'GROCERY',
             pending: false,
-            userCategoryId: grocery.id,
+            categoryId: grocery.id,
           ),
           BankTransaction(
             id: 'housing-$index',
@@ -245,7 +245,7 @@ class _OverviewSpend() {
             rawDescription: 'Housing',
             normalizedMerchant: 'HOUSING',
             pending: false,
-            userCategoryId: housingCategory.id,
+            categoryId: housingCategory.id,
           ),
         ]);
         index += 1;

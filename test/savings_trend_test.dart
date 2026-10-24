@@ -19,7 +19,7 @@ void main() {
           rawDescription: 'Pay',
           normalizedMerchant: 'PAY',
           pending: false,
-          userCategoryId: SpecialCategory.income.id,
+          categoryId: SpecialCategory.income.id,
         ),
         BankTransaction(
           id: 'spend$dayOffset',
@@ -30,7 +30,7 @@ void main() {
           rawDescription: 'Shop',
           normalizedMerchant: 'SHOP',
           pending: false,
-          userCategoryId: 'cat_dining',
+          categoryId: 'cat_dining',
         ),
       ],
     ];

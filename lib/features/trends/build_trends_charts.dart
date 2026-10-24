@@ -1,4 +1,5 @@
 import 'package:spend_trends/domain/account.dart';
+import 'package:spend_trends/domain/account_balance_snapshot.dart';
 import 'package:spend_trends/domain/category.dart';
 import 'package:spend_trends/domain/category_group.dart';
 import 'package:spend_trends/domain/owned_asset.dart';
@@ -6,6 +7,7 @@ import 'package:spend_trends/domain/special_category.dart';
 import 'package:spend_trends/domain/transaction.dart';
 import 'package:spend_trends/features/trends/cash_flow_trend_builder.dart';
 import 'package:spend_trends/features/trends/category_spend_trend_builder.dart';
+import 'package:spend_trends/features/trends/conscious_spending_numbers.dart';
 import 'package:spend_trends/features/trends/net_worth_trend.dart';
 import 'package:spend_trends/features/trends/trend_chart_catalog.dart';
 import 'package:spend_trends/features/trends/trends_chart_bundle.dart';
@@ -19,6 +21,7 @@ class const BuildTrendsCharts() {
     List<CategoryGroup> groups = const [],
     List<Account> accounts = const [],
     List<OwnedAssetWithValuations> ownedAssets = const [],
+    List<AccountBalanceSnapshot> balanceSnapshots = const [],
     DateTime? endDate,
   }) {
     final chartEnd = (endDate ?? DateTime.now()).startOfDay;
@@ -40,6 +43,14 @@ class const BuildTrendsCharts() {
     final cashFlowMaps = CashFlowDailyMaps.fromTransactions(
       inRangeTransactions,
       categories: categories,
+      accounts: accounts,
+    );
+
+    final consciousSpendingNumbers = ConsciousSpendingNumbers.endingOn(
+      transactions: transactions,
+      categories: categories,
+      accounts: accounts,
+      today: chartEnd,
     );
 
     final chartRange = _resolveChartRange(
@@ -52,15 +63,16 @@ class const BuildTrendsCharts() {
       chartEnd: chartEnd,
     );
     if (chartRange == null) {
-      return const TrendsChartBundle(
-        categorySpend: [],
-        cashFlows: [],
-        netWorth: [],
+      return TrendsChartBundle(
+        categorySpend: const [],
+        cashFlows: const [],
+        consciousSpendingNumbers: consciousSpendingNumbers,
       );
     }
 
     final hasSpendHistory = chartRange.hasSpendHistory;
     return TrendsChartBundle(
+      consciousSpendingNumbers: consciousSpendingNumbers,
       categorySpend: hasSpendHistory
           ? CategorySpendTrendBuilder(
               spendMaps: spendMaps,
@@ -84,6 +96,7 @@ class const BuildTrendsCharts() {
         transactions: inRangeTransactions,
         chartDates: chartRange.dates,
         ownedAssets: ownedAssets,
+        balanceSnapshots: balanceSnapshots,
       ),
     );
   }

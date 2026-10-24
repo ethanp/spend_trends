@@ -58,8 +58,6 @@ class _BanksPullTransactionListState()
       investmentAccountIds: CancelingMerchantPairs.investmentIdsFrom(accounts),
     );
     final ruleMatchIndex = RuleMatchIndex(rules);
-    final explainingByTransactionId = ruleMatchIndex
-        .explainingRulesByTransactionId(visible);
 
     if (widget.transactions.isEmpty) {
       return AppCard(
@@ -118,7 +116,6 @@ class _BanksPullTransactionListState()
                       accounts: accounts,
                       categories: categories,
                       columnWidths: allocatedWidths,
-                      explainingByTransactionId: explainingByTransactionId,
                       ruleMatchIndex: ruleMatchIndex,
                       offsettingIds: offsettingIds,
                     ),
@@ -191,7 +188,6 @@ class _BanksPullTransactionListState()
     required Map<String, Account> accounts,
     required Map<String, SpendCategory> categories,
     required ActivityColumnWidths columnWidths,
-    required Map<String, CategorizationRule?> explainingByTransactionId,
     required RuleMatchIndex ruleMatchIndex,
     required Set<String> offsettingIds,
   }) {
@@ -210,16 +206,12 @@ class _BanksPullTransactionListState()
 
     final transaction = (listItem as ActivityDayTransactionItem).transaction;
     final account = accounts[transaction.accountId];
-    final category = categories[transaction.effectiveCategoryId];
-    final explainingRule =
-        explainingByTransactionId[transaction.id] ??
-        ruleMatchIndex.explainingRule(transaction);
+    final category = categories[transaction.categoryId];
+    final CategorizationRule? categorizingRule =
+        ruleMatchIndex.rulesById[transaction.categoryRuleId];
     final isOffsetting = offsettingIds.contains(transaction.id);
-    final String? categoryCaption =
-        explainingRule != null &&
-            explainingRule.beatsImportDefault &&
-            category != null
-        ? '${explainingRule.pattern} → ${category.name}'
+    final String? categoryCaption = categorizingRule != null && category != null
+        ? '${categorizingRule.pattern} → ${category.name}'
         : null;
 
     return ActivityTransactionTile(
@@ -230,10 +222,10 @@ class _BanksPullTransactionListState()
       selected: widget.selectedTransactionId == transaction.id,
       columnWidths: columnWidths,
       onActivated: () => _selectTransaction(transaction),
-      onRuleSelected:
-          explainingRule != null && explainingRule.beatsImportDefault
-          ? () => ManageRuleSheet.show(context, ref: ref, rule: explainingRule)
-          : null,
+      onRuleSelected: categorizingRule == null
+          ? null
+          : () =>
+                ManageRuleSheet.show(context, ref: ref, rule: categorizingRule),
       extraTrailing: isOffsetting
           ? const Tooltip(
               message: 'Offsets another transaction in this pull',

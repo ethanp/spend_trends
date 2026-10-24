@@ -124,7 +124,7 @@ class BanksController() extends Notifier<BanksActionState> {
 
   Future<void> _applyCategoryRules() async {
     final categorizer = await ref.read(categorizerProvider.future);
-    await categorizer.applyRulesToUncategorized();
+    await categorizer.recategorizeAll();
   }
 
   Future<void> _runBusyAction(Future<void> Function() action) async {

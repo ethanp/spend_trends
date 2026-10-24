@@ -53,7 +53,6 @@ class _ActivityScreenState() extends ConsumerState<ActivityScreen> {
 
   final _searchController = TextEditingController();
   String _searchQuery = '';
-  bool _hideRuleMatched = true;
   bool _uncategorizedOnly = false;
   String? _selectedTransactionId;
 
@@ -131,7 +130,6 @@ class _ActivityScreenState() extends ConsumerState<ActivityScreen> {
       categories: browseData.categories,
       rules: browseData.rules,
       searchQuery: _searchQuery,
-      hideRuleMatched: _hideRuleMatched,
       uncategorizedOnly: _uncategorizedOnly,
     ).run();
     return _ActivityListSnapshot(
@@ -161,11 +159,11 @@ class _ActivityScreenState() extends ConsumerState<ActivityScreen> {
         ActivityFilterBar(
           searchController: _searchController,
           onSearchChanged: (query) => setState(() => _searchQuery = query),
-          hideRuleMatched: _hideRuleMatched,
+          uncategorizedOnly: _uncategorizedOnly,
           searchMatchCount: snapshot.filtered.searchMatchCount,
           visibleCount: snapshot.filtered.visible.length,
-          onHideRuleMatchedChanged: (hide) {
-            setState(() => _hideRuleMatched = hide);
+          onUncategorizedOnlyChanged: (uncategorizedOnly) {
+            setState(() => _uncategorizedOnly = uncategorizedOnly);
           },
         ),
         if (!AppBrowseSplitShell.isSplit(context))
@@ -202,7 +200,6 @@ class _ActivityScreenState() extends ConsumerState<ActivityScreen> {
       onUncategorizedFilterApplied: () {
         setState(() {
           _uncategorizedOnly = true;
-          _hideRuleMatched = false;
           _selectedTransactionId = null;
         });
       },
@@ -242,7 +239,6 @@ class _ActivityScreenState() extends ConsumerState<ActivityScreen> {
                   accounts: accounts,
                   categories: categories,
                   ruleMatchIndex: filtered.ruleMatchIndex,
-                  explainingByTransactionId: filtered.explainingByTransactionId,
                   selectedTransactionId: _selectedTransactionId,
                   columnWidths: columnWidths,
                   onTransactionSelected: _selectTransaction,

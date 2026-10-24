@@ -1,15 +1,9 @@
-/// Built-in categories with stable ids (`cat_housing`, `cat_income`,
-/// `cat_transfer`, `cat_investments`). Older data could:
-/// - lack those rows entirely
-/// - store Copilot `transaction_type` income/transfer as a *user* category lock
-///   (so Activity treated them as manual instead of auto-categorized)
-/// - have duplicate named "Housing"/"Income"/"Transfer"/"Investments"
-///   categories from seeds or early imports
+/// Built-in categories with stable ids ([SpecialCategory]). Older data could
+/// lack those rows or have duplicate-named copies from seeds or imports.
 ///
-/// This startup migration upserts the specials, moves type-derived locks onto
-/// `suggested_category_id`, backfills suggested from `transaction_type`,
-/// merges duplicate-named categories onto the canonical ids, and puts Income
-/// + Investments in the Income group. Idempotent.
+/// This startup migration upserts the specials, merges duplicate-named
+/// categories (and their rules) onto the canonical ids, and puts Income in
+/// the Income group. Idempotent.
 library;
 
 import 'package:spend_trends/domain/special_category.dart';
@@ -22,8 +16,6 @@ const _log = ELogger('SpecialCategories');
 Future<void> ensureSpecialCategoriesMigrated(PowerSyncDatabase database) async {
   await ensureIncomeCategoryGroup(database);
   await _upsertSpecialCategories(database);
-  await _releaseTypeDerivedUserLocks(database);
-  await _backfillFromTransactionType(database);
   await _mergeDuplicateNamedCategories(database);
 }
 
@@ -61,58 +53,6 @@ Future<void> _upsertSpecialCategories(PowerSyncDatabase database) async {
   }
 }
 
-/// Older builds wrote type-derived Income/Transfer onto [user_category_id], which
-/// made Activity treat them as manual. Move those locks to suggested.
-Future<void> _releaseTypeDerivedUserLocks(PowerSyncDatabase database) async {
-  await database.execute(
-    '''
-    UPDATE transactions
-    SET user_category_id = NULL, suggested_category_id = ?
-    WHERE user_category_id = ?
-      AND lower(trim(coalesce(transaction_type, ''))) = 'income'
-    ''',
-    [SpecialCategory.income.id, SpecialCategory.income.id],
-  );
-  await database.execute(
-    '''
-    UPDATE transactions
-    SET user_category_id = NULL, suggested_category_id = ?
-    WHERE user_category_id = ?
-      AND lower(trim(coalesce(transaction_type, ''))) IN (
-        'transfer',
-        'internal transfer'
-      )
-    ''',
-    [SpecialCategory.transfer.id, SpecialCategory.transfer.id],
-  );
-}
-
-/// Copilot / import `transaction_type` → suggested category (not a user lock).
-Future<void> _backfillFromTransactionType(PowerSyncDatabase database) async {
-  await database.execute(
-    '''
-    UPDATE transactions
-    SET suggested_category_id = ?
-    WHERE lower(trim(coalesce(transaction_type, ''))) = 'income'
-      AND (user_category_id IS NULL OR trim(user_category_id) = '')
-    ''',
-    [SpecialCategory.income.id],
-  );
-  await database.execute(
-    '''
-    UPDATE transactions
-    SET suggested_category_id = ?
-    WHERE lower(trim(coalesce(transaction_type, ''))) IN (
-      'transfer',
-      'internal transfer'
-    )
-      AND (user_category_id IS NULL OR trim(user_category_id) = '')
-    ''',
-    [SpecialCategory.transfer.id],
-  );
-  _log.fine('Backfilled special categories from transaction_type');
-}
-
 Future<void> _mergeDuplicateNamedCategories(PowerSyncDatabase database) async {
   for (final special in SpecialCategory.values) {
     final duplicateRows = await database.getAll(
@@ -126,15 +66,7 @@ Future<void> _mergeDuplicateNamedCategories(PowerSyncDatabase database) async {
     for (final row in duplicateRows) {
       final duplicateId = row['id'] as String;
       await database.execute(
-        'UPDATE transactions SET user_category_id = ? WHERE user_category_id = ?',
-        [special.id, duplicateId],
-      );
-      await database.execute(
-        '''
-        UPDATE transactions
-        SET suggested_category_id = ?
-        WHERE suggested_category_id = ?
-        ''',
+        'UPDATE transactions SET category_id = ? WHERE category_id = ?',
         [special.id, duplicateId],
       );
       await database.execute(

@@ -175,15 +175,11 @@ class SimpleFinWindowIngester({
       );
     } on SimpleFinFetchException catch (error) {
       if (error.statusCode == 403 || error.statusCode == 402) rethrow;
-      tally.errors.add(
-        SimpleFinError(code: 'fetch', message: error.message),
-      );
+      tally.errors.add(SimpleFinError(code: 'fetch', message: error.message));
       return;
     }
     tally.errors.addAll(catalog.errors);
-    final fetchingIds = {
-      for (final bank in knownBanks) ...bank.accountIds,
-    };
+    final fetchingIds = {for (final bank in knownBanks) ...bank.accountIds};
     final extras = SimpleFinBankTarget.notYetFetching(
       accountSet: catalog,
       fetchingIds: fetchingIds,
@@ -315,7 +311,10 @@ class SimpleFinWindowIngester({
       tally.failedBanks += 1;
       tally.firstFailure ??= error.message;
       tally.errors.add(
-        SimpleFinError(code: 'fetch', message: '${bank.name}: ${error.message}'),
+        SimpleFinError(
+          code: 'fetch',
+          message: '${bank.name}: ${error.message}',
+        ),
       );
       _emitBank(
         onProgress,
@@ -372,7 +371,9 @@ class SimpleFinWindowIngester({
           accountExternalId: remoteAccount.id,
           accountLabel: SimpleFinAccountMapper.labelFor(remoteAccount),
           transactionCount: accountTransactions.length,
-          transactions: List<SimpleFinPulledTransaction>.of(accountTransactions),
+          transactions: List<SimpleFinPulledTransaction>.of(
+            accountTransactions,
+          ),
           accountsDone: index + 1,
           accountsTotal: accounts.length,
         ),

@@ -1,3 +1,4 @@
+import 'package:spend_trends/agent_api/agent_api_server.dart';
 import 'package:spend_trends/features/shell/spend_trends_app.dart';
 import 'package:spend_trends/services/sync/sync_config.dart';
 import 'package:ethan_sync/ethan_sync.dart';
@@ -29,6 +30,8 @@ Future<void> main() async {
       ),
     ],
   );
+
+  await AgentApiServer.startFromEnv(container);
 
   try {
     await SyncLifecycle.start(container);

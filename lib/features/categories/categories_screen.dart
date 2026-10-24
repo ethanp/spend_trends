@@ -15,6 +15,7 @@ import 'package:spend_trends/features/categories/group_editor_sheet.dart';
 import 'package:spend_trends/widgets/app_browse_split_shell.dart';
 import 'package:spend_trends/widgets/app_primary_button.dart';
 import 'package:spend_trends/widgets/app_sheet_panel.dart';
+
 import 'categories_providers.dart';
 
 class const CategoriesScreen() extends ConsumerStatefulWidget {

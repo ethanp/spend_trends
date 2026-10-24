@@ -174,7 +174,7 @@ class _TrendPointContributorsSheetState()
   ) {
     final categoryId =
         _categoryOverrides[contributor.transaction.id] ??
-        contributor.transaction.effectiveCategoryId;
+        contributor.transaction.categoryId;
     if (categoryId == null) return null;
     return categoryById[categoryId];
   }

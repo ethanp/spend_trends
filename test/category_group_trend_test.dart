@@ -180,6 +180,6 @@ BankTransaction _txn({
     rawDescription: categoryId,
     normalizedMerchant: categoryId,
     pending: false,
-    userCategoryId: categoryId,
+    categoryId: categoryId,
   );
 }

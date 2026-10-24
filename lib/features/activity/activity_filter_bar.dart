@@ -4,14 +4,14 @@ import 'package:flutter/material.dart';
 import 'package:spend_trends/domain/transaction.dart';
 import 'package:spend_trends/widgets/app_card.dart';
 
-/// Sticky Activity chrome: search and hide-auto-categorized.
+/// Sticky Activity chrome: search and uncategorized-only.
 class const ActivityFilterBar({
   required final TextEditingController searchController,
   required final ValueChanged<String> onSearchChanged,
-  required final bool hideRuleMatched,
+  required final bool uncategorizedOnly,
   required final int searchMatchCount,
   required final int visibleCount,
-  required final ValueChanged<bool> onHideRuleMatchedChanged,
+  required final ValueChanged<bool> onUncategorizedOnlyChanged,
 }) extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
@@ -35,11 +35,11 @@ class const ActivityFilterBar({
               ),
             ),
             const SizedBox(height: ELayout.spaceSm),
-            _RuleMatchFilterToggle(
-              hideRuleMatched: hideRuleMatched,
+            _UncategorizedOnlyToggle(
+              uncategorizedOnly: uncategorizedOnly,
               hiddenCount: searchMatchCount - visibleCount,
               visibleCount: visibleCount,
-              onChanged: onHideRuleMatchedChanged,
+              onChanged: onUncategorizedOnlyChanged,
             ),
           ],
         ),
@@ -48,8 +48,8 @@ class const ActivityFilterBar({
   }
 }
 
-class const _RuleMatchFilterToggle({
-  required final bool hideRuleMatched,
+class const _UncategorizedOnlyToggle({
+  required final bool uncategorizedOnly,
   required final int hiddenCount,
   required final int visibleCount,
   required final ValueChanged<bool> onChanged,
@@ -68,21 +68,21 @@ class const _RuleMatchFilterToggle({
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Hide auto-categorized',
+                  'Uncategorized only',
                   style: EText.body.medium.copyWith(
                     fontWeight: FontWeight.w600,
                   ),
                 ),
                 Text(
-                  hideRuleMatched
-                      ? '$visibleCount shown · $hiddenCount hidden'
+                  uncategorizedOnly
+                      ? '$visibleCount need a rule · $hiddenCount categorized'
                       : 'Showing all loaded transactions',
                   style: EText.caption,
                 ),
               ],
             ),
           ),
-          Switch(value: hideRuleMatched, onChanged: onChanged),
+          Switch(value: uncategorizedOnly, onChanged: onChanged),
         ],
       ),
     );

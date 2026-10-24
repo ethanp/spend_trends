@@ -1,250 +1,246 @@
+import 'package:flutter_test/flutter_test.dart';
 import 'package:spend_trends/domain/category.dart';
+import 'package:spend_trends/domain/rule_change_plan.dart';
 import 'package:spend_trends/domain/rule_match_index.dart';
 import 'package:spend_trends/domain/transaction.dart';
-import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  group('RuleMatchIndex.bestMatchingRule', () {
-    test('prefers longer contains pattern over shorter prefix', () {
-      const groceryRule = CategorizationRule(
-        id: 'grocery',
-        matchType: RuleMatchType.merchantContains,
-        pattern: 'kroger',
-        categoryId: 'groceries',
-        priority: 10,
-      );
-      const fuelRule = CategorizationRule(
-        id: 'fuel',
-        matchType: RuleMatchType.merchantContains,
-        pattern: 'kroger fuel',
-        categoryId: 'transport',
-        priority: 10,
-      );
-      // Alphabetical order would try "kroger" before "kroger fuel".
-      final rules = [groceryRule, fuelRule];
-      final index = RuleMatchIndex(rules);
-
-      final fuelTxn = _txn(merchant: 'KROGER FUEL');
-      final groceryTxn = _txn(merchant: 'KROGER');
-
-      expect(index.bestMatchingRule(fuelTxn)?.categoryId, 'transport');
-      expect(index.bestMatchingRule(groceryTxn)?.categoryId, 'groceries');
-    });
-
-    test('account-scoped rule beats global rule at same priority', () {
-      const globalBuy = CategorizationRule(
-        id: 'global-buy',
-        matchType: RuleMatchType.merchantContains,
-        pattern: 'buy',
-        categoryId: 'shopping',
-        priority: 10,
-      );
-      const wealthfrontBuy = CategorizationRule(
-        id: 'wf-buy',
-        matchType: RuleMatchType.merchantContains,
-        pattern: 'buy',
-        categoryId: 'transfer',
-        priority: 10,
-        accountId: 'wealthfront',
-      );
-      final index = RuleMatchIndex([globalBuy, wealthfrontBuy]);
-
-      expect(
-        index.bestMatchingRule(_txn(merchant: 'BUY STOCK', accountId: 'wealthfront'))
-            ?.categoryId,
-        'transfer',
-      );
-      expect(
-        index.bestMatchingRule(_txn(merchant: 'BUY COFFEE', accountId: 'checking'))
-            ?.categoryId,
-        'shopping',
-      );
-    });
-
-    test('higher priority still beats a longer pattern', () {
-      final rules = [
-        const CategorizationRule(
-          id: 'long',
-          matchType: RuleMatchType.merchantContains,
-          pattern: 'kroger fuel',
-          categoryId: 'transport',
-          priority: 10,
-        ),
-        const CategorizationRule(
-          id: 'short',
-          matchType: RuleMatchType.merchantContains,
-          pattern: 'kroger',
-          categoryId: 'groceries',
-          priority: 20,
-        ),
-      ];
-
-      expect(
-        RuleMatchIndex(rules)
-            .bestMatchingRule(_txn(merchant: 'KROGER FUEL'))
-            ?.categoryId,
-        'groceries',
-      );
-    });
-  });
-
-  group('RuleMatchIndex.coveredByBetterExistingRule', () {
-    const fuelRule = CategorizationRule(
-      id: 'fuel',
-      matchType: RuleMatchType.merchantContains,
-      pattern: 'kroger fuel',
-      categoryId: 'transport',
-      priority: 10,
-    );
-    const groceryProposed = CategorizationRule(
-      id: '_proposed_',
-      matchType: RuleMatchType.merchantContains,
-      pattern: 'kroger',
-      categoryId: '_proposed_',
-      priority: 10,
-    );
-    final existingIndex = RuleMatchIndex([fuelRule]);
-
-    test('skips fuel txn when proposing shorter kroger pattern', () {
-      expect(
-        existingIndex.coveredByBetterExistingRule(
-          transaction: _txn(merchant: 'KROGER FUEL'),
-          proposedRule: groceryProposed,
-        ),
-        isTrue,
-      );
-    });
-
-    test('keeps plain kroger txn for shorter pattern', () {
-      expect(
-        existingIndex.coveredByBetterExistingRule(
-          transaction: _txn(merchant: 'KROGER'),
-          proposedRule: groceryProposed,
-        ),
-        isFalse,
-      );
-    });
-
-    test('does not treat same-pattern existing rule as covering', () {
-      const existingGrocery = CategorizationRule(
-        id: 'grocery',
-        matchType: RuleMatchType.merchantContains,
-        pattern: 'kroger',
-        categoryId: 'groceries',
-        priority: 10,
-      );
-      expect(
-        RuleMatchIndex([existingGrocery, fuelRule]).coveredByBetterExistingRule(
-          transaction: _txn(merchant: 'KROGER'),
-          proposedRule: groceryProposed,
-        ),
-        isFalse,
-      );
-    });
-
-    test('still skips fuel when same-pattern grocery rule already exists', () {
-      const existingGrocery = CategorizationRule(
-        id: 'grocery',
-        matchType: RuleMatchType.merchantContains,
-        pattern: 'kroger',
-        categoryId: 'groceries',
-        priority: 10,
-      );
-      expect(
-        RuleMatchIndex([existingGrocery, fuelRule]).coveredByBetterExistingRule(
-          transaction: _txn(merchant: 'KROGER FUEL'),
-          proposedRule: groceryProposed,
-        ),
-        isTrue,
-      );
-    });
-
-    test('skips when higher-priority shorter rule already wins', () {
-      const priorityFuel = CategorizationRule(
-        id: 'fuel-priority',
-        matchType: RuleMatchType.merchantContains,
-        pattern: 'fuel',
-        categoryId: 'transport',
-        priority: 50,
-      );
-      expect(
-        RuleMatchIndex([priorityFuel]).coveredByBetterExistingRule(
-          transaction: _txn(merchant: 'KROGER FUEL'),
-          proposedRule: groceryProposed,
-        ),
-        isTrue,
-      );
-    });
-  });
-
-  group('RuleMatchIndex.explainingRule', () {
-    test('lists only transactions where the rule is primary', () {
-      const groceryRule = CategorizationRule(
-        id: 'grocery',
-        matchType: RuleMatchType.merchantContains,
-        pattern: 'kroger',
-        categoryId: 'groceries',
-        priority: 10,
-      );
-      const fuelRule = CategorizationRule(
-        id: 'fuel',
-        matchType: RuleMatchType.merchantContains,
-        pattern: 'kroger fuel',
-        categoryId: 'transport',
-        priority: 10,
-      );
-      final index = RuleMatchIndex([groceryRule, fuelRule]);
-
-      final groceryTxn = _txn(
-        id: 'g1',
-        merchant: 'KROGER',
-        suggestedCategoryId: 'groceries',
-      );
-      final fuelTxn = _txn(
-        id: 'f1',
-        merchant: 'KROGER FUEL',
-        suggestedCategoryId: 'transport',
-      );
-      final wrongCategoryTxn = _txn(
-        id: 'w1',
-        merchant: 'KROGER',
-        userCategoryId: 'dining',
-      );
-
-      final primaryForGrocery = [
-        for (final transaction in [groceryTxn, fuelTxn, wrongCategoryTxn])
-          if (index.explainingRule(transaction)?.id == groceryRule.id)
-            transaction.id,
-      ];
-      expect(primaryForGrocery, ['g1']);
-
-      final primaryForFuel = [
-        for (final transaction in [groceryTxn, fuelTxn, wrongCategoryTxn])
-          if (index.explainingRule(transaction)?.id == fuelRule.id)
-            transaction.id,
-      ];
-      expect(primaryForFuel, ['f1']);
-    });
-  });
-}
-
-BankTransaction _txn({
-  required String merchant,
-  String id = 't1',
-  String accountId = 'a1',
-  String? userCategoryId,
-  String? suggestedCategoryId,
-}) {
-  return BankTransaction(
+  BankTransaction transaction({
+    required String id,
+    required String description,
+    String accountId = 'checking',
+    String? categoryId,
+    String? categoryRuleId,
+  }) => BankTransaction(
     id: id,
     accountId: accountId,
-    externalId: 'e1',
-    postedAt: DateTime(2024, 1, 1),
+    externalId: id,
+    postedAt: DateTime(2026, 1, 1),
     amountCents: -1000,
-    rawDescription: merchant,
-    normalizedMerchant: merchant,
+    rawDescription: description,
+    normalizedMerchant: description.toUpperCase(),
     pending: false,
-    userCategoryId: userCategoryId,
-    suggestedCategoryId: suggestedCategoryId,
+    categoryId: categoryId,
+    categoryRuleId: categoryRuleId,
+  );
+
+  CategorizationRule rule({
+    required String id,
+    required String pattern,
+    required String categoryId,
+    RuleMatchType matchType = RuleMatchType.merchantContains,
+    String? accountId,
+  }) => CategorizationRule(
+    id: id,
+    matchType: matchType,
+    pattern: pattern,
+    categoryId: categoryId,
+    accountId: accountId,
+  );
+
+  group('RuleMatchIndex.bestMatchingRule picks the most specific rule', () {
+    final kroger = rule(
+      id: 'kroger',
+      pattern: 'kroger',
+      categoryId: 'groceries',
+    );
+    final krogerFuel = rule(
+      id: 'kroger-fuel',
+      pattern: 'kroger fuel',
+      categoryId: 'transport',
+    );
+
+    test('longer contains pattern beats a shorter one', () {
+      final index = RuleMatchIndex([kroger, krogerFuel]);
+      expect(
+        index.bestMatchingRule(
+          transaction(id: 'fuel', description: 'Kroger Fuel #12'),
+        ),
+        krogerFuel,
+      );
+      expect(
+        index.bestMatchingRule(transaction(id: 'groc', description: 'Kroger')),
+        kroger,
+      );
+    });
+
+    test('one-account rule beats an all-accounts rule', () {
+      final buyAnywhere = rule(
+        id: 'buy',
+        pattern: 'buy',
+        categoryId: 'shopping',
+      );
+      final buyAtBrokerage = rule(
+        id: 'buy-brokerage',
+        pattern: 'buy',
+        categoryId: 'transfer',
+        accountId: 'brokerage',
+      );
+      final index = RuleMatchIndex([buyAnywhere, buyAtBrokerage]);
+      expect(
+        index.bestMatchingRule(
+          transaction(id: 't', description: 'Buy LQD', accountId: 'brokerage'),
+        ),
+        buyAtBrokerage,
+      );
+      expect(
+        index.bestMatchingRule(
+          transaction(id: 'c', description: 'Buy Buy Baby'),
+        ),
+        buyAnywhere,
+      );
+    });
+
+    test('exact match beats a longer contains pattern', () {
+      final amazonExact = rule(
+        id: 'amazon-exact',
+        pattern: 'amazon',
+        categoryId: 'shopping',
+        matchType: RuleMatchType.merchantExact,
+      );
+      final amazonPrime = rule(
+        id: 'prime',
+        pattern: 'amazon',
+        categoryId: 'utilities',
+      );
+      final index = RuleMatchIndex([amazonPrime, amazonExact]);
+      expect(
+        index.bestMatchingRule(transaction(id: 'a', description: 'Amazon')),
+        amazonExact,
+      );
+      expect(
+        index.bestMatchingRule(
+          transaction(id: 'p', description: 'Amazon Prime'),
+        ),
+        amazonPrime,
+      );
+    });
+  });
+
+  group('RuleChangePlan', () {
+    final kroger = rule(
+      id: 'kroger',
+      pattern: 'kroger',
+      categoryId: 'shopping',
+    );
+    final plainKroger = transaction(
+      id: 'plain',
+      description: 'Kroger',
+      categoryId: 'shopping',
+      categoryRuleId: 'kroger',
+    );
+    final krogerFuel = transaction(
+      id: 'fuel',
+      description: 'Kroger Fuel',
+      categoryId: 'shopping',
+      categoryRuleId: 'kroger',
+    );
+    final unrelated = transaction(
+      id: 'other',
+      description: 'Shell',
+      categoryId: 'transport',
+    );
+
+    test('a narrower new rule takes only what it matches', () {
+      final plan = RuleChangePlan(
+        rulesBefore: [kroger],
+        transactions: [plainKroger, krogerFuel, unrelated],
+        upserts: [
+          rule(
+            id: 'fuel-rule',
+            pattern: 'kroger fuel',
+            categoryId: 'transport',
+          ),
+        ],
+      );
+      expect(plan.recategorized.map((move) => move.transaction.id), ['fuel']);
+      expect(plan.categoryChanges.single.categoryId, 'transport');
+    });
+
+    test('retargeting a rule moves everything it categorizes', () {
+      final plan = RuleChangePlan(
+        rulesBefore: [kroger],
+        transactions: [plainKroger, krogerFuel, unrelated],
+        upserts: [kroger.copyWith(categoryId: 'groceries')],
+      );
+      expect(plan.categoryChanges.map((move) => move.transaction.id), [
+        'plain',
+        'fuel',
+      ]);
+    });
+
+    test('deleting a rule uncategorizes what no other rule matches', () {
+      final plan = RuleChangePlan(
+        rulesBefore: [kroger],
+        transactions: [plainKroger, unrelated],
+        deletedRuleIds: {'kroger'},
+      );
+      expect(plan.categoryChanges.single.transaction.id, 'plain');
+      expect(plan.categoryChanges.single.categoryId, isNull);
+    });
+
+    test('a rule-less legacy category is left alone unless a rule matches', () {
+      final plan = RuleChangePlan(
+        rulesBefore: [kroger],
+        transactions: [unrelated],
+        upserts: [
+          rule(
+            id: 'fuel-rule',
+            pattern: 'kroger fuel',
+            categoryId: 'transport',
+          ),
+        ],
+      );
+      expect(plan.recategorized, isEmpty);
+    });
+
+    test('a draft resolves to the rule with the same match', () {
+      const draft = RuleDraft(pattern: ' Kroger ', categoryId: 'groceries');
+      expect(draft.sameMatchAs(kroger), isTrue);
+      expect(
+        draft.matches(transaction(id: 'k', description: 'KROGER #320')),
+        isTrue,
+      );
+    });
+  });
+
+  test(
+    'a whole-account rule matches blank descriptions, losing to text rules',
+    () {
+      final stakingAccount = rule(
+        id: 'staking',
+        pattern: '',
+        categoryId: 'income',
+        matchType: RuleMatchType.wholeAccount,
+        accountId: 'staked-eth',
+      );
+      final rewardText = rule(
+        id: 'reward',
+        pattern: 'reward',
+        categoryId: 'transfer',
+        accountId: 'staked-eth',
+      );
+      final index = RuleMatchIndex([stakingAccount, rewardText]);
+      expect(
+        index.bestMatchingRule(
+          transaction(id: 'blank', description: '', accountId: 'staked-eth'),
+        ),
+        stakingAccount,
+      );
+      expect(
+        index.bestMatchingRule(
+          transaction(
+            id: 'named',
+            description: 'Reward',
+            accountId: 'staked-eth',
+          ),
+        ),
+        rewardText,
+      );
+      expect(
+        index.bestMatchingRule(transaction(id: 'elsewhere', description: '')),
+        isNull,
+      );
+    },
   );
 }

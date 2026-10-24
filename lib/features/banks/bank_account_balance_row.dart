@@ -1,6 +1,7 @@
 import 'package:ethan_ui/ethan_ui.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
 import 'package:spend_trends/domain/account.dart';
 import 'package:spend_trends/providers/spend_data_changed.dart';
 import 'package:spend_trends/services/sqlite/accounts_repository.dart';
@@ -235,6 +236,10 @@ class _BankAccountBalanceRowState()
 
   static String? _exceptionLabel(Account account) {
     return switch (account.status) {
+      AccountStatus.ok when account.isManualBalanceStale(DateTime.now()) =>
+        account.balanceAsOf == null
+            ? 'No balance recorded'
+            : 'Balance as of ${DateFormat.yMMMd().format(account.balanceAsOf!)}',
       AccountStatus.ok => null,
       AccountStatus.needsRelink => 'Needs re-link',
       AccountStatus.stale => 'Stale',

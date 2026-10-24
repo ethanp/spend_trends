@@ -62,9 +62,6 @@ class _RemoveDuplicateTransactionsTileState()
         'removed ${result.deletedSameAccountCount} same-account duplicates',
       );
     }
-    if (result.categoriesCopiedToSimplefin > 0) {
-      parts.add('copied ${result.categoriesCopiedToSimplefin} categories');
-    }
     if (parts.isEmpty) {
       if (result.linkedAccountMasks == 0) {
         return 'No linked accounts and no same-account duplicates found.';

@@ -15,7 +15,6 @@ class const ActivityDayListSliver({
   required final Map<String, Account> accounts,
   required final Map<String, SpendCategory> categories,
   required final RuleMatchIndex ruleMatchIndex,
-  required final Map<String, CategorizationRule?> explainingByTransactionId,
   required final String? selectedTransactionId,
   required final ActivityColumnWidths columnWidths,
   required final void Function(BankTransaction transaction)
@@ -47,10 +46,9 @@ class const ActivityDayListSliver({
           final transaction =
               (listItem as ActivityDayTransactionItem).transaction;
           final account = accounts[transaction.accountId];
-          final category = categories[transaction.effectiveCategoryId];
-          final explainingRule =
-              explainingByTransactionId[transaction.id] ??
-              ruleMatchIndex.explainingRule(transaction);
+          final category = categories[transaction.categoryId];
+          final CategorizationRule? categorizingRule =
+              ruleMatchIndex.rulesById[transaction.categoryRuleId];
           return Padding(
             padding: const EdgeInsets.only(bottom: ELayout.spaceSm),
             child: ActivityTransactionTile(
@@ -60,10 +58,9 @@ class const ActivityDayListSliver({
               selected: selectedTransactionId == transaction.id,
               columnWidths: columnWidths,
               onActivated: () => onTransactionSelected(transaction),
-              onRuleSelected:
-                  explainingRule != null && explainingRule.beatsImportDefault
-                  ? () => onRuleSelected(explainingRule)
-                  : null,
+              onRuleSelected: categorizingRule == null
+                  ? null
+                  : () => onRuleSelected(categorizingRule),
             ),
           );
         }, childCount: listItems.length),

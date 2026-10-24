@@ -1,3 +1,5 @@
+import 'package:spend_trends/domain/account.dart';
+import 'package:spend_trends/domain/cash_flow_breakdown.dart';
 import 'package:spend_trends/domain/category.dart';
 import 'package:spend_trends/domain/category_group.dart';
 import 'package:spend_trends/domain/conscious_spending_area.dart';
@@ -25,6 +27,7 @@ class TrendPointContributors._() {
     required List<BankTransaction> transactions,
     required List<SpendCategory> categories,
     required List<CategoryGroup> groups,
+    List<Account> accounts = const [],
     int limit = topCount,
   }) {
     if (series.guide || _isGuideSeriesId(series.id)) return const [];
@@ -74,20 +77,28 @@ class TrendPointContributors._() {
       groups: groups,
     );
     if (membership == null) return const [];
+    final cashFlowBreakdown = CashFlowBreakdown(
+      categories: categories,
+      accounts: accounts,
+    );
 
     final candidates = <BankTransaction>[];
     for (final transaction in transactions) {
       final day = transaction.postedAt.startOfDay;
       if (day.isBefore(windowStartDay) || day.isAfter(windowEndDay)) continue;
-      if (!membership.includes(transaction)) continue;
+      if (membership.signedAmountCents(transaction, cashFlowBreakdown) == 0) {
+        continue;
+      }
       candidates.add(transaction);
     }
     if (candidates.isEmpty) return const [];
 
     final contributors = <TrendPointContributor>[];
     for (final transaction in candidates) {
-      final signedAmount = membership.signedAmountCents(transaction);
-      if (signedAmount == 0) continue;
+      final signedAmount = membership.signedAmountCents(
+        transaction,
+        cashFlowBreakdown,
+      );
       final txnIndex = dayIndexByDate[transaction.postedAt.startOfDay];
       if (txnIndex == null) continue;
       final smoothedContribution = smoother.impulseContributionCents(
@@ -134,16 +145,16 @@ class TrendPointContributors._() {
       return const _SeriesMembership.uncategorized();
     }
     if (seriesId == TrendChartCatalog.incomeSeriesId) {
-      return const _SeriesMembership.income();
+      return const _SeriesMembership.cashFlow(_CashFlowLine.takeHome);
     }
     if (seriesId == TrendChartCatalog.spendingSeriesId) {
-      return const _SeriesMembership.cashFlowSpending();
+      return const _SeriesMembership.cashFlow(_CashFlowLine.spending);
     }
     if (seriesId == TrendChartCatalog.transferSeriesId) {
-      return const _SeriesMembership.transfer();
+      return const _SeriesMembership.cashFlow(_CashFlowLine.transfer);
     }
     if (seriesId == TrendChartCatalog.savingsSeriesId) {
-      return const _SeriesMembership.savings();
+      return const _SeriesMembership.cashFlow(_CashFlowLine.savings);
     }
     if (seriesId.startsWith(TrendChartCatalog.groupSeriesIdPrefix)) {
       final groupId = seriesId.substring(
@@ -164,12 +175,7 @@ class TrendPointContributors._() {
       );
       final area = ConsciousSpendingArea.fromStorage(areaName);
       if (area == null) return null;
-      final memberIds = {
-        for (final category in categories)
-          if (category.consciousSpendingArea == area) category.id,
-      };
-      if (memberIds.isEmpty) return null;
-      return _SeriesMembership.cashFlowSpending(categoryIds: memberIds);
+      return _SeriesMembership.consciousSpendingArea(area);
     }
     if (seriesId.startsWith('__')) return null;
     return _SeriesMembership.categorySpend(categoryIds: {seriesId});
@@ -179,80 +185,67 @@ class TrendPointContributors._() {
 enum _MembershipKind() {
   categorySpend,
   uncategorized,
-  income,
-  cashFlowSpending,
+  cashFlow,
+  consciousSpendingArea,
+}
+
+/// Cash-flow chart lines, each read off a [CashFlowContribution].
+enum _CashFlowLine() {
+  takeHome,
+  spending,
   transfer,
-  savings,
+  savings;
+
+  int centsOf(CashFlowContribution contribution) => switch (this) {
+    _CashFlowLine.takeHome => contribution.takeHomeCents,
+    _CashFlowLine.spending => contribution.spendingCents,
+    _CashFlowLine.transfer => contribution.transferCents,
+    _CashFlowLine.savings => contribution.savingsCents,
+  };
 }
 
 class const _SeriesMembership._({
   required final _MembershipKind kind,
   final Set<String>? categoryIds,
+  final _CashFlowLine? cashFlowLine,
+  final ConsciousSpendingArea? area,
 }) {
   const new categorySpend({required Set<String>? categoryIds})
     : this._(kind: _MembershipKind.categorySpend, categoryIds: categoryIds);
 
   const new uncategorized() : this._(kind: _MembershipKind.uncategorized);
 
-  const new income() : this._(kind: _MembershipKind.income);
+  const new cashFlow(_CashFlowLine cashFlowLine)
+    : this._(kind: _MembershipKind.cashFlow, cashFlowLine: cashFlowLine);
 
-  const new cashFlowSpending({Set<String>? categoryIds})
-    : this._(kind: _MembershipKind.cashFlowSpending, categoryIds: categoryIds);
+  const new consciousSpendingArea(ConsciousSpendingArea area)
+    : this._(kind: _MembershipKind.consciousSpendingArea, area: area);
 
-  const new transfer() : this._(kind: _MembershipKind.transfer);
-
-  const new savings() : this._(kind: _MembershipKind.savings);
-
-  bool includes(BankTransaction transaction) {
-    final categoryId = transaction.effectiveCategoryId;
+  /// This transaction's signed share of the line; 0 means not a member.
+  int signedAmountCents(
+    BankTransaction transaction,
+    CashFlowBreakdown cashFlowBreakdown,
+  ) {
     switch (kind) {
       case _MembershipKind.categorySpend:
-        if (transaction.excluded || transaction.isZeroAmount) return false;
-        if (SpecialCategory.isFlowId(categoryId)) return false;
-        if (categoryIds == null) return true;
-        return categoryId != null && categoryIds!.contains(categoryId);
-      case _MembershipKind.uncategorized:
-        if (transaction.excluded || transaction.isZeroAmount) return false;
-        return transaction.isUncategorized;
-      case _MembershipKind.income:
-        if (!transaction.isInflow && !transaction.isOutflow) return false;
-        if (SpecialCategory.isTransferId(categoryId)) return false;
-        if (SpecialCategory.isIncomeId(categoryId)) return true;
-        if (transaction.excluded) return false;
-        return transaction.isInflow;
-      case _MembershipKind.cashFlowSpending:
-        if (!transaction.isOutflow) return false;
-        if (SpecialCategory.isTransferId(categoryId)) return false;
-        if (SpecialCategory.isIncomeId(categoryId)) return false;
-        if (transaction.excluded) return false;
-        if (categoryIds == null) return true;
-        return categoryId != null && categoryIds!.contains(categoryId);
-      case _MembershipKind.transfer:
-        return SpecialCategory.isTransferId(categoryId);
-      case _MembershipKind.savings:
-        if (SpecialCategory.isTransferId(categoryId)) return false;
-        if (SpecialCategory.isIncomeId(categoryId)) return true;
-        if (transaction.excluded) return false;
-        return transaction.isInflow || transaction.isOutflow;
-    }
-  }
-
-  int signedAmountCents(BankTransaction transaction) {
-    final magnitude = transaction.amountCents.abs();
-    switch (kind) {
-      case _MembershipKind.categorySpend:
-      case _MembershipKind.uncategorized:
-        return -transaction.amountCents;
-      case _MembershipKind.income:
-      case _MembershipKind.cashFlowSpending:
-      case _MembershipKind.transfer:
-        return magnitude;
-      case _MembershipKind.savings:
-        if (SpecialCategory.isIncomeId(transaction.effectiveCategoryId) ||
-            transaction.isInflow) {
-          return magnitude;
+        if (transaction.excluded || transaction.isZeroAmount) return 0;
+        final categoryId = transaction.categoryId;
+        if (SpecialCategory.isFlowId(categoryId)) return 0;
+        if (categoryIds != null &&
+            (categoryId == null || !categoryIds!.contains(categoryId))) {
+          return 0;
         }
-        return -magnitude;
+        return -transaction.amountCents;
+      case _MembershipKind.uncategorized:
+        if (transaction.excluded || !transaction.isUncategorized) return 0;
+        return -transaction.amountCents;
+      case _MembershipKind.cashFlow:
+        return cashFlowLine!.centsOf(
+          cashFlowBreakdown.contributionOf(transaction),
+        );
+      case _MembershipKind.consciousSpendingArea:
+        final contribution = cashFlowBreakdown.contributionOf(transaction);
+        return contribution.area == area ? contribution.areaCents : 0;
     }
   }
 }

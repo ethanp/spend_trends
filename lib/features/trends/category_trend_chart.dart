@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:spend_trends/domain/category.dart';
 import 'package:spend_trends/domain/category_group.dart';
+import 'package:spend_trends/domain/account.dart';
 import 'package:spend_trends/domain/life_event.dart';
 import 'package:spend_trends/domain/stay_chain.dart';
 import 'package:spend_trends/domain/transaction.dart';
@@ -34,6 +35,7 @@ class const CategoryTrendChart({
   required final List<BankTransaction> transactions,
   required final List<SpendCategory> categories,
   required final List<CategoryGroup> groups,
+  final List<Account> accounts = const [],
   final List<LifeEvent> lifeEvents = const [],
   final StayChain? housingChain,
   final StayChain? jobChain,
@@ -348,6 +350,7 @@ class _CategoryTrendChartState() extends ConsumerState<CategoryTrendChart> {
       transactions: widget.transactions,
       categories: widget.categories,
       groups: widget.groups,
+      accounts: widget.accounts,
     );
     if (contributors.isEmpty) return;
 

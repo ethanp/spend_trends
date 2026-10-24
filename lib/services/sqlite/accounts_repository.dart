@@ -106,6 +106,37 @@ WHERE conn_name = ?
     );
   }
 
+  /// Sets the balance a manual account shows (its newest snapshot).
+  Future<void> setBalance({
+    required String accountId,
+    required int balanceCents,
+    required DateTime? asOf,
+  }) async {
+    await _powerSync.execute(
+      'UPDATE accounts SET balance_cents = ?, balance_as_of = ? WHERE id = ?',
+      [balanceCents, asOf?.millisecondsSinceEpoch, accountId],
+    );
+  }
+
+  /// Re-identifies an account (e.g. a history import becoming manual),
+  /// keeping its id and transactions.
+  Future<void> reidentify({
+    required String accountId,
+    required String externalId,
+    required String name,
+    required AccountKind kind,
+    String? institution,
+  }) async {
+    await _powerSync.execute(
+      '''
+      UPDATE accounts
+      SET external_id = ?, name = ?, account_kind = ?, conn_name = ?
+      WHERE id = ?
+      ''',
+      [externalId, name, kind.storageValue, institution, accountId],
+    );
+  }
+
   Future<void> updateKind({
     required String accountId,
     required AccountKind kind,

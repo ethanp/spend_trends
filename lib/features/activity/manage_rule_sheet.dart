@@ -4,10 +4,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:spend_trends/domain/category.dart';
+import 'package:spend_trends/domain/rule_change_plan.dart';
 import 'package:spend_trends/domain/category_group.dart';
 import 'package:spend_trends/domain/transaction.dart';
 import 'package:spend_trends/features/banks/banks_providers.dart';
 import 'package:spend_trends/features/categories/categories_providers.dart';
+import 'package:spend_trends/services/sqlite/transactions_repository.dart';
 import 'package:spend_trends/providers/spend_data_changed.dart';
 import 'package:spend_trends/theme/finance_colors.dart';
 import 'package:spend_trends/widgets/app_sheet_panel.dart';
@@ -47,8 +49,12 @@ class _ManageRuleSheetState() extends ConsumerState<ManageRuleSheet> {
 
   Future<void> _loadPrimaryMatches() async {
     try {
-      final categorizer = await ref.read(categorizerProvider.future);
-      final matches = await categorizer.transactionsExplainedByRule(_rule);
+      final transactionsRepository = await ref.read(
+        transactionsRepositoryProvider.future,
+      );
+      final matches = await transactionsRepository.listCategorizedByRule(
+        _rule.id,
+      );
       if (!mounted) return;
       setState(() {
         _primaryMatches = matches;
@@ -100,7 +106,7 @@ class _ManageRuleSheetState() extends ConsumerState<ManageRuleSheet> {
           Text('Rule', style: EText.section),
           const SizedBox(height: ELayout.spaceSm),
           Text(
-            'contains “${_rule.pattern}”',
+            _rule.matchCaption,
             style: EText.body.medium.copyWith(
               fontWeight: FontWeight.w600,
               color: FinanceColors.accentPrimary,
@@ -283,18 +289,13 @@ class _ManageRuleSheetState() extends ConsumerState<ManageRuleSheet> {
     setState(() => _busy = true);
     try {
       final categorizer = await ref.read(categorizerProvider.future);
-      await categorizer.retargetRule(rule: _rule, categoryId: selected.id);
+      await categorizer.applyRuleChanges(
+        drafts: [RuleDraft.retargeting(_rule, categoryId: selected.id)],
+      );
       ref.read(spendDataChangedProvider.notifier).notify();
       if (!mounted) return;
       setState(() {
-        _rule = CategorizationRule(
-          id: _rule.id,
-          matchType: _rule.matchType,
-          pattern: _rule.pattern,
-          categoryId: selected.id,
-          priority: _rule.priority,
-          accountId: _rule.accountId,
-        );
+        _rule = _rule.copyWith(categoryId: selected.id);
         _busy = false;
         _primaryMatches = null;
       });
@@ -327,11 +328,12 @@ class _ManageRuleSheetState() extends ConsumerState<ManageRuleSheet> {
           title: const Text('Remove this rule?'),
           content: Text(
             matchCount == 0
-                ? 'The rule will be deleted. No transactions are currently '
-                      'using it as primary.'
-                : 'Deletes the rule and clears categories on $matchCount '
-                      '${matchCount == 1 ? 'transaction' : 'transactions'}. '
-                      'Remaining rules will reclaim matches as suggested.',
+                ? 'The rule will be deleted. It categorizes no transactions '
+                      'right now.'
+                : 'Deletes the rule. Its $matchCount '
+                      '${matchCount == 1 ? 'transaction goes' : 'transactions go'} '
+                      'to the next most specific matching rule, or become '
+                      'uncategorized.',
           ),
           actions: [
             TextButton(
@@ -354,7 +356,7 @@ class _ManageRuleSheetState() extends ConsumerState<ManageRuleSheet> {
     setState(() => _busy = true);
     try {
       final categorizer = await ref.read(categorizerProvider.future);
-      await categorizer.removeRuleAndReclaim(_rule);
+      await categorizer.applyRuleChanges(deletedRuleIds: {_rule.id});
       ref.read(spendDataChangedProvider.notifier).notify();
       if (!mounted) return;
       Navigator.of(context).pop();
@@ -381,7 +383,7 @@ class _ManageRuleSheetState() extends ConsumerState<ManageRuleSheet> {
     BankTransaction transaction,
     Map<String, String> categoryNameById,
   ) {
-    final categoryId = transaction.effectiveCategoryId;
+    final categoryId = transaction.categoryId;
     if (categoryId == null) return 'Uncategorized';
     return categoryNameById[categoryId] ?? 'Unknown category';
   }

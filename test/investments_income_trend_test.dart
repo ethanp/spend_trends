@@ -7,7 +7,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:spend_trends/features/trends/trend_chart_catalog.dart';
 
 void main() {
-  test('Investments counts as income and is excluded from spend', () {
+  test('Investments fills the investments area, not income or spend', () {
     final start = DateTime(2024, 1, 1);
     final end = start.add(const Duration(days: 9));
     final transactions = <BankTransaction>[
@@ -21,18 +21,18 @@ void main() {
           rawDescription: 'Pay',
           normalizedMerchant: 'PAY',
           pending: false,
-          userCategoryId: SpecialCategory.income.id,
+          categoryId: SpecialCategory.income.id,
         ),
         BankTransaction(
           id: 'invest$dayOffset',
           accountId: 'a1',
           externalId: 'v$dayOffset',
           postedAt: start.add(Duration(days: dayOffset)),
-          amountCents: 2000,
-          rawDescription: 'Dividend',
-          normalizedMerchant: 'DIVIDEND',
+          amountCents: -2000,
+          rawDescription: 'Brokerage deposit',
+          normalizedMerchant: 'BROKERAGE DEPOSIT',
           pending: false,
-          userCategoryId: SpecialCategory.investments.id,
+          categoryId: SpecialCategory.investments.id,
         ),
         BankTransaction(
           id: 'spend$dayOffset',
@@ -43,7 +43,7 @@ void main() {
           rawDescription: 'Shop',
           normalizedMerchant: 'SHOP',
           pending: false,
-          userCategoryId: 'cat_dining',
+          categoryId: 'cat_dining',
         ),
       ],
     ];
@@ -76,102 +76,112 @@ void main() {
     final spending = bundle.cashFlows.firstWhere(
       (series) => series.id == TrendChartCatalog.spendingSeriesId,
     );
-    expect(income.points.last.rollingCents, closeTo(2555000, 0.01));
+    final investmentsArea = bundle.cashFlows.firstWhere(
+      (series) =>
+          series.id ==
+          TrendChartCatalog.consciousSpendingAreaSeriesId(
+            ConsciousSpendingArea.investments,
+          ),
+    );
+    expect(income.points.last.rollingCents, closeTo(1825000, 0.01));
     expect(spending.points.last.rollingCents, closeTo(365000, 0.01));
+    expect(investmentsArea.points.last.rollingCents, closeTo(730000, 0.01));
   });
 
-  test(
-    'assigned conscious-spending areas build cash-flow series without changing Income or Spending',
-    () {
-      final start = DateTime(2024, 1, 1);
-      final end = start.add(const Duration(days: 9));
-      final transactions = <BankTransaction>[
-        for (var dayOffset = 0; dayOffset < 10; dayOffset++) ...[
-          BankTransaction(
-            id: 'income$dayOffset',
-            accountId: 'a1',
-            externalId: 'i$dayOffset',
-            postedAt: start.add(Duration(days: dayOffset)),
-            amountCents: 10000,
-            rawDescription: 'Pay',
-            normalizedMerchant: 'PAY',
-            pending: false,
-            userCategoryId: SpecialCategory.income.id,
-          ),
-          BankTransaction(
-            id: 'rent$dayOffset',
-            accountId: 'a1',
-            externalId: 'r$dayOffset',
-            postedAt: start.add(Duration(days: dayOffset)),
-            amountCents: -5000,
-            rawDescription: 'Rent',
-            normalizedMerchant: 'RENT',
-            pending: false,
-            userCategoryId: SpecialCategory.housing.id,
-          ),
-          BankTransaction(
-            id: 'dining$dayOffset',
-            accountId: 'a1',
-            externalId: 'd$dayOffset',
-            postedAt: start.add(Duration(days: dayOffset)),
-            amountCents: -2000,
-            rawDescription: 'Tacos',
-            normalizedMerchant: 'TACOS',
-            pending: false,
-            userCategoryId: 'cat_dining',
-          ),
-        ],
-      ];
+  test('assigned conscious-spending areas build cash-flow series without changing Income or Spending', () {
+    final start = DateTime(2024, 1, 1);
+    final end = start.add(const Duration(days: 9));
+    final transactions = <BankTransaction>[
+      for (var dayOffset = 0; dayOffset < 10; dayOffset++) ...[
+        BankTransaction(
+          id: 'income$dayOffset',
+          accountId: 'a1',
+          externalId: 'i$dayOffset',
+          postedAt: start.add(Duration(days: dayOffset)),
+          amountCents: 10000,
+          rawDescription: 'Pay',
+          normalizedMerchant: 'PAY',
+          pending: false,
+          categoryId: SpecialCategory.income.id,
+        ),
+        BankTransaction(
+          id: 'rent$dayOffset',
+          accountId: 'a1',
+          externalId: 'r$dayOffset',
+          postedAt: start.add(Duration(days: dayOffset)),
+          amountCents: -5000,
+          rawDescription: 'Rent',
+          normalizedMerchant: 'RENT',
+          pending: false,
+          categoryId: SpecialCategory.housing.id,
+        ),
+        BankTransaction(
+          id: 'dining$dayOffset',
+          accountId: 'a1',
+          externalId: 'd$dayOffset',
+          postedAt: start.add(Duration(days: dayOffset)),
+          amountCents: -2000,
+          rawDescription: 'Tacos',
+          normalizedMerchant: 'TACOS',
+          pending: false,
+          categoryId: 'cat_dining',
+        ),
+      ],
+    ];
 
-      final bundle = const BuildTrendsCharts().build(
-        transactions: transactions,
-        categories: [
-          SpecialCategory.income.asSpendCategory(),
-          SpecialCategory.housing.asSpendCategory(),
-          const SpendCategory(
-            id: 'cat_dining',
-            name: 'Dining',
-            sortOrder: 0,
-            archived: false,
-            consciousSpendingArea: ConsciousSpendingArea.guiltFree,
+    final bundle = const BuildTrendsCharts().build(
+      transactions: transactions,
+      categories: [
+        SpecialCategory.income.asSpendCategory(),
+        SpecialCategory.housing.asSpendCategory(),
+        const SpendCategory(
+          id: 'cat_dining',
+          name: 'Dining',
+          sortOrder: 0,
+          archived: false,
+          consciousSpendingArea: ConsciousSpendingArea.guiltFree,
+        ),
+      ],
+      endDate: end,
+    );
+
+    final income = bundle.cashFlows.firstWhere(
+      (series) => series.id == TrendChartCatalog.incomeSeriesId,
+    );
+    final spending = bundle.cashFlows.firstWhere(
+      (series) => series.id == TrendChartCatalog.spendingSeriesId,
+    );
+    final fixedCosts = bundle.cashFlows.firstWhere(
+      (series) =>
+          series.id ==
+          TrendChartCatalog.consciousSpendingAreaSeriesId(
+            ConsciousSpendingArea.fixedCosts,
           ),
-        ],
-        endDate: end,
-      );
+    );
+    final guiltFree = bundle.cashFlows.firstWhere(
+      (series) =>
+          series.id ==
+          TrendChartCatalog.consciousSpendingAreaSeriesId(
+            ConsciousSpendingArea.guiltFree,
+          ),
+    );
 
-      final income = bundle.cashFlows.firstWhere(
-        (series) => series.id == TrendChartCatalog.incomeSeriesId,
-      );
-      final spending = bundle.cashFlows.firstWhere(
-        (series) => series.id == TrendChartCatalog.spendingSeriesId,
-      );
-      final fixedCosts = bundle.cashFlows.firstWhere(
-        (series) =>
-            series.id ==
-            TrendChartCatalog.consciousSpendingAreaSeriesId(
-              ConsciousSpendingArea.fixedCosts,
-            ),
-      );
-      final guiltFree = bundle.cashFlows.firstWhere(
-        (series) =>
-            series.id ==
-            TrendChartCatalog.consciousSpendingAreaSeriesId(
-              ConsciousSpendingArea.guiltFree,
-            ),
-      );
-
-      expect(income.points.last.rollingCents, closeTo(3650000, 0.01));
-      expect(spending.points.last.rollingCents, closeTo(2555000, 0.01));
-      expect(fixedCosts.points.last.rollingCents, closeTo(1825000, 0.01));
-      expect(guiltFree.points.last.rollingCents, closeTo(730000, 0.01));
+    expect(income.points.last.rollingCents, closeTo(3650000, 0.01));
+    expect(spending.points.last.rollingCents, closeTo(2555000, 0.01));
+    expect(fixedCosts.points.last.rollingCents, closeTo(1825000, 0.01));
+    expect(guiltFree.points.last.rollingCents, closeTo(730000, 0.01));
     expect(fixedCosts.legendCaption, isNull);
     expect(guiltFree.legendCaption, isNull);
     expect(
-      ConsciousSpendingArea.fixedCosts.impliedTakeHomeLabel(3650000),
+      ConsciousSpendingArea.fixedCosts.ramitGuideline.impliedTakeHomeLabel(
+        3650000,
+      ),
       r'$18.3k–$21.9k',
     );
     expect(
-      ConsciousSpendingArea.investments.impliedTakeHomeLabel(3650000),
+      ConsciousSpendingArea.investments.ramitGuideline.impliedTakeHomeLabel(
+        3650000,
+      ),
       r'$3.7k',
     );
     expect(
@@ -181,19 +191,17 @@ void main() {
       ),
       50,
     );
-    expect(ConsciousSpendingArea.fixedCosts.containsPercent(50), isTrue);
-    expect(ConsciousSpendingArea.fixedCosts.containsPercent(49), isFalse);
-    expect(ConsciousSpendingArea.investments.impliedTakeHomeLabel(0), '—');
-      expect(
-        bundle.cashFlows.any(
-          (series) =>
-              series.id ==
-              TrendChartCatalog.consciousSpendingAreaSeriesId(
-                ConsciousSpendingArea.savings,
-              ),
-        ),
-        isFalse,
-      );
-    },
-  );
+    expect(
+      ConsciousSpendingArea.fixedCosts.ramitGuideline.contains(50),
+      isTrue,
+    );
+    expect(
+      ConsciousSpendingArea.fixedCosts.ramitGuideline.contains(49),
+      isFalse,
+    );
+    expect(
+      ConsciousSpendingArea.investments.ramitGuideline.impliedTakeHomeLabel(0),
+      '—',
+    );
+  });
 }

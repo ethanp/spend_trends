@@ -6,6 +6,7 @@ import 'package:spend_trends/features/banks/bank_accounts_list.dart';
 import 'package:spend_trends/features/owned_assets/owned_assets_section.dart';
 import 'package:spend_trends/features/banks/banks_controller.dart';
 import 'package:spend_trends/features/banks/banks_pull_live_session.dart';
+import 'package:spend_trends/features/banks/manual_account_form_sheet.dart';
 import 'package:spend_trends/services/simplefin/simplefin_access_store.dart';
 import 'package:spend_trends/services/simplefin/simplefin_pull_windows.dart';
 import 'package:spend_trends/theme/finance_colors.dart';
@@ -127,6 +128,21 @@ class _BanksSourceSectionState() extends ConsumerState<BanksSourceSection> {
           actionError: actionState.actionError,
           selectedAccountId: widget.selectedAccountId,
           onAccountSelected: widget.onAccountSelected,
+        ),
+        const SizedBox(height: ELayout.spaceSm),
+        Row(
+          children: [
+            TextButton.icon(
+              onPressed: () => ManualAccountFormSheet.show(context),
+              icon: const Icon(Icons.add, size: 16),
+              label: const Text('Add manual account'),
+            ),
+            const HelpTooltip(
+              message:
+                  'For institutions SimpleFIN can’t reach. Update its balance '
+                  'by hand; each update is a dated point in net worth.',
+            ),
+          ],
         ),
         const SizedBox(height: ELayout.spaceXl),
         OwnedAssetsSection(

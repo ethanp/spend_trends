@@ -3,8 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:spend_trends/domain/category.dart';
 import 'package:spend_trends/widgets/app_sheet_panel.dart';
 
-class const CategoryEditorRetireSection({required final VoidCallback? onMergeStarted})
-    extends StatelessWidget {
+class const CategoryEditorRetireSection({
+  required final VoidCallback? onMergeStarted,
+}) extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Column(

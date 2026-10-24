@@ -13,7 +13,7 @@ import 'package:spend_trends/domain/transaction.dart';
 import 'package:spend_trends/domain/trend_spend_rate.dart';
 import 'package:spend_trends/features/trends/category_trend_chart.dart';
 import 'package:spend_trends/features/trends/category_trend_series.dart';
-import 'package:spend_trends/features/trends/four_numbers_card.dart';
+import 'package:spend_trends/features/trends/conscious_spending_numbers_card.dart';
 import 'package:spend_trends/features/trends/net_worth_trend.dart';
 import 'package:spend_trends/features/trends/trend_chart_catalog.dart';
 import 'package:spend_trends/features/trends/trends_chart_bundle.dart';
@@ -72,6 +72,9 @@ class const TrendsScreen() extends ConsumerWidget {
             categories:
                 categoriesAsync.asData?.value ?? const <SpendCategory>[],
             groups: groupsAsync.asData?.value ?? const <CategoryGroup>[],
+            accounts:
+                accountsAsync.asData?.value.values.toList() ??
+                const <Account>[],
             lifeEvents: lifeEventsAsync.asData?.value ?? const <LifeEvent>[],
             housingChain: housingAsync.asData?.value,
             jobChain: jobAsync.asData?.value,
@@ -88,6 +91,7 @@ class const TrendsScreen() extends ConsumerWidget {
     required List<BankTransaction> transactions,
     required List<SpendCategory> categories,
     required List<CategoryGroup> groups,
+    required List<Account> accounts,
     required List<LifeEvent> lifeEvents,
     required StayChain? housingChain,
     required StayChain? jobChain,
@@ -96,7 +100,9 @@ class const TrendsScreen() extends ConsumerWidget {
       return ListView(
         padding: ETabBarOverlay.paddingOf(context),
         children: [
-          FourNumbersCard(cashFlows: bundle.cashFlows),
+          ConsciousSpendingNumbersCard(
+            consciousSpendingNumbers: bundle.consciousSpendingNumbers,
+          ),
           const SizedBox(height: ELayout.spaceXl),
           Text(
             'Connect a bank on the Banks tab and sync, or import CSV in '
@@ -111,7 +117,9 @@ class const TrendsScreen() extends ConsumerWidget {
     return ListView(
       padding: ETabBarOverlay.paddingOf(context),
       children: [
-        FourNumbersCard(cashFlows: bundle.cashFlows),
+        ConsciousSpendingNumbersCard(
+          consciousSpendingNumbers: bundle.consciousSpendingNumbers,
+        ),
         if (bundle.categorySpend.isNotEmpty) ...[
           const SizedBox(height: ELayout.spaceLg),
           CategoryTrendChart(
@@ -120,6 +128,7 @@ class const TrendsScreen() extends ConsumerWidget {
             transactions: transactions,
             categories: categories,
             groups: groups,
+            accounts: accounts,
             lifeEvents: lifeEvents,
             housingChain: housingChain,
             jobChain: jobChain,
@@ -136,6 +145,7 @@ class const TrendsScreen() extends ConsumerWidget {
             transactions: transactions,
             categories: categories,
             groups: groups,
+            accounts: accounts,
             lifeEvents: lifeEvents,
             housingChain: housingChain,
             jobChain: jobChain,
@@ -160,6 +170,7 @@ class const TrendsScreen() extends ConsumerWidget {
             transactions: transactions,
             categories: categories,
             groups: groups,
+            accounts: accounts,
             lifeEvents: lifeEvents,
             housingChain: housingChain,
             jobChain: jobChain,

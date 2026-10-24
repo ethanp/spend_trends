@@ -1,6 +1,10 @@
+import 'dart:math' as math;
+
 import 'package:spend_trends/domain/account.dart';
+import 'package:spend_trends/domain/account_balance_snapshot.dart';
 import 'package:spend_trends/domain/account_kind.dart' show AccountKind;
 import 'package:spend_trends/domain/owned_asset.dart';
+import 'package:spend_trends/domain/special_category.dart';
 import 'package:spend_trends/domain/transaction.dart';
 import 'package:spend_trends/features/trends/category_trend_point.dart';
 import 'package:spend_trends/features/trends/category_trend_series.dart';
@@ -37,6 +41,7 @@ class NetWorthTrend._() {
     required List<BankTransaction> transactions,
     required List<DateTime> chartDates,
     List<OwnedAssetWithValuations> ownedAssets = const [],
+    List<AccountBalanceSnapshot> balanceSnapshots = const [],
   }) {
     if (chartDates.isEmpty) return const [];
     final totals = List<double>.filled(chartDates.length, 0);
@@ -45,6 +50,7 @@ class NetWorthTrend._() {
       transactions: transactions,
       chartDates: chartDates,
       ownedAssets: ownedAssets,
+      balanceSnapshots: balanceSnapshots,
     )) {
       for (var dayIndex = 0; dayIndex < chartDates.length; dayIndex++) {
         totals[dayIndex] += component.history.rawDailyCents[dayIndex];
@@ -86,6 +92,7 @@ class NetWorthTrend._() {
     required List<BankTransaction> transactions,
     required List<DateTime> chartDates,
     List<OwnedAssetWithValuations> ownedAssets = const [],
+    List<AccountBalanceSnapshot> balanceSnapshots = const [],
   }) {
     if ((accounts.isEmpty && ownedAssets.isEmpty) || chartDates.length < 2) {
       return const [];
@@ -96,6 +103,7 @@ class NetWorthTrend._() {
       transactions: transactions,
       chartDates: chartDates,
       ownedAssets: ownedAssets,
+      balanceSnapshots: balanceSnapshots,
     );
     final netWorthSeries = _totalSeries(
       components: components,
@@ -103,7 +111,54 @@ class NetWorthTrend._() {
     );
     if (netWorthSeries == null) return const [];
 
-    return [netWorthSeries, ..._breakdownSeries(components, chartDates)];
+    return [
+      netWorthSeries,
+      ?_cumulativeAssetSalesSeries(
+        transactions: transactions,
+        chartDates: chartDates,
+      ),
+      ..._breakdownSeries(components, chartDates),
+    ];
+  }
+
+  /// Running total of Asset sale proceeds as unsmoothed steps, so each sale
+  /// reads as a lump sum beside net worth instead of a savings ramp.
+  static CategoryTrendSeries? _cumulativeAssetSalesSeries({
+    required List<BankTransaction> transactions,
+    required List<DateTime> chartDates,
+  }) {
+    final proceedsByDay = <DateTime, int>{};
+    for (final transaction in transactions) {
+      if (!SpecialCategory.isAssetSaleId(transaction.categoryId)) {
+        continue;
+      }
+      proceedsByDay.update(
+        transaction.postedAt.startOfDay,
+        (priorCents) => priorCents + transaction.amountCents,
+        ifAbsent: () => transaction.amountCents,
+      );
+    }
+    if (proceedsByDay.isEmpty) return null;
+
+    var runningCents = 0.0;
+    final points = <CategoryTrendPoint>[];
+    for (final day in chartDates) {
+      runningCents += proceedsByDay[day.startOfDay] ?? 0;
+      points.add(
+        CategoryTrendPoint(
+          date: day,
+          rollingCents: runningCents,
+          smoothedCents: runningCents,
+        ),
+      );
+    }
+    return _seriesFromPoints(
+      id: TrendChartCatalog.assetSalesSeriesId,
+      name: 'Asset sales',
+      lineColor: TrendChartCatalog.assetSalesLineColor,
+      legendCaption: 'Lump sums',
+      points: points,
+    );
   }
 
   /// One account's reconstructed balance, starting on the first known day.
@@ -115,6 +170,7 @@ class NetWorthTrend._() {
     required Account account,
     required List<Account> accounts,
     required List<BankTransaction> transactions,
+    List<AccountBalanceSnapshot> balanceSnapshots = const [],
     DateTime? endDate,
   }) {
     final chartEnd = (endDate ?? DateTime.now()).startOfDay;
@@ -124,8 +180,14 @@ class NetWorthTrend._() {
       transactions: transactions,
       accountIds: includeAccountIds,
     );
+    final DateTime? firstSnapshotDay = account.isManual
+        ? _snapshotsFor(account, balanceSnapshots).firstOrNull?.recordedOn
+        : null;
     final knownFrom =
-        (postedAmounts.earliestDay ?? account.balanceAsOf ?? chartEnd)
+        (firstSnapshotDay ??
+                postedAmounts.earliestDay ??
+                account.balanceAsOf ??
+                chartEnd)
             .startOfDay;
     final chartStart = knownFrom.isBefore(historyFloor)
         ? historyFloor
@@ -140,6 +202,7 @@ class NetWorthTrend._() {
         account: account,
         kind: account.kind,
         transactions: transactions,
+        balanceSnapshots: balanceSnapshots,
         chartDates: chartDates,
         includeAccountIds: includeAccountIds,
       ),
@@ -152,6 +215,7 @@ class NetWorthTrend._() {
     required List<BankTransaction> transactions,
     required List<DateTime> chartDates,
     required List<OwnedAssetWithValuations> ownedAssets,
+    required List<AccountBalanceSnapshot> balanceSnapshots,
   }) {
     final roots = _rootAccounts(accounts);
     final childIdsByParent = _childIdsByParent(accounts);
@@ -164,6 +228,7 @@ class NetWorthTrend._() {
             account: account,
             kind: group.kind,
             transactions: transactions,
+            balanceSnapshots: balanceSnapshots,
             chartDates: chartDates,
             includeAccountIds: {account.id, ...?childIdsByParent[account.id]},
           ),
@@ -191,6 +256,7 @@ class NetWorthTrend._() {
     required Account account,
     required AccountKind kind,
     required List<BankTransaction> transactions,
+    required List<AccountBalanceSnapshot> balanceSnapshots,
     required List<DateTime> chartDates,
     required Set<String> includeAccountIds,
   }) {
@@ -201,11 +267,69 @@ class NetWorthTrend._() {
       dotted: account.balanceCents < 0,
       legendGroup: kind.legendLabel,
       plotAbsoluteMagnitude: true,
-      history: _accountHistory(
-        account: account,
-        transactions: transactions,
-        chartDates: chartDates,
-        includeAccountIds: includeAccountIds,
+      history: account.isManual
+          ? _recordedBalanceHistory(
+              account: account,
+              snapshots: _snapshotsFor(account, balanceSnapshots),
+              chartDates: chartDates,
+            )
+          : _accountHistory(
+              account: account,
+              transactions: transactions,
+              chartDates: chartDates,
+              includeAccountIds: includeAccountIds,
+            ),
+    );
+  }
+
+  /// Oldest first.
+  static List<AccountBalanceSnapshot> _snapshotsFor(
+    Account account,
+    List<AccountBalanceSnapshot> balanceSnapshots,
+  ) => [
+    for (final snapshot in balanceSnapshots)
+      if (snapshot.accountId == account.id) snapshot,
+  ]..sort((left, right) => left.recordedOn.compareTo(right.recordedOn));
+
+  /// A manual account steps between its recorded balances; before the first
+  /// it is unknown. With none recorded, only today shows the balance.
+  static NetWorthComponentHistory _recordedBalanceHistory({
+    required Account account,
+    required List<AccountBalanceSnapshot> snapshots,
+    required List<DateTime> chartDates,
+  }) {
+    if (chartDates.isEmpty) {
+      return NetWorthComponentHistory(
+        rawDailyCents: const [],
+        firstKnownDayIndex: 0,
+      );
+    }
+    if (snapshots.isEmpty) {
+      return NetWorthComponentHistory(
+        rawDailyCents: [
+          ...List<double>.filled(chartDates.length - 1, 0),
+          account.balanceCents.toDouble(),
+        ],
+        firstKnownDayIndex: chartDates.length - 1,
+      );
+    }
+    final values = List<double>.filled(chartDates.length, 0);
+    var nextSnapshotIndex = 0;
+    double? recordedCents;
+    for (var dayIndex = 0; dayIndex < chartDates.length; dayIndex++) {
+      final day = chartDates[dayIndex].startOfDay;
+      while (nextSnapshotIndex < snapshots.length &&
+          !snapshots[nextSnapshotIndex].recordedOn.startOfDay.isAfter(day)) {
+        recordedCents = snapshots[nextSnapshotIndex].balanceCents.toDouble();
+        nextSnapshotIndex++;
+      }
+      values[dayIndex] = recordedCents ?? 0;
+    }
+    return NetWorthComponentHistory(
+      rawDailyCents: values,
+      firstKnownDayIndex: math.min(
+        _firstIndexOnOrAfter(chartDates, snapshots.first.recordedOn),
+        chartDates.length - 1,
       ),
     );
   }
@@ -427,6 +551,7 @@ class NetWorthTrend._() {
     bool dotted = false,
     bool percentileAreaFill = false,
     String? legendGroup,
+    String? legendCaption,
   }) {
     final built = CategoryTrendSeries(
       id: id,
@@ -435,6 +560,7 @@ class NetWorthTrend._() {
       dotted: dotted,
       percentileAreaFill: percentileAreaFill,
       legendGroup: legendGroup,
+      legendCaption: legendCaption,
       points: points,
     );
     if (!built.hasMeaningfulTrend) return null;
@@ -462,9 +588,11 @@ class NetWorthTrend._() {
     );
   }
 
+  /// Accounts with a live balance to walk back from; history-only accounts
+  /// would walk back from \$0 into negative balances.
   static List<Account> _rootAccounts(List<Account> accounts) => [
     for (final account in accounts)
-      if (!account.hasParent) account,
+      if (account.countsTowardNetWorth) account,
   ];
 
   static Map<String, Set<String>> _childIdsByParent(List<Account> accounts) {

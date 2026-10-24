@@ -156,7 +156,7 @@ class const CategoriesBurnPane({
             style: EText.body.medium,
           ),
           for (final rule in categoryRules)
-            Text(_ruleCaption(rule), style: EText.caption),
+            Text(rule.matchCaption, style: EText.caption),
         ],
         const SizedBox(height: ELayout.spaceLg),
         AppPrimaryButton(
@@ -171,13 +171,5 @@ class const CategoriesBurnPane({
     if (whole <= 0) return '0%';
     final pct = ((part / whole) * 100).round();
     return '$pct%';
-  }
-
-  String _ruleCaption(CategorizationRule rule) {
-    final matchLabel = switch (rule.matchType) {
-      RuleMatchType.merchantContains => 'contains',
-      RuleMatchType.merchantExact => 'exact',
-    };
-    return '$matchLabel “${rule.pattern}”';
   }
 }

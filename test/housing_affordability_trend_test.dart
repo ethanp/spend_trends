@@ -19,7 +19,7 @@ void main() {
           rawDescription: 'Pay',
           normalizedMerchant: 'PAY',
           pending: false,
-          userCategoryId: SpecialCategory.income.id,
+          categoryId: SpecialCategory.income.id,
         ),
         BankTransaction(
           id: 'housing$dayOffset',
@@ -30,7 +30,7 @@ void main() {
           rawDescription: 'Rent',
           normalizedMerchant: 'RENT',
           pending: false,
-          userCategoryId: SpecialCategory.housing.id,
+          categoryId: SpecialCategory.housing.id,
         ),
       ],
     ];

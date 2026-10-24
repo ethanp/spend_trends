@@ -1,0 +1,30 @@
+#!/bin/bash
+# Agent entry for the Spend Trends categorization API (macOS app must be open).
+#
+# Usage:
+#   scripts/agent_api GET /context
+#   scripts/agent_api GET '/transactions?category=none&limit=50'
+#   scripts/agent_api POST /rules/preview '{"pattern":"payoff, wire"}'
+set -euo pipefail
+ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+TOKEN="$(grep -E '^AGENT_API_TOKEN=' "$ROOT/.env" | cut -d= -f2-)"
+# The app writes the port it actually serves on (it falls back to a free port
+# when a hot restart leaves the configured one stuck).
+PORT_FILE="$HOME/Library/Application Support/com.ethan.spend_trends/agent_api_port"
+if [ -f "$PORT_FILE" ]; then
+  PORT="$(cat "$PORT_FILE")"
+else
+  PORT="$(grep -E '^AGENT_API_PORT=' "$ROOT/.env" | cut -d= -f2-)"
+fi
+METHOD="${1:?method required}"
+PATH_AND_QUERY="${2:?path required}"
+BODY="${3:-}"
+BASE_URL="http://127.0.0.1:${PORT:-8791}"
+# A hot restart leaves the port empty for a few seconds; wait it out.
+for _ in $(seq 1 30); do
+  curl -sf --max-time 2 "$BASE_URL/health" >/dev/null && break
+  sleep 1
+done
+ARGS=(-sS --max-time 30 -X "$METHOD" -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json')
+if [ -n "$BODY" ]; then ARGS+=(--data "$BODY"); fi
+exec curl "${ARGS[@]}" "$BASE_URL$PATH_AND_QUERY"

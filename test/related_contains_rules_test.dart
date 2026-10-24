@@ -14,7 +14,6 @@ void main() {
       matchType: RuleMatchType.merchantContains,
       pattern: pattern,
       categoryId: categoryId,
-      priority: CategorizationRule.userCreatedPriority,
     );
   }
 
@@ -64,7 +63,6 @@ void main() {
             matchType: RuleMatchType.merchantExact,
             pattern: 'amazon',
             categoryId: 'cat_groceries',
-            priority: 10,
           ),
         ],
         categoryNameById: categoryNames,

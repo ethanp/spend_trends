@@ -7,7 +7,6 @@ import 'package:spend_trends/services/csv/copilot_csv_persist.dart';
 import 'package:spend_trends/services/csv/in_progress_copilot_csv_import.dart';
 import 'package:spend_trends/services/csv/copilot_import_types.dart';
 import 'package:spend_trends/services/sqlite/accounts_repository.dart';
-import 'package:spend_trends/services/sqlite/categories_repository.dart';
 import 'package:spend_trends/services/sqlite/transactions_repository.dart';
 import 'package:spend_trends/util/merchant_normalize.dart';
 import 'package:ethan_utils/ethan_utils.dart';
@@ -24,7 +23,6 @@ const _logger = ELogger('ImportCopilotTransactionsCsv');
 /// matches (after belongs-to / mask linking), and can backfill empty notes.
 class ImportCopilotTransactionsCsv({
   required final AccountsRepository _accountsRepository,
-  required final CategoriesRepository _categoriesRepository,
   required final TransactionsRepository _transactionsRepository,
 }) {
   final _uuid = const Uuid();
@@ -212,7 +210,6 @@ class ImportCopilotTransactionsCsv({
     }
 
     final session = InProgressCopilotCsvImport(
-      categoryIdByName: await _loadCategoryIdsByName(),
       existingByExternalKey: existingByExternalKey,
       existingByContentKey: existingByContentKey,
       matchingCharges: MatchingSimplefinCharges.from(
@@ -224,13 +221,5 @@ class ImportCopilotTransactionsCsv({
     );
     _persist.seedAccountCache(session, accounts);
     return session;
-  }
-
-  Future<Map<String, String>> _loadCategoryIdsByName() async {
-    final categories = await _categoriesRepository.listAll();
-    return {
-      for (final category in categories)
-        category.name.trim().toLowerCase(): category.id,
-    };
   }
 }

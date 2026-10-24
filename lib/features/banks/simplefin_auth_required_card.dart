@@ -15,10 +15,7 @@ class AcknowledgedSimpleFinAuthBanks() extends Notifier<Set<String>> {
   Set<String> build() => const {};
 
   void acknowledge(Iterable<String> bankNames) {
-    state = {
-      ...state,
-      for (final name in bankNames) name.toLowerCase(),
-    };
+    state = {...state, for (final name in bankNames) name.toLowerCase()};
   }
 }
 
@@ -26,7 +23,6 @@ class AcknowledgedSimpleFinAuthBanks() extends Notifier<Set<String>> {
 class const SimpleFinAuthRequiredCard({
   required final List<SimpleFinError> errors,
 }) extends ConsumerWidget {
-
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final acknowledged = ref.watch(acknowledgedSimpleFinAuthBanksProvider);

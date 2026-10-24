@@ -84,7 +84,7 @@ class BudgetMonth({
     for (final transaction in transactions) {
       if (transaction.excluded) continue;
       if (!transaction.isOutflow) continue;
-      final categoryId = transaction.effectiveCategoryId;
+      final categoryId = transaction.categoryId;
       if (categoryId == null) continue;
       spentByCategory.update(
         categoryId,

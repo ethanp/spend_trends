@@ -35,8 +35,8 @@ const Schema spendTrendsSchema = Schema([
     Column.text('raw_description'),
     Column.text('normalized_merchant'),
     Column.integer('pending'),
-    Column.text('user_category_id'),
-    Column.text('suggested_category_id'),
+    Column.text('category_id'),
+    Column.text('category_rule_id'),
     Column.text('note'),
     Column.text('transaction_type'),
     Column.integer('excluded'),
@@ -47,8 +47,8 @@ const Schema spendTrendsSchema = Schema([
     Column.text('match_type'),
     Column.text('pattern'),
     Column.text('category_id'),
-    Column.integer('priority'),
     Column.text('account_id'),
+    Column.text('note'),
   ]),
   Table('life_events', [
     Column.text('title'),
@@ -96,5 +96,11 @@ const Schema spendTrendsSchema = Schema([
     Column.text('owned_asset_id'),
     Column.integer('value_cents'),
     Column.integer('valued_on'),
+  ]),
+  Table('projection_settings', [Column.text('settings_json')]),
+  Table('account_balance_snapshots', [
+    Column.text('account_id'),
+    Column.integer('balance_cents'),
+    Column.integer('recorded_on'),
   ]),
 ]);

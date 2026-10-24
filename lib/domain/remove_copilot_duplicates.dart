@@ -9,7 +9,6 @@ const _log = ELogger('RemoveCopilotDuplicates');
 
 class const RemoveCopilotDuplicatesResult({
   required final int deletedCopilotCount,
-  required final int categoriesCopiedToSimplefin,
   required final int linkedAccountMasks,
   final int deletedSameAccountCount = 0,
 });
@@ -104,8 +103,8 @@ class MatchingSimplefinCharges._({
 /// Removes Copilot rows that duplicate SimpleFIN charges on the same card/account.
 ///
 /// Links accounts by explicit [Account.belongsToAccountId] or by trailing
-/// 4-digit mask. Keeps SimpleFIN as canonical; copies a Copilot user category
-/// onto the matching SimpleFIN charge when that charge is uncategorized.
+/// 4-digit mask. Keeps SimpleFIN as canonical and copies the Copilot note
+/// onto the matching charge; rules categorize both rows the same way.
 class RemoveCopilotDuplicates({
   required final AccountsRepository _accountsRepository,
   required final TransactionsRepository _transactionsRepository,
@@ -115,7 +114,6 @@ class RemoveCopilotDuplicates({
     final sameAccountDeleted = await removeSameAccountDuplicates();
     return RemoveCopilotDuplicatesResult(
       deletedCopilotCount: crossAccount.deletedCopilotCount,
-      categoriesCopiedToSimplefin: crossAccount.categoriesCopiedToSimplefin,
       linkedAccountMasks: crossAccount.linkedAccountMasks,
       deletedSameAccountCount: sameAccountDeleted,
     );
@@ -136,7 +134,6 @@ class RemoveCopilotDuplicates({
 
     final idsToDelete = <String>{};
     var notesCopied = 0;
-    var categoriesCopied = 0;
 
     for (final bucket in buckets.values) {
       if (bucket.length < 2) continue;
@@ -151,15 +148,6 @@ class RemoveCopilotDuplicates({
           );
           notesCopied++;
         }
-        final categoryToCopy =
-            duplicate.userCategoryId ?? duplicate.suggestedCategoryId;
-        if (categoryToCopy != null && keeper.isUncategorized) {
-          await _transactionsRepository.setSuggestedCategory(
-            transactionId: keeper.id,
-            categoryId: categoryToCopy,
-          );
-          categoriesCopied++;
-        }
         idsToDelete.add(duplicate.id);
       }
     }
@@ -170,7 +158,7 @@ class RemoveCopilotDuplicates({
 
     _log.log(
       'Removed ${idsToDelete.length} same-account duplicates '
-      '(merged $notesCopied notes, $categoriesCopied categories)',
+      '(merged $notesCopied notes)',
     );
     return idsToDelete.length;
   }
@@ -186,13 +174,11 @@ class RemoveCopilotDuplicates({
     if (matchingCharges.isEmpty) {
       return const RemoveCopilotDuplicatesResult(
         deletedCopilotCount: 0,
-        categoriesCopiedToSimplefin: 0,
         linkedAccountMasks: 0,
       );
     }
 
     final copilotIdsToDelete = <String>{};
-    var categoriesCopied = 0;
 
     for (final transaction in transactions) {
       final account = accountsById[transaction.accountId];
@@ -205,17 +191,6 @@ class RemoveCopilotDuplicates({
         normalizedMerchant: transaction.normalizedMerchant,
       );
       if (match == null) continue;
-
-      // Copilot provenance is always suggested — never a user lock on SimpleFIN.
-      final categoryToCopy =
-          transaction.userCategoryId ?? transaction.suggestedCategoryId;
-      if (categoryToCopy != null && match.isUncategorized) {
-        await _transactionsRepository.setSuggestedCategory(
-          transactionId: match.id,
-          categoryId: categoryToCopy,
-        );
-        categoriesCopied++;
-      }
 
       final noteToCopy = transaction.note?.trim() ?? '';
       if (noteToCopy.isNotEmpty) {
@@ -237,13 +212,11 @@ class RemoveCopilotDuplicates({
 
     _log.log(
       'Removed ${copilotIdsToDelete.length} Copilot duplicates across '
-      '${matchingCharges.linkCount} linked accounts '
-      '(copied $categoriesCopied categories to SimpleFIN)',
+      '${matchingCharges.linkCount} linked accounts',
     );
 
     return RemoveCopilotDuplicatesResult(
       deletedCopilotCount: copilotIdsToDelete.length,
-      categoriesCopiedToSimplefin: categoriesCopied,
       linkedAccountMasks: matchingCharges.linkCount,
     );
   }
@@ -265,9 +238,7 @@ class RemoveCopilotDuplicates({
 
   static int _keepScore(BankTransaction transaction) {
     var score = 0;
-    if (transaction.hasUserCategory) score += 100;
     if ((transaction.note?.trim() ?? '').isNotEmpty) score += 50;
-    if (transaction.suggestedCategoryId != null) score += 10;
     // Prefer live-bank rows over Copilot re-imports when external ids differ.
     if (!transaction.externalId.startsWith('copilot:')) score += 20;
     return score;

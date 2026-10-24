@@ -7,7 +7,6 @@ import 'package:spend_trends/features/banks/banks_advanced_section.dart';
 import 'package:spend_trends/features/settings/copilot_import_tile.dart';
 import 'package:spend_trends/features/settings/csv_import_sheet.dart';
 import 'package:spend_trends/features/settings/remove_duplicate_transactions_tile.dart';
-import 'package:spend_trends/features/settings/unlock_copilot_categories_tile.dart';
 import 'package:spend_trends/features/settings/settings_section.dart';
 import 'package:spend_trends/features/settings/sync_status_tile.dart';
 
@@ -50,8 +49,6 @@ class const SettingsScreen() extends ConsumerWidget {
             ),
             const SizedBox(height: ELayout.spaceLg),
             const CopilotImportTile(),
-            const SizedBox(height: ELayout.spaceLg),
-            const UnlockCopilotCategoriesTile(),
             const SizedBox(height: ELayout.spaceLg),
             const RemoveDuplicateTransactionsTile(),
             const SizedBox(height: ELayout.spaceLg),

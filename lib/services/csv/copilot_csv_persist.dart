@@ -1,8 +1,6 @@
 import 'package:spend_trends/domain/account.dart';
 import 'package:spend_trends/domain/account_kind.dart';
-import 'package:spend_trends/domain/special_category.dart';
 import 'package:spend_trends/domain/transaction.dart';
-import 'package:spend_trends/services/csv/copilot_category_map.dart';
 import 'package:spend_trends/services/csv/copilot_csv_parse.dart';
 import 'package:spend_trends/services/csv/in_progress_copilot_csv_import.dart';
 import 'package:spend_trends/services/sqlite/accounts_repository.dart';
@@ -86,16 +84,6 @@ class CopilotCsvPersist({
     required InProgressCopilotCsvImport session,
     required String normalizedMerchant,
   }) {
-    final specialFromType = SpecialCategory.fromTransactionType(
-      parsed.transactionType,
-    );
-    final budgetsCategoryName = specialFromType != null
-        ? null
-        : spendCategoryNameForCopilot(parsed.categoryText);
-    final mappedCategoryId = budgetsCategoryName == null
-        ? null
-        : session.categoryIdByName[budgetsCategoryName.toLowerCase()];
-    final defaultCategoryId = specialFromType?.id ?? mappedCategoryId;
     return BankTransaction(
       id: uuid.v4(),
       accountId: accountId,
@@ -105,8 +93,6 @@ class CopilotCsvPersist({
       rawDescription: parsed.name,
       normalizedMerchant: normalizedMerchant,
       pending: parsed.pending,
-      userCategoryId: null,
-      suggestedCategoryId: defaultCategoryId,
       note: parsed.note,
       transactionType: parsed.transactionType,
       excluded: parsed.excluded,

@@ -46,10 +46,7 @@ class _CategoryEditorSheetState() extends ConsumerState<CategoryEditorSheet> {
 
   bool get _isEditing => widget.category != null;
 
-  /// Income / Transfer only — Housing and Investments stay editable.
-  bool get _isImmutableBuiltin =>
-      widget.category?.id == SpecialCategory.income.id ||
-      widget.category?.id == SpecialCategory.transfer.id;
+  bool get _isImmutableBuiltin => widget.category?.lockedCaption != null;
 
   @override
   void initState() {
@@ -104,15 +101,7 @@ class _CategoryEditorSheetState() extends ConsumerState<CategoryEditorSheet> {
           style: EText.section.copyWith(fontWeight: FontWeight.w600),
         ),
         const SizedBox(height: ELayout.spaceSm),
-        Text(
-          widget.category!.isIncome
-              ? 'Income · excluded from spend trends. '
-                    'It cannot be renamed or deleted.'
-              : 'Transfer · excluded from spend trends. '
-                    'It cannot be renamed or deleted. '
-                    'Use it for money moving between your own accounts.',
-          style: EText.caption,
-        ),
+        Text(widget.category!.lockedCaption!, style: EText.caption),
         const SizedBox(height: ELayout.spaceMd),
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
@@ -260,7 +249,7 @@ class _CategoryEditorSheetState() extends ConsumerState<CategoryEditorSheet> {
         for (final rule in preview)
           Padding(
             padding: const EdgeInsets.only(bottom: ELayout.spaceXs),
-            child: Text(_ruleCaption(rule), style: EText.caption),
+            child: Text(rule.matchCaption, style: EText.caption),
           ),
         if (categoryRules.length > preview.length)
           Text(
@@ -269,14 +258,6 @@ class _CategoryEditorSheetState() extends ConsumerState<CategoryEditorSheet> {
           ),
       ],
     );
-  }
-
-  String _ruleCaption(CategorizationRule rule) {
-    final matchLabel = switch (rule.matchType) {
-      RuleMatchType.merchantContains => 'contains',
-      RuleMatchType.merchantExact => 'exact',
-    };
-    return '$matchLabel “${rule.pattern}”';
   }
 
   Widget _errorMessage() {

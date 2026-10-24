@@ -1,4 +1,5 @@
 import 'package:spend_trends/domain/month_summary.dart';
+import 'package:spend_trends/domain/rule_change_plan.dart';
 import 'package:spend_trends/domain/transaction.dart';
 import 'package:ethan_sync/ethan_sync.dart';
 import 'package:ethan_utils/ethan_utils.dart';
@@ -123,7 +124,7 @@ class TransactionsRepository(final PowerSyncDatabase _powerSync) {
           INSERT INTO transactions (
             id, account_id, external_id, posted_at, amount_cents,
             raw_description, normalized_merchant, pending,
-            user_category_id, suggested_category_id, note,
+            category_id, category_rule_id, note,
             transaction_type, excluded, recurring_series, imported_at
           ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
           ''',
@@ -136,8 +137,8 @@ class TransactionsRepository(final PowerSyncDatabase _powerSync) {
             transaction.rawDescription,
             transaction.normalizedMerchant,
             transaction.pending ? 1 : 0,
-            transaction.userCategoryId,
-            transaction.suggestedCategoryId,
+            transaction.categoryId,
+            transaction.categoryRuleId,
             _normalizedNote(transaction.note),
             transaction.transactionType,
             transaction.excluded ? 1 : 0,
@@ -163,10 +164,9 @@ class TransactionsRepository(final PowerSyncDatabase _powerSync) {
     });
   }
 
-  Future<bool> upsertTransaction(
-    BankTransaction transaction, {
-    bool overwriteUserCategory = false,
-  }) async {
+  /// Inserts or refreshes bank fields. Category stays whatever rules last
+  /// set; run [Categorizer.recategorizeAll] after a batch of new rows.
+  Future<bool> upsertTransaction(BankTransaction transaction) async {
     final existing = await findByAccountExternalId(
       accountId: transaction.accountId,
       externalId: transaction.externalId,
@@ -181,12 +181,9 @@ class TransactionsRepository(final PowerSyncDatabase _powerSync) {
       'raw_description': transaction.rawDescription,
       'normalized_merchant': transaction.normalizedMerchant,
       'pending': transaction.pending ? 1 : 0,
-      'user_category_id': overwriteUserCategory
-          ? transaction.userCategoryId
-          : (existing?.userCategoryId ?? transaction.userCategoryId),
-      'suggested_category_id': overwriteUserCategory
-          ? transaction.suggestedCategoryId
-          : (existing?.suggestedCategoryId ?? transaction.suggestedCategoryId),
+      'category_id': existing?.categoryId ?? transaction.categoryId,
+      'category_rule_id':
+          existing?.categoryRuleId ?? transaction.categoryRuleId,
       // Keep an existing note when the incoming row has none (e.g. SimpleFIN sync).
       'note': _mergedNote(existing: existing?.note, incoming: transaction.note),
       'transaction_type': transaction.transactionType,
@@ -239,43 +236,26 @@ class TransactionsRepository(final PowerSyncDatabase _powerSync) {
     return trimmed;
   }
 
-  Future<void> setUserCategory({
-    required String transactionId,
-    required String? categoryId,
-  }) async {
-    await _powerSync.execute(
-      'UPDATE transactions SET user_category_id = ? WHERE id = ?',
-      [categoryId, transactionId],
+  Future<List<BankTransaction>> listCategorizedByRule(String ruleId) async {
+    final rows = await _powerSync.getAll(
+      'SELECT * FROM transactions WHERE category_rule_id = ? '
+      'ORDER BY posted_at DESC',
+      [ruleId],
     );
+    return rows.map(_fromRow).toList();
   }
 
-  Future<void> setSuggestedCategory({
-    required String transactionId,
-    required String? categoryId,
-  }) async {
-    await _powerSync.execute(
-      '''
-      UPDATE transactions
-      SET suggested_category_id = ?
-      WHERE id = ? AND user_category_id IS NULL
-      ''',
-      [categoryId, transactionId],
-    );
-  }
-
-  /// Move a locked user category onto suggested so default rules can own it.
-  Future<void> releaseUserCategoryToSuggested({
-    required String transactionId,
-    required String categoryId,
-  }) async {
-    await _powerSync.execute(
-      '''
-      UPDATE transactions
-      SET user_category_id = NULL, suggested_category_id = ?
-      WHERE id = ?
-      ''',
-      [categoryId, transactionId],
-    );
+  /// Writes the rule-derived category for each moved transaction in one batch.
+  Future<void> setCategories(List<RecategorizedTransaction> moves) async {
+    if (moves.isEmpty) return;
+    await _powerSync.writeTransaction((tx) async {
+      for (final move in moves) {
+        await tx.execute(
+          'UPDATE transactions SET category_id = ?, category_rule_id = ? WHERE id = ?',
+          [move.categoryId, move.rule?.id, move.transaction.id],
+        );
+      }
+    });
   }
 
   Future<void> deleteTransaction(String transactionId) async {
@@ -357,8 +337,8 @@ class TransactionsRepository(final PowerSyncDatabase _powerSync) {
       rawDescription: columns['raw_description'] as String,
       normalizedMerchant: columns['normalized_merchant'] as String,
       pending: columns['pending'].asInt() == 1,
-      userCategoryId: columns['user_category_id'] as String?,
-      suggestedCategoryId: columns['suggested_category_id'] as String?,
+      categoryId: columns['category_id'] as String?,
+      categoryRuleId: columns['category_rule_id'] as String?,
       note: columns['note'] as String?,
       transactionType: columns['transaction_type'] as String?,
       excluded: columns['excluded'] != null && columns['excluded'].asInt() == 1,

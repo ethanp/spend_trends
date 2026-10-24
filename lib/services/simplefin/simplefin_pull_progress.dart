@@ -51,7 +51,13 @@ class const SimpleFinPullResult({
 });
 
 /// Download state for one bank during a pull.
-enum SimpleFinBankLoadPhase() { waiting, receiving, saving, done, failed }
+enum SimpleFinBankLoadPhase() {
+  waiting,
+  receiving,
+  saving,
+  done,
+  failed,
+}
 
 class const SimpleFinBankLoad({
   required final String connectionId,

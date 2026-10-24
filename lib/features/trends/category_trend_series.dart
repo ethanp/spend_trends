@@ -51,6 +51,7 @@ class const CategoryTrendSeries({
   bool get isMetaLegend =>
       isAllSpend ||
       id == TrendChartCatalog.netWorthSeriesId ||
+      id == TrendChartCatalog.assetSalesSeriesId ||
       id == TrendChartCatalog.housingAffordabilitySeriesId ||
       id == TrendChartCatalog.uncategorizedSeriesId;
 

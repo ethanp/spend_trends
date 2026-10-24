@@ -10,18 +10,16 @@ class const ActivityVisibleTransactions({
   required final int searchMatchCount,
   required final List<BankTransaction> visible,
   required final RuleMatchIndex ruleMatchIndex,
-  required final Map<String, CategorizationRule?> explainingByTransactionId,
 });
 
 /// Filters Activity transactions: Copilot links, search, canceling pairs,
-/// auto-categorized hide, and optional uncategorized-only.
+/// and optional uncategorized-only.
 class const ActivityVisibleTransactionsQuery({
   required final List<BankTransaction> transactions,
   required final Map<String, Account> accounts,
   required final Map<String, SpendCategory> categories,
   required final List<CategorizationRule> rules,
   required final String searchQuery,
-  required final bool hideRuleMatched,
   required final bool uncategorizedOnly,
 }) {
   ActivityVisibleTransactions run() {
@@ -33,7 +31,7 @@ class const ActivityVisibleTransactionsQuery({
               transaction: transaction,
               query: searchQuery,
               account: accounts[transaction.accountId],
-              category: categories[transaction.effectiveCategoryId],
+              category: categories[transaction.categoryId],
             ))
           transaction,
     ];
@@ -45,37 +43,17 @@ class const ActivityVisibleTransactionsQuery({
             accountsById: accounts,
           );
 
-    final ruleMatchIndex = RuleMatchIndex(rules);
-    final Map<String, CategorizationRule?> explainingByTransactionId;
-    final List<BankTransaction> afterRuleFilter;
-    if (hideRuleMatched) {
-      explainingByTransactionId = ruleMatchIndex.explainingRulesByTransactionId(
-        searchMatches,
-      );
-      afterRuleFilter = [
-        for (final transaction in searchMatches)
-          if (!transaction.isAutoCategorized(
-            explainingByTransactionId[transaction.id],
-          ))
-            transaction,
-      ];
-    } else {
-      explainingByTransactionId = const {};
-      afterRuleFilter = searchMatches;
-    }
-
     final visible = uncategorizedOnly
         ? [
-            for (final transaction in afterRuleFilter)
+            for (final transaction in searchMatches)
               if (transaction.isUncategorized) transaction,
           ]
-        : afterRuleFilter;
+        : searchMatches;
 
     return ActivityVisibleTransactions(
       searchMatchCount: searchMatches.length,
       visible: visible,
-      ruleMatchIndex: ruleMatchIndex,
-      explainingByTransactionId: explainingByTransactionId,
+      ruleMatchIndex: RuleMatchIndex(rules),
     );
   }
 

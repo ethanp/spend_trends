@@ -1,4 +1,5 @@
 import 'package:spend_trends/domain/account.dart';
+import 'package:spend_trends/domain/account_balance_snapshot.dart';
 import 'package:spend_trends/domain/account_kind.dart';
 import 'package:spend_trends/domain/owned_asset.dart';
 import 'package:spend_trends/domain/owned_asset_kind.dart';
@@ -342,7 +343,7 @@ void main() {
           rawDescription: 'Coffee',
           normalizedMerchant: 'COFFEE',
           pending: false,
-          userCategoryId: 'cat_dining',
+          categoryId: 'cat_dining',
         ),
     ];
 
@@ -612,6 +613,65 @@ void main() {
     expect(homeSeries.legendGroup, AccountKind.nonFinancialAssets.legendLabel);
     expect(homeSeries.points[0].rollingCents, 20000000.0);
     expect(homeSeries.points[4].rollingCents, 25000000.0);
+  });
+
+  test('manual account steps between recorded balances, ignoring txns', () {
+    final day0 = DateTime(2024, 1, 1);
+    final chartDates = [
+      for (var dayOffset = 0; dayOffset < 10; dayOffset++)
+        day0.add(Duration(days: dayOffset)),
+    ];
+    final accounts = [
+      Account(
+        id: 'hsa',
+        externalId: 'manual:hsa',
+        name: 'HSA',
+        currency: 'USD',
+        balanceCents: 150000,
+        balanceAsOf: DateTime(2024, 1, 6),
+        status: AccountStatus.ok,
+        kind: AccountKind.investment,
+      ),
+    ];
+    final transactions = [
+      BankTransaction(
+        id: 'contribution',
+        accountId: 'hsa',
+        externalId: 'c1',
+        postedAt: DateTime(2024, 1, 4),
+        amountCents: 99999,
+        rawDescription: 'Contribution',
+        normalizedMerchant: 'CONTRIBUTION',
+        pending: false,
+      ),
+    ];
+    final balanceSnapshots = [
+      AccountBalanceSnapshot(
+        id: 'later',
+        accountId: 'hsa',
+        balanceCents: 150000,
+        recordedOn: DateTime(2024, 1, 6),
+      ),
+      AccountBalanceSnapshot(
+        id: 'earlier',
+        accountId: 'hsa',
+        balanceCents: 100000,
+        recordedOn: DateTime(2024, 1, 3),
+      ),
+    ];
+
+    final daily = NetWorthTrend.dailyCents(
+      accounts: accounts,
+      transactions: transactions,
+      chartDates: chartDates,
+      balanceSnapshots: balanceSnapshots,
+    );
+
+    expect(daily[1], 0.0);
+    expect(daily[2], 100000.0);
+    expect(daily[4], 100000.0);
+    expect(daily[5], 150000.0);
+    expect(daily[9], 150000.0);
   });
 
   test('factory includes owned assets in the net worth series', () {

@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:spend_trends/domain/account.dart';
+import 'package:spend_trends/domain/account_balance_snapshot.dart';
 import 'package:spend_trends/domain/category.dart';
 import 'package:spend_trends/domain/category_group.dart';
 import 'package:spend_trends/domain/owned_asset.dart';
@@ -44,11 +45,15 @@ final trendsChartBundleProvider = FutureProvider<TrendsChartBundle>((
   final List<OwnedAssetWithValuations> ownedAssets = await ref.watch(
     ownedAssetsListProvider.future,
   );
+  final List<AccountBalanceSnapshot> balanceSnapshots = await ref.watch(
+    accountBalanceSnapshotsProvider.future,
+  );
   return const BuildTrendsCharts().build(
     transactions: transactions,
     categories: categories,
     groups: groups,
     accounts: accounts.values.toList(),
     ownedAssets: ownedAssets,
+    balanceSnapshots: balanceSnapshots,
   );
 });

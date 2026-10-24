@@ -189,25 +189,6 @@ class SuggestMerchantCategories({
     }
   }
 
-  Future<void> applyToUncategorized(
-    List<CategorySuggestion> suggestions,
-  ) async {
-    final resolved = await createMissingCategories(suggestions);
-    final byMerchant = {
-      for (final suggestion in resolved)
-        suggestion.merchant.toUpperCase(): suggestion,
-    };
-    for (final transaction in await _uncategorizedCandidates()) {
-      if (transaction.hasUserCategory) continue;
-      final suggestion = byMerchant[transaction.normalizedMerchant];
-      if (suggestion?.categoryId == null) continue;
-      await _transactionsRepository.setSuggestedCategory(
-        transactionId: transaction.id,
-        categoryId: suggestion!.categoryId!,
-      );
-    }
-  }
-
   Future<http.Response> _postChatCompletions(
     List<Map<String, String>> messages,
   ) async {

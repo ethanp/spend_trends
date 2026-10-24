@@ -8,7 +8,6 @@ const _logger = ELogger('InProgressCopilotCsvImport');
 
 /// In-memory state for one Copilot CSV import run.
 class InProgressCopilotCsvImport({
-  required final Map<String, String> categoryIdByName,
   required final Map<String, TransactionPresence> existingByExternalKey,
   required final Map<String, TransactionPresence> existingByContentKey,
   required final MatchingSimplefinCharges matchingCharges,

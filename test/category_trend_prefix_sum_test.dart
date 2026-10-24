@@ -20,7 +20,7 @@ void main() {
         rawDescription: 'Coffee',
         normalizedMerchant: 'COFFEE',
         pending: false,
-        userCategoryId: 'cat_dining',
+        categoryId: 'cat_dining',
       ),
     );
     final bundle = const BuildTrendsCharts().build(
@@ -96,7 +96,7 @@ void main() {
           rawDescription: 'Coffee',
           normalizedMerchant: 'COFFEE',
           pending: false,
-          userCategoryId: 'cat_dining',
+          categoryId: 'cat_dining',
         ),
     ];
 

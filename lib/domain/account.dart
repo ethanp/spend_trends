@@ -79,8 +79,39 @@ class const Account({
 
   bool get isCopilot => externalId.startsWith('copilot:');
 
-  /// Copilot imports carry transaction history only — no live balance.
-  bool get hasLiveBalance => !isCopilot;
+  /// Imported from an aggregator export (e.g. Empower) for its history only:
+  /// a closed plan or one SimpleFIN cannot reach.
+  bool get isHistoryImport => externalId.startsWith('history:');
+
+  /// Valued by hand (an institution SimpleFIN cannot reach); its balance
+  /// comes from recorded snapshots.
+  bool get isManual => externalId.startsWith('manual:');
+
+  /// Synced from SimpleFIN, so it has a live balance and can be pulled.
+  /// Copilot and history imports carry transactions only.
+  bool get isFromSimpleFin =>
+      externalId.isNotEmpty && !isCopilot && !isHistoryImport && !isManual;
+
+  bool get hasLiveBalance => isFromSimpleFin || isManual;
+
+  /// A manual balance older than this needs looking up again; nothing
+  /// refreshes it.
+  static const manualBalanceFreshFor = Duration(days: 60);
+
+  /// A manual account with no balance, or one older than
+  /// [manualBalanceFreshFor] as of [now].
+  bool isManualBalanceStale(DateTime now) =>
+      isManual &&
+      (balanceAsOf == null ||
+          now.difference(balanceAsOf!) > manualBalanceFreshFor);
+
+  /// Where the account's balance and transactions come from.
+  String get sourceName {
+    if (isCopilot) return 'copilot';
+    if (isHistoryImport) return 'history';
+    if (isManual) return 'manual';
+    return 'simplefin';
+  }
 
   String get balanceCaption => hasLiveBalance ? formatCents(balanceCents) : '—';
 

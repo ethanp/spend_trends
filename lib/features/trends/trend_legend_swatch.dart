@@ -54,7 +54,11 @@ class _HiddenLegendSwatchPainter(final Color color) extends CustomPainter {
       const Radius.circular(2),
     );
     canvas.drawRRect(rect, stroke);
-    canvas.drawLine(Offset(1, size.height - 1), Offset(size.width - 1, 1), stroke);
+    canvas.drawLine(
+      Offset(1, size.height - 1),
+      Offset(size.width - 1, 1),
+      stroke,
+    );
   }
 
   @override

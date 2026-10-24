@@ -3,6 +3,7 @@ import 'package:ethan_utils/ethan_utils.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:spend_trends/domain/categorizer.dart';
+import 'package:spend_trends/domain/rule_change_plan.dart';
 import 'package:spend_trends/features/activity/rule_impact_confirm_sheet.dart';
 import 'package:spend_trends/providers/llm_providers.dart';
 import 'package:spend_trends/features/categories/categories_providers.dart';
@@ -30,13 +31,8 @@ class const SuggestCategoriesSheet() extends ConsumerStatefulWidget {
 class _SuggestCategoriesSheetState()
     extends ConsumerState<SuggestCategoriesSheet> {
   bool _loading = true;
-  bool _createRules = true;
   String? _error;
   List<CategorySuggestion> _suggestions = const [];
-
-  String get _primaryActionLabel => _createRules ? 'Review' : 'Apply';
-
-  String get _bulkActionLabel => _createRules ? 'Review all' : 'Apply all';
 
   @override
   void initState() {
@@ -104,16 +100,12 @@ class _SuggestCategoriesSheetState()
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _buildTitleRow(),
-          const SizedBox(height: ELayout.spaceMd),
-          _buildCreateRulesToggle(),
-          if (_createRules) ...[
-            const SizedBox(height: ELayout.spaceXs),
-            Text(
-              'You’ll confirm which existing transactions each rule '
-              'should update.',
-              style: EText.caption,
-            ),
-          ],
+          const SizedBox(height: ELayout.spaceXs),
+          Text(
+            'Each suggestion becomes a rule. You’ll see which existing '
+            'transactions it takes before it is created.',
+            style: EText.caption,
+          ),
         ],
       ),
     );
@@ -124,25 +116,7 @@ class _SuggestCategoriesSheetState()
       children: [
         Expanded(child: Text('Suggested categories', style: EText.section)),
         if (_suggestions.isNotEmpty)
-          TextButton(onPressed: _reviewAll, child: Text(_bulkActionLabel)),
-      ],
-    );
-  }
-
-  Widget _buildCreateRulesToggle() {
-    return Row(
-      children: [
-        Switch(
-          value: _createRules,
-          onChanged: (value) => setState(() => _createRules = value),
-        ),
-        const SizedBox(width: ELayout.spaceSm),
-        Expanded(
-          child: Text(
-            'Also create a rule for each merchant',
-            style: EText.body.medium,
-          ),
-        ),
+          TextButton(onPressed: _reviewAll, child: const Text('Review all')),
       ],
     );
   }
@@ -223,7 +197,7 @@ class _SuggestCategoriesSheetState()
           ),
           TextButton(
             onPressed: () => _reviewOne(suggestion),
-            child: Text(_primaryActionLabel),
+            child: const Text('Review'),
           ),
         ],
       ),
@@ -260,28 +234,21 @@ class _SuggestCategoriesSheetState()
     if (suggester == null) return false;
 
     final resolved = await suggester.createMissingCategories(suggestions);
-
-    if (!_createRules) {
-      await suggester.applyToUncategorized(resolved);
-      ref.read(spendDataChangedProvider.notifier).notify();
-      return true;
-    }
-
-    return _applyWithRules(resolved);
-  }
-
-  Future<bool> _applyWithRules(List<CategorySuggestion> suggestions) async {
     final categorizer = await ref.read(categorizerProvider.future);
-    final groups = await _buildImpactGroups(categorizer, suggestions);
+    final groups = await _buildImpactGroups(categorizer, resolved);
     if (!mounted) return false;
 
-    final result = await RuleImpactConfirmSheet.show(context, groups: groups);
-    if (result == null) return false;
+    final confirmedGroups = await RuleImpactConfirmSheet.show(
+      context,
+      groups: groups,
+    );
+    if (confirmedGroups == null) return false;
 
-    await _persistRulesAndCategories(
-      categorizer,
-      result.groups,
-      result.selectedTransactionIds,
+    await categorizer.applyRuleChanges(
+      drafts: [
+        for (final group in confirmedGroups)
+          RuleDraft(pattern: group.pattern, categoryId: group.categoryId),
+      ],
     );
     ref.read(spendDataChangedProvider.notifier).notify();
     return true;
@@ -301,31 +268,12 @@ class _SuggestCategoriesSheetState()
           pattern: pattern,
           categoryId: categoryId,
           categoryName: suggestion.categoryName,
-          transactions: await categorizer.transactionsMatchingContains(pattern),
+          transactions: await categorizer.transactionsClaimedBy(
+            RuleDraft(pattern: pattern, categoryId: categoryId),
+          ),
         ),
       );
     }
     return groups;
-  }
-
-  Future<void> _persistRulesAndCategories(
-    Categorizer categorizer,
-    List<RuleImpactGroup> groups,
-    Set<String> selectedIds,
-  ) async {
-    for (final group in groups) {
-      await categorizer.upsertMerchantContainsRule(
-        pattern: group.pattern,
-        categoryId: group.categoryId,
-      );
-      await categorizer.applyCategoryToTransactions(
-        categoryId: group.categoryId,
-        transactionIds: [
-          for (final transaction in group.transactions)
-            if (selectedIds.contains(transaction.id)) transaction.id,
-        ],
-        asUserCategory: false,
-      );
-    }
   }
 }

@@ -52,25 +52,26 @@ class const SpendCategory({
   }
 }
 
+/// The only way a transaction gets a category. When several rules match, the
+/// most specific wins (see [RuleMatchIndex]).
 class const CategorizationRule({
   required final String id,
   required final RuleMatchType matchType,
   required final String pattern,
   required final String categoryId,
-  required final int priority,
   final String? accountId,
+
+  /// Why this rule exists and any assumptions behind it.
+  final String? note,
 }) {
-  /// Weakest priority — Copilot / import defaults lose to user-created rules.
-  static const defaultImportPriority = 0;
-
-  /// Priority for rules created from the Activity recategorize sheet.
-  static const userCreatedPriority = 10;
-
-  bool get isDefaultImport => priority == defaultImportPriority;
-
-  bool get beatsImportDefault => priority > defaultImportPriority;
-
   bool get isLimitedToOneAccount => accountId != null;
+
+  /// e.g. `contains “kroger”`, `exact “amazon”`, `every transaction`.
+  String get matchCaption => switch (matchType) {
+    RuleMatchType.merchantContains => 'contains “$pattern”',
+    RuleMatchType.merchantExact => 'exact “$pattern”',
+    RuleMatchType.wholeAccount => 'every transaction',
+  };
 
   bool appliesToTransaction(BankTransaction transaction) =>
       accountId == null || accountId == transaction.accountId;
@@ -81,11 +82,26 @@ class const CategorizationRule({
     if (account == null) return 'One account';
     return account.displayNameWithInstitution;
   }
+
+  CategorizationRule copyWith({String? categoryId, String? note}) =>
+      CategorizationRule(
+        id: id,
+        matchType: matchType,
+        pattern: pattern,
+        categoryId: categoryId ?? this.categoryId,
+        accountId: accountId,
+        note: note ?? this.note,
+      );
 }
 
-enum RuleMatchType() {
-  merchantContains,
-  merchantExact;
+enum RuleMatchType({required final int specificity}) {
+  /// Every transaction on the rule's account (feeds with blank descriptions,
+  /// e.g. staking rewards). Needs an account; the pattern is empty.
+  wholeAccount(specificity: 0),
+  merchantContains(specificity: 1),
+  merchantExact(specificity: 2);
+
+  bool get usesPattern => this != wholeAccount;
 
   static RuleMatchType fromStorage(String value) {
     return RuleMatchType.values.firstWhere(

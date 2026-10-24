@@ -2,6 +2,7 @@ import 'package:ethan_ui/ethan_ui.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:spend_trends/domain/category.dart';
+import 'package:spend_trends/domain/rule_change_plan.dart';
 import 'package:spend_trends/domain/category_group.dart';
 import 'package:spend_trends/features/activity/overlapping_merchant_contains_rules.dart';
 import 'package:spend_trends/features/categories/categories_providers.dart';
@@ -175,7 +176,9 @@ class _OverlappingRuleChipState() extends ConsumerState<_OverlappingRuleChip> {
     setState(() => _busy = true);
     try {
       final categorizer = await ref.read(categorizerProvider.future);
-      await categorizer.removeRuleAndReclaim(widget.entry.rule);
+      await categorizer.applyRuleChanges(
+        deletedRuleIds: {widget.entry.rule.id},
+      );
       ref.read(spendDataChangedProvider.notifier).notify();
       if (mounted) setState(() => _busy = false);
     } catch (error) {
@@ -190,9 +193,10 @@ class _OverlappingRuleChipState() extends ConsumerState<_OverlappingRuleChip> {
     setState(() => _busy = true);
     try {
       final categorizer = await ref.read(categorizerProvider.future);
-      await categorizer.retargetRule(
-        rule: widget.entry.rule,
-        categoryId: category.id,
+      await categorizer.applyRuleChanges(
+        drafts: [
+          RuleDraft.retargeting(widget.entry.rule, categoryId: category.id),
+        ],
       );
       ref.read(spendDataChangedProvider.notifier).notify();
       if (mounted) setState(() => _busy = false);

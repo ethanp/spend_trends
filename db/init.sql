@@ -33,7 +33,7 @@ CREATE TABLE IF NOT EXISTS categories (
     group_id TEXT REFERENCES category_groups(id),
     conscious_spending_area TEXT CHECK (
         conscious_spending_area IS NULL OR
-        conscious_spending_area IN ('fixedCosts', 'investments', 'savings', 'guiltFree')
+        conscious_spending_area IN ('fixedCosts', 'investments', 'guiltFree')
     )
 );
 
@@ -46,8 +46,8 @@ CREATE TABLE IF NOT EXISTS transactions (
     raw_description TEXT NOT NULL,
     normalized_merchant TEXT NOT NULL,
     pending INTEGER NOT NULL DEFAULT 0,
-    user_category_id TEXT REFERENCES categories(id),
-    suggested_category_id TEXT REFERENCES categories(id),
+    category_id TEXT REFERENCES categories(id),
+    category_rule_id TEXT,
     note TEXT,
     transaction_type TEXT,
     excluded INTEGER NOT NULL DEFAULT 0,
@@ -61,8 +61,8 @@ CREATE TABLE IF NOT EXISTS categorization_rules (
     match_type TEXT NOT NULL,
     pattern TEXT NOT NULL,
     category_id TEXT NOT NULL REFERENCES categories(id) ON DELETE CASCADE,
-    priority INTEGER NOT NULL DEFAULT 0,
-    account_id TEXT REFERENCES accounts(id) ON DELETE CASCADE
+    account_id TEXT REFERENCES accounts(id) ON DELETE CASCADE,
+    note TEXT
 );
 
 CREATE TABLE IF NOT EXISTS life_events (
@@ -133,3 +133,18 @@ CREATE TABLE IF NOT EXISTS owned_asset_valuations (
 
 CREATE INDEX IF NOT EXISTS owned_asset_valuations_asset_valued
     ON owned_asset_valuations (owned_asset_id, valued_on DESC);
+
+CREATE TABLE IF NOT EXISTS projection_settings (
+    id TEXT PRIMARY KEY,
+    settings_json TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS account_balance_snapshots (
+    id TEXT PRIMARY KEY,
+    account_id TEXT NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
+    balance_cents BIGINT NOT NULL,
+    recorded_on BIGINT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS account_balance_snapshots_account_recorded
+    ON account_balance_snapshots (account_id, recorded_on);

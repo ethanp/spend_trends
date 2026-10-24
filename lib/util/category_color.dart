@@ -15,6 +15,7 @@ class CategoryColor._() {
   static const housing = FinanceColors.housing;
   static const income = EColors.success;
   static const transfer = FinanceColors.accentSecondary;
+  static const assetSale = Color(0xFFF77F00);
 
   /// Same palette as Trends series (readable on dark surfaces).
   static const palette = <Color>[
@@ -45,6 +46,7 @@ class CategoryColor._() {
       return income;
     }
     if (SpecialCategory.isTransferId(categoryId)) return transfer;
+    if (SpecialCategory.isAssetSaleId(categoryId)) return assetSale;
     final trimmedGroupId = groupId?.trim();
     if (trimmedGroupId != null && trimmedGroupId.isNotEmpty) {
       return forGroupId(trimmedGroupId).shadeKeyedBy(categoryId);

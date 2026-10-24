@@ -65,7 +65,7 @@ class const ActivityColumnWidths({
 
     for (final transaction in transactions) {
       final categoryName =
-          categories[transaction.effectiveCategoryId]?.name ?? 'Uncategorized';
+          categories[transaction.categoryId]?.name ?? 'Uncategorized';
       final categoryPaint = categoryName.laidOutWidth(categoryStyle);
       if (categoryPaint > categoryWidth) categoryWidth = categoryPaint;
 

@@ -1,8 +1,10 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:spend_trends/domain/account.dart';
+import 'package:spend_trends/domain/account_balance_snapshot.dart';
 import 'package:spend_trends/domain/pull_simplefin_transactions.dart';
 import 'package:spend_trends/providers/spend_data_changed.dart';
 import 'package:spend_trends/services/simplefin/simplefin_access_store.dart';
+import 'package:spend_trends/services/sqlite/account_balance_snapshots_repository.dart';
 import 'package:spend_trends/services/simplefin/simplefin_client.dart';
 import 'package:spend_trends/services/sqlite/accounts_repository.dart';
 import 'package:spend_trends/services/sqlite/simplefin_pull_history.dart';
@@ -46,3 +48,13 @@ final accountsMapProvider = FutureProvider<Map<String, Account>>((ref) async {
   final accounts = await repository.listAccounts();
   return {for (final account in accounts) account.id: account};
 });
+
+/// Recorded balances of manual accounts, oldest first.
+final accountBalanceSnapshotsProvider =
+    FutureProvider<List<AccountBalanceSnapshot>>((ref) async {
+      ref.watch(spendDataChangedProvider);
+      final repository = await ref.watch(
+        accountBalanceSnapshotsRepositoryProvider.future,
+      );
+      return repository.listAll();
+    });

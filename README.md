@@ -47,6 +47,7 @@ SimpleFIN Bridge ──HTTP──► App (claim + /accounts)
 | `domain/` | Models + use cases (ingest, categorize, spend rollups) |
 | `services/` | SimpleFIN, PowerSync repos, CSV, LLM, ethan_sync config |
 | `providers/` | Riverpod wiring |
+| `agent_api/` | Loopback HTTP API for agent categorization audits (macOS) |
 | `theme/` | Finance accent overlay (`FinanceColors`); chrome via `ethan_ui` |
 | `widgets/`, `util/` | Shared UI/helpers |
 
@@ -78,8 +79,41 @@ flutter run -d iphone
 | `SIMPLEFIN_ACCESS_URL` | After claim | Claimed Access URL (not Setup Token) |
 | `LLM_APP_NAME` | Optional | Usually `spend_trends` |
 | `LLM_APP_SECRET` | Optional | Must match infra `LLM_SPEND_TRENDS_SECRET` |
+| `AGENT_API_TOKEN` | Optional | Turns on the agent API (macOS); any random string |
+| `AGENT_API_PORT` | Optional | Agent API port, default `8791` |
 
 `.env` is gitignored and listed as a Flutter asset (same pattern as your other apps). Keep real values only on your machine.
+
+## Agent API
+
+While the macOS app is open, it serves a loopback-only HTTP API on
+`127.0.0.1:$AGENT_API_PORT` so a local agent can audit and adjust
+categorization. A hot restart can leave that port stuck on a dead listener;
+the app then binds a free port and writes the one it serves on to
+`~/Library/Application Support/com.ethan.spend_trends/agent_api_port`, which
+`scripts/agent_api` reads. Routes call the same repositories and `Categorizer` the UI
+uses; writes go through PowerSync and sync to other devices. Every route
+except `/health` needs `Authorization: Bearer $AGENT_API_TOKEN`.
+
+```bash
+scripts/agent_api GET /context
+scripts/agent_api GET '/merchants?category=none'
+scripts/agent_api POST /rules/preview '{"pattern":"trader joe"}'
+```
+
+Start with `GET /context`. It returns a guide to category roles (spend,
+income, transfer, asset sale) and categorization sources (user lock, rule,
+import), conscious spending areas, every category with counts and trailing
+year spend, accounts, and the endpoint list.
+
+| Read | Write |
+|------|-------|
+| `GET /conscious-spending` (the dashboard card), `/categories`, `/accounts`, `/rules` | `POST /transactions/categorize` lock or clear a category |
+| `GET /rules/<id>/transactions` | `POST /transactions/release` user lock → suggested |
+| `GET /transactions?category=&source=&account=&search=&since=&until=&minAmountCents=&direction=&limit=` | `PATCH /transactions/<id>` note |
+| `GET /transactions/<id>` | `POST /rules`, `PATCH /rules/<id>`, `DELETE /rules/<id>` |
+| `GET /merchants` (same filters) | `POST /categories`, `PATCH /categories/<id>`, `POST /categories/<id>/merge` |
+| `POST /rules/preview` (dry run) | `POST /groups` |
 
 ## Infra
 

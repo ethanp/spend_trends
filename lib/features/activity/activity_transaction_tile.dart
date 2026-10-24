@@ -133,6 +133,7 @@ class const ActivityTransactionTile({
     if (category?.isTransfer == true) {
       return FinanceColors.accentSecondary;
     }
+    if (category?.isAssetSale == true) return CategoryColor.assetSale;
     if (transaction.isInflow || category?.isIncome == true) {
       return EColors.success;
     }

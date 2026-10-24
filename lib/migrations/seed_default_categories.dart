@@ -63,10 +63,7 @@ Future<void> seedDefaultCategoriesIfNeeded(PowerSyncDatabase database) async {
       name: 'Travel',
       area: ConsciousSpendingArea.guiltFree,
     ),
-    _DefaultSpendCategory(
-      name: 'Other',
-      area: ConsciousSpendingArea.guiltFree,
-    ),
+    _DefaultSpendCategory(name: 'Other', area: ConsciousSpendingArea.guiltFree),
   ];
   for (var index = 0; index < spendDefaults.length; index++) {
     final seed = spendDefaults[index];

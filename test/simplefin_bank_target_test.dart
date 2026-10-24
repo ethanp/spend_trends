@@ -7,8 +7,18 @@ import 'package:spend_trends/services/simplefin/simplefin_pull_progress.dart';
 void main() {
   test('local accounts group into one target per bank', () {
     final banks = SimpleFinBankTarget.fromLocalAccounts([
-      _account(id: '1', externalId: 'ext-chase-1', connId: 'chase', connName: 'Chase'),
-      _account(id: '2', externalId: 'ext-chase-2', connId: 'chase', connName: 'Chase'),
+      _account(
+        id: '1',
+        externalId: 'ext-chase-1',
+        connId: 'chase',
+        connName: 'Chase',
+      ),
+      _account(
+        id: '2',
+        externalId: 'ext-chase-2',
+        connId: 'chase',
+        connName: 'Chase',
+      ),
       _account(
         id: '3',
         externalId: 'ext-cap1',
@@ -19,10 +29,10 @@ void main() {
     ]);
 
     expect(banks.map((bank) => bank.name).toList(), ['Capital One', 'Chase']);
-    expect(
-      banks.firstWhere((bank) => bank.name == 'Chase').accountIds,
-      ['ext-chase-1', 'ext-chase-2'],
-    );
+    expect(banks.firstWhere((bank) => bank.name == 'Chase').accountIds, [
+      'ext-chase-1',
+      'ext-chase-2',
+    ]);
   });
 
   test('account set uses the same bank key as local accounts', () {

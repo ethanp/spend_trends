@@ -7,7 +7,6 @@ import 'package:spend_trends/providers/spend_data_changed.dart';
 import 'package:spend_trends/services/csv/copilot_csv_file.dart';
 import 'package:spend_trends/services/csv/import_copilot_transactions_csv.dart';
 import 'package:spend_trends/services/sqlite/accounts_repository.dart';
-import 'package:spend_trends/services/sqlite/categories_repository.dart';
 import 'package:spend_trends/services/sqlite/transactions_repository.dart';
 
 import 'remove_copilot_duplicates_provider.dart';
@@ -89,7 +88,7 @@ class _CopilotImportTileState() extends ConsumerState<CopilotImportTile> {
         setState(() => _message = 'Applying categorization rules…');
       }
       final categorizer = await ref.read(categorizerProvider.future);
-      await categorizer.applyRulesToUncategorized();
+      await categorizer.recategorizeAll();
       ref.read(spendDataChangedProvider.notifier).notify();
       if (!mounted) return;
       setState(() {
@@ -98,7 +97,6 @@ class _CopilotImportTileState() extends ConsumerState<CopilotImportTile> {
           dedupe ??
               const RemoveCopilotDuplicatesResult(
                 deletedCopilotCount: 0,
-                categoriesCopiedToSimplefin: 0,
                 linkedAccountMasks: 0,
               ),
         );
@@ -152,7 +150,6 @@ class _CopilotImportTileState() extends ConsumerState<CopilotImportTile> {
   ) async {
     final importer = ImportCopilotTransactionsCsv(
       accountsRepository: await ref.read(accountsRepositoryProvider.future),
-      categoriesRepository: await ref.read(categoriesRepositoryProvider.future),
       transactionsRepository: await ref.read(
         transactionsRepositoryProvider.future,
       ),

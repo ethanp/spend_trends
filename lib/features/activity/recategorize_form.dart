@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 import 'package:spend_trends/domain/account.dart';
 import 'package:spend_trends/domain/category.dart';
 import 'package:spend_trends/domain/category_group.dart';
+import 'package:spend_trends/domain/rule_change_plan.dart';
 import 'package:spend_trends/domain/transaction.dart';
 import 'package:spend_trends/features/activity/contains_pattern_rematch.dart';
 import 'package:spend_trends/features/activity/default_contains_pattern.dart';
@@ -17,9 +18,9 @@ import 'package:spend_trends/features/categories/categories_providers.dart';
 import 'package:spend_trends/providers/spend_data_changed.dart';
 import 'package:spend_trends/services/sqlite/transactions_repository.dart';
 import 'package:spend_trends/widgets/category_picker.dart';
-import 'package:spend_trends/widgets/select_all_none_row.dart';
 
-/// Inline / sheet body for assigning a category (and optional contains-rule).
+/// Inline / sheet body for categorizing a transaction. Picking a category
+/// always creates (or retargets) a rule; categories come only from rules.
 class const RecategorizeForm({
   required final BankTransaction transaction,
 
@@ -32,13 +33,11 @@ class const RecategorizeForm({
 }
 
 class _RecategorizeFormState() extends ConsumerState<RecategorizeForm> {
-  bool _createRule = true;
   bool _limitRuleToThisAccount = false;
   bool _savingNote = false;
   late final TextEditingController _patternController;
   late final TextEditingController _noteController;
   late final ContainsPatternRematch _patternRematch;
-  final Set<String> _selectedMatchIds = {};
   String? _error;
 
   @override
@@ -56,12 +55,16 @@ class _RecategorizeFormState() extends ConsumerState<RecategorizeForm> {
     _patternRematch = ContainsPatternRematch(
       fetchMatches: (pattern) async {
         final categorizer = await ref.read(categorizerProvider.future);
-        return categorizer.transactionsMatchingContains(
-          pattern,
-          accountId: _ruleAccountIdForNewRule(),
+        return categorizer.transactionsClaimedBy(
+          _ruleDraft(
+            pattern: pattern,
+            categoryId: widget.transaction.categoryId ?? '',
+          ),
         );
       },
-      notify: _selectRematchedTransactions,
+      notify: () {
+        if (mounted) setState(() {});
+      },
     );
     _patternRematch.rematch(_patternController.text);
   }
@@ -72,19 +75,6 @@ class _RecategorizeFormState() extends ConsumerState<RecategorizeForm> {
     _patternController.dispose();
     _noteController.dispose();
     super.dispose();
-  }
-
-  void _selectRematchedTransactions() {
-    if (!mounted) return;
-    setState(() {
-      if (_patternRematch.rematching) return;
-      final previousIds = Set<String>.from(_selectedMatchIds);
-      _selectedMatchIds
-        ..removeAll(previousIds)
-        ..addAll([
-          for (final transaction in _patternRematch.matches) transaction.id,
-        ]);
-    });
   }
 
   String get _description => widget.transaction.rawDescription.isEmpty
@@ -136,15 +126,11 @@ class _RecategorizeFormState() extends ConsumerState<RecategorizeForm> {
         const SizedBox(height: ELayout.spaceMd),
         _noteField(),
         const SizedBox(height: ELayout.spaceMd),
-        _createRuleToggle(),
-        if (_createRule) ...[
-          const SizedBox(height: ELayout.spaceSm),
-          _ruleAccountScopeToggle(
-            ref.watch(accountsMapProvider).asData?.value ?? const {},
-          ),
-          const SizedBox(height: ELayout.spaceSm),
-          _patternAndImpactPreview(),
-        ],
+        _ruleAccountScopeToggle(
+          ref.watch(accountsMapProvider).asData?.value ?? const {},
+        ),
+        const SizedBox(height: ELayout.spaceSm),
+        _patternAndImpactPreview(),
         if (_error != null) ...[
           const SizedBox(height: ELayout.spaceSm),
           Text(_error!, style: EText.caption.copyWith(color: EColors.danger)),
@@ -213,28 +199,9 @@ class _RecategorizeFormState() extends ConsumerState<RecategorizeForm> {
     );
   }
 
-  Widget _createRuleToggle() {
-    return Row(
-      children: [
-        Switch(
-          value: _createRule,
-          onChanged: (value) {
-            setState(() => _createRule = value);
-            if (value) {
-              _patternRematch.rematch(_patternController.text);
-            }
-          },
-        ),
-        const SizedBox(width: ELayout.spaceSm),
-        Expanded(child: Text('Also create a rule', style: EText.body.medium)),
-      ],
-    );
-  }
-
   Widget _ruleAccountScopeToggle(Map<String, Account> accountsById) {
     final account = accountsById[widget.transaction.accountId];
-    final accountLabel =
-        account?.displayNameWithInstitution ?? 'This account';
+    final accountLabel = account?.displayNameWithInstitution ?? 'This account';
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -253,9 +220,7 @@ class _RecategorizeFormState() extends ConsumerState<RecategorizeForm> {
               Text('Limit rule to one account', style: EText.body.medium),
               const SizedBox(height: ELayout.spaceXs),
               Text(
-                _limitRuleToThisAccount
-                    ? 'Only $accountLabel'
-                    : 'Every account — turn on to scope (e.g. brokerage buy/sell).',
+                _limitRuleToThisAccount ? 'Only $accountLabel' : 'Every account — turn on to scope (e.g. brokerage buy/sell).',
                 style: EText.caption,
               ),
             ],
@@ -265,10 +230,14 @@ class _RecategorizeFormState() extends ConsumerState<RecategorizeForm> {
     );
   }
 
-  String? _ruleAccountIdForNewRule() {
-    if (!_createRule || !_limitRuleToThisAccount) return null;
-    return widget.transaction.accountId;
-  }
+  RuleDraft _ruleDraft({required String pattern, required String categoryId}) =>
+      RuleDraft(
+        pattern: pattern,
+        categoryId: categoryId,
+        accountId: _limitRuleToThisAccount
+            ? widget.transaction.accountId
+            : null,
+      );
 
   Widget _patternAndImpactPreview() {
     final existingRules =
@@ -336,35 +305,20 @@ class _RecategorizeFormState() extends ConsumerState<RecategorizeForm> {
               transaction,
               categoryNameById,
             ),
-            selected: _selectedMatchIds.contains(transaction.id),
-            onSelectionChanged: (selected) =>
-                _setSelected(transaction.id, selected),
           ),
       ],
     );
   }
 
   Widget _matchPreviewHeader(int matchCount) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          matchCount == 0
-              ? 'Matching transactions appear as you type. The rule still '
-                    'applies to future matches.'
-              : '$matchCount existing '
-                    '${matchCount == 1 ? 'transaction matches' : 'transactions match'}. '
-                    'Deselect any that should keep their current category.',
-          style: EText.caption,
-        ),
-        if (matchCount > 0) ...[
-          const SizedBox(height: ELayout.spaceXs),
-          SelectAllNoneRow(
-            onAllSelected: _selectAllMatches,
-            onNoneSelected: _selectNoMatches,
-          ),
-        ],
-      ],
+    return Text(
+      matchCount == 0
+          ? 'Transactions the rule would take appear as you type. It also '
+                'applies to future ones.'
+          : 'The rule takes these $matchCount existing '
+                '${matchCount == 1 ? 'transaction' : 'transactions'}. '
+                'Narrow the pattern or limit it to one account to leave any out.',
+      style: EText.caption,
     );
   }
 
@@ -375,7 +329,7 @@ class _RecategorizeFormState() extends ConsumerState<RecategorizeForm> {
     return CategoryPicker(
       categories: categories,
       groups: groups,
-      selectedId: widget.transaction.effectiveCategoryId,
+      selectedId: widget.transaction.categoryId,
       onCategorySelected: _assign,
     );
   }
@@ -385,10 +339,7 @@ class _RecategorizeFormState() extends ConsumerState<RecategorizeForm> {
 
     setState(() => _error = null);
     try {
-      final alsoApplyToTransactionIds = _createRule
-          ? Set<String>.from(_selectedMatchIds)
-          : const <String>{};
-      await _persistAssignment(category.id, alsoApplyToTransactionIds);
+      await _persistAssignment(category.id);
       if (mounted) widget.onCompleted(category.id);
     } catch (error) {
       setState(() => _error = '$error');
@@ -396,24 +347,29 @@ class _RecategorizeFormState() extends ConsumerState<RecategorizeForm> {
   }
 
   bool _validateRuleInput() {
-    if (!_createRule || _patternController.text.trim().isNotEmpty) return true;
-    setState(() => _error = 'Enter a contains pattern, or turn the rule off.');
-    return false;
+    final pattern = _patternController.text.trim();
+    final String? problem = pattern.isEmpty
+        ? 'Enter a contains pattern.'
+        : !_ruleDraft(
+            pattern: pattern,
+            categoryId: '',
+          ).matches(widget.transaction)
+        ? 'The pattern must match this transaction.'
+        : null;
+    setState(() => _error = problem);
+    return problem == null;
   }
 
-  Future<void> _persistAssignment(
-    String categoryId,
-    Set<String> alsoApplyToTransactionIds,
-  ) async {
+  Future<void> _persistAssignment(String categoryId) async {
     await _persistNoteIfNeeded();
     final categorizer = await ref.read(categorizerProvider.future);
-    await categorizer.assignUserCategory(
-      transactionId: widget.transaction.id,
-      categoryId: categoryId,
-      createRule: _createRule,
-      containsPattern: _createRule ? _patternController.text.trim() : null,
-      ruleAccountId: _ruleAccountIdForNewRule(),
-      alsoApplyToTransactionIds: alsoApplyToTransactionIds,
+    await categorizer.applyRuleChanges(
+      drafts: [
+        _ruleDraft(
+          pattern: _patternController.text.trim(),
+          categoryId: categoryId,
+        ),
+      ],
     );
     ref.read(spendDataChangedProvider.notifier).notify();
   }
@@ -441,29 +397,5 @@ class _RecategorizeFormState() extends ConsumerState<RecategorizeForm> {
       transactionId: widget.transaction.id,
       note: _noteController.text,
     );
-  }
-
-  void _setSelected(String transactionId, bool selected) {
-    setState(() {
-      if (selected) {
-        _selectedMatchIds.add(transactionId);
-      } else {
-        _selectedMatchIds.remove(transactionId);
-      }
-    });
-  }
-
-  void _selectAllMatches() {
-    setState(() {
-      _selectedMatchIds
-        ..clear()
-        ..addAll([
-          for (final transaction in _patternRematch.matches) transaction.id,
-        ]);
-    });
-  }
-
-  void _selectNoMatches() {
-    setState(_selectedMatchIds.clear);
   }
 }

@@ -26,7 +26,7 @@ class const CategorySpendDailyMaps({
     for (final transaction in transactions) {
       // Outflows add spend; inflows in a spend category subtract (refunds).
       if (transaction.excluded || transaction.isZeroAmount) continue;
-      final categoryId = transaction.effectiveCategoryId;
+      final categoryId = transaction.categoryId;
       if (categoryId != null && flowCategoryIds.contains(categoryId)) {
         continue;
       }
