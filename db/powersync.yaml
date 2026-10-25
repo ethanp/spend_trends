@@ -51,3 +51,4 @@ sync_rules:
           - SELECT * FROM owned_asset_valuations
           - SELECT * FROM projection_settings
           - SELECT * FROM account_balance_snapshots
+          - SELECT * FROM imported_net_worth_days

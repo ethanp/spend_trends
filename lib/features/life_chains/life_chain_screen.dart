@@ -25,14 +25,10 @@ class const LifeChainScreen({required final LifeChainKind kind})
       ),
       body: chainAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (error, _) => Center(
-          child: Padding(
-            padding: const EdgeInsets.all(ELayout.spaceLg),
-            child: Text(
-              '$error',
-              style: EText.body.medium.copyWith(color: EColors.danger),
-            ),
-          ),
+        error: (error, stackTrace) => ELoadErrorView(
+          screenName: 'Life chain',
+          error: error,
+          stackTrace: stackTrace,
         ),
         data: (chain) => _ChainBody(kind: kind, chain: chain),
       ),

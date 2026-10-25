@@ -3,7 +3,7 @@ import 'package:shelf/shelf.dart';
 import 'package:shelf_router/shelf_router.dart';
 import 'package:spend_trends/agent_api/agent_api_json.dart';
 import 'package:spend_trends/agent_api/live_retirement_projection.dart';
-import 'package:spend_trends/domain/projection/projection_tax_treatment.dart';
+import 'package:spend_trends/domain/account_tax_treatment.dart';
 import 'package:spend_trends/features/projections/projections_providers.dart';
 
 /// The Projections tab's retirement projection, and its assumptions.
@@ -26,7 +26,10 @@ class const AgentApiProjectionRoutes({
       'basis':
           'Today’s dollars (real returns). Live balances and the last 365 '
           'days of take-home, non-housing spending, and 401(k) payroll '
-          'contributions; housing from the current mortgage.',
+          'contributions. Life events apply from the first year they cover '
+          'at mid-year: a job sets take-home, a home sets mortgage terms and '
+          'carrying costs (moving sells the previous home), and each child '
+          'adds its yearly cost.',
       'currentAge': projection.currentAge,
       'earliestRetirementAge': projection.earliestRetirementAge,
       'savingsTarget': switch (projection.savingsTarget) {
@@ -45,10 +48,9 @@ class const AgentApiProjectionRoutes({
         'nonHousingSpendingAnnual': start.nonHousingSpendingAnnual.round(),
         'payrollContributionsAnnual': start.payrollContributionsAnnual.round(),
         'mortgageBalance': start.mortgageBalance.round(),
-        'mortgagePaymentMonthly': start.mortgagePaymentMonthly.round(),
         'homeValue': start.homeValue.round(),
         'balances': {
-          for (final treatment in ProjectionTaxTreatment.values)
+          for (final treatment in AccountTaxTreatment.values)
             treatment.name: start.balanceFor(treatment).round(),
         },
         'taxTreatmentByAccountId': {
@@ -64,11 +66,13 @@ class const AgentApiProjectionRoutes({
             'taxable': year.taxable.round(),
             'traditional': year.traditional.round(),
             'roth': year.roth.round(),
+            'college': year.college.round(),
             'liquid': year.liquid.round(),
             'homeEquity': year.homeEquity.round(),
             'income': year.income.round(),
             'spending': year.spending.round(),
             'housing': year.housing.round(),
+            'mortgagePayment': year.mortgagePayment.round(),
           },
       ],
     });

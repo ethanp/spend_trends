@@ -8,6 +8,7 @@ import 'package:spend_trends/services/simplefin/simplefin_pull_progress.dart';
 import 'package:spend_trends/services/simplefin/simplefin_pull_windows.dart';
 import 'package:spend_trends/services/simplefin/simplefin_transaction_mapper.dart';
 import 'package:spend_trends/services/simplefin/simplefin_window_ingester.dart';
+import 'package:spend_trends/services/sqlite/account_balance_snapshots_repository.dart';
 import 'package:spend_trends/services/sqlite/accounts_repository.dart';
 import 'package:spend_trends/services/sqlite/simplefin_pull_history.dart';
 import 'package:spend_trends/services/sqlite/transactions_repository.dart';
@@ -23,6 +24,7 @@ class PullSimpleFinTransactions({
   required final SimpleFinClient _client,
   required final SimpleFinAccessStore _accessStore,
   required final AccountsRepository _accountsRepository,
+  required AccountBalanceSnapshotsRepository snapshotsRepository,
   required TransactionsRepository transactionsRepository,
   required final SimpleFinPullHistory _simpleFinPullHistory,
 }) {
@@ -30,6 +32,7 @@ class PullSimpleFinTransactions({
     client: _client,
     accountMapper: SimpleFinAccountMapper(
       accountsRepository: _accountsRepository,
+      snapshotsRepository: snapshotsRepository,
     ),
     transactionMapper: SimpleFinTransactionMapper(
       transactionsRepository: transactionsRepository,

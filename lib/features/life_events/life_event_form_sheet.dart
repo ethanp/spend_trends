@@ -3,6 +3,7 @@ import 'package:ethan_utils/ethan_utils.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:spend_trends/domain/life_event.dart';
+import 'package:spend_trends/features/life_events/life_event_details_form.dart';
 import 'package:spend_trends/providers/spend_data_changed.dart';
 import 'package:spend_trends/services/sqlite/life_events_repository.dart';
 import 'package:spend_trends/widgets/app_date_field.dart';
@@ -41,6 +42,11 @@ class _LifeEventFormSheetState() extends ConsumerState<LifeEventFormSheet> {
   late DateTime _startedOn;
   late DateTime _endedOn;
   late _LifeEventDateMode _dateMode;
+  late LifeEventKind _kind = widget.lifeEvent?.kind ?? LifeEventKind.milestone;
+  late LifeEventDetailsForm _detailsForm = LifeEventDetailsForm.forKind(
+    _kind,
+    lifeEvent: widget.lifeEvent,
+  );
   bool _busy = false;
   String? _error;
 
@@ -69,6 +75,7 @@ class _LifeEventFormSheetState() extends ConsumerState<LifeEventFormSheet> {
   void dispose() {
     _titleController.dispose();
     _noteController.dispose();
+    _detailsForm.dispose();
     super.dispose();
   }
 
@@ -84,6 +91,8 @@ class _LifeEventFormSheetState() extends ConsumerState<LifeEventFormSheet> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               _sheetHeader(),
+              const SizedBox(height: ELayout.spaceMd),
+              _kindControl(),
               const SizedBox(height: ELayout.spaceMd),
               _titleField(),
               const SizedBox(height: ELayout.spaceMd),
@@ -102,6 +111,7 @@ class _LifeEventFormSheetState() extends ConsumerState<LifeEventFormSheet> {
                   onActivated: () => _pickDate(isStart: false),
                 ),
               ],
+              ..._detailsForm.fields(() => setState(() {})),
               const SizedBox(height: ELayout.spaceMd),
               _noteField(),
               if (_error != null) ...[
@@ -137,6 +147,26 @@ class _LifeEventFormSheetState() extends ConsumerState<LifeEventFormSheet> {
       autofocus: !_isEditing,
       style: EText.body.medium.copyWith(color: EColors.textPrimary),
       decoration: EInput.filled(hintText: 'Title'),
+    );
+  }
+
+  Widget _kindControl() {
+    return SegmentedButton<LifeEventKind>(
+      segments: [
+        for (final kind in LifeEventKind.values)
+          ButtonSegment(value: kind, label: Text(kind.label)),
+      ],
+      selected: {_kind},
+      onSelectionChanged: (selection) {
+        _detailsForm.dispose();
+        setState(() {
+          _kind = selection.first;
+          _detailsForm = LifeEventDetailsForm.forKind(
+            _kind,
+            lifeEvent: widget.lifeEvent,
+          );
+        });
+      },
     );
   }
 
@@ -233,27 +263,24 @@ class _LifeEventFormSheetState() extends ConsumerState<LifeEventFormSheet> {
     });
 
     try {
-      final repository = await ref.read(lifeEventsRepositoryProvider.future);
-      if (_isEditing) {
-        await repository.upsert(
-          LifeEvent(
-            id: widget.lifeEvent!.id,
+      final LifeEventsRepository repository = await ref.read(
+        lifeEventsRepositoryProvider.future,
+      );
+      await repository.upsert(
+        _detailsForm.eventWith(
+          LifeEventBasics(
+            id: widget.lifeEvent?.id ?? repository.newId(),
             title: title,
             startedOn: _startedOn,
             endedOn: _endedOnForSave,
             note: _noteController.text,
           ),
-        );
-      } else {
-        await repository.create(
-          title: title,
-          startedOn: _startedOn,
-          endedOn: _endedOnForSave,
-          note: _noteController.text,
-        );
-      }
+        ),
+      );
       ref.read(spendDataChangedProvider.notifier).notify();
       if (mounted) Navigator.of(context).pop();
+    } on FormatException catch (error) {
+      setState(() => _error = error.message);
     } catch (error) {
       setState(() => _error = '$error');
     } finally {

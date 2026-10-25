@@ -2,6 +2,7 @@ import 'package:spend_trends/domain/account.dart';
 import 'package:spend_trends/domain/account_balance_snapshot.dart';
 import 'package:spend_trends/domain/category.dart';
 import 'package:spend_trends/domain/category_group.dart';
+import 'package:spend_trends/domain/imported_net_worth_day.dart';
 import 'package:spend_trends/domain/owned_asset.dart';
 import 'package:spend_trends/domain/special_category.dart';
 import 'package:spend_trends/domain/transaction.dart';
@@ -22,6 +23,7 @@ class const BuildTrendsCharts() {
     List<Account> accounts = const [],
     List<OwnedAssetWithValuations> ownedAssets = const [],
     List<AccountBalanceSnapshot> balanceSnapshots = const [],
+    List<ImportedNetWorthDay> importedNetWorthDays = const [],
     DateTime? endDate,
   }) {
     final chartEnd = (endDate ?? DateTime.now()).startOfDay;
@@ -97,6 +99,7 @@ class const BuildTrendsCharts() {
         chartDates: chartRange.dates,
         ownedAssets: ownedAssets,
         balanceSnapshots: balanceSnapshots,
+        importedNetWorthDays: importedNetWorthDays,
       ),
     );
   }

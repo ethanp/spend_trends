@@ -17,6 +17,7 @@ const Schema spendTrendsSchema = Schema([
     Column.text('conn_user_label'),
     Column.text('account_kind'),
     Column.text('belongs_to_account_id'),
+    Column.text('tax_treatment'),
   ]),
   Table('category_groups', [Column.text('name'), Column.integer('sort_order')]),
   Table('categories', [
@@ -55,6 +56,8 @@ const Schema spendTrendsSchema = Schema([
     Column.integer('started_on'),
     Column.integer('ended_on'),
     Column.text('note'),
+    Column.text('kind'),
+    Column.text('details_json'),
   ]),
   Table('housing_stays', [
     Column.text('label'),
@@ -102,5 +105,9 @@ const Schema spendTrendsSchema = Schema([
     Column.text('account_id'),
     Column.integer('balance_cents'),
     Column.integer('recorded_on'),
+  ]),
+  Table('imported_net_worth_days', [
+    Column.integer('recorded_on'),
+    Column.integer('net_worth_cents'),
   ]),
 ]);

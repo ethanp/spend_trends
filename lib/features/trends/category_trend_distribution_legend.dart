@@ -234,26 +234,22 @@ class _CategoryTrendDistributionLegendState()
         pair: pairsBySeriesId[series.id],
         scale: scale,
         isHidden: widget.hiddenSeriesIds.contains(series.id),
-        canExpand: canExpand,
         isExpanded: isExpanded,
         formatAnnualized: _formatAnnualized,
         pastYearTotalLabel: _pastYearTotalLabel(series),
-        onActivated: () => _activateSeries(series, canExpand: canExpand),
+        onActivated: () => widget.onSeriesToggled(series.id),
         onSoloActivated: () => widget.onSeriesSoloed(series.id),
+        onExpandToggled: canExpand ? () => _toggleGroupMembers(series) : null,
       ),
     );
   }
 
-  void _activateSeries(CategoryTrendSeries series, {required bool canExpand}) {
-    if (canExpand) {
-      setState(() {
-        _expandedGroupSeriesId = _expandedGroupSeriesId == series.id
-            ? null
-            : series.id;
-      });
-      return;
-    }
-    widget.onSeriesToggled(series.id);
+  void _toggleGroupMembers(CategoryTrendSeries groupSeries) {
+    setState(() {
+      _expandedGroupSeriesId = _expandedGroupSeriesId == groupSeries.id
+          ? null
+          : groupSeries.id;
+    });
   }
 
   String _formatAnnualized(int annualizedCents) {
@@ -306,12 +302,16 @@ class const _DistributionColumn({
   required final CategoryTrendDistributionPair? pair,
   required final TrendValueScale scale,
   required final bool isHidden,
-  required final bool canExpand,
   required final bool isExpanded,
   required final String Function(int cents) formatAnnualized,
   required final String pastYearTotalLabel,
+
+  /// Shows or hides this line.
   required final VoidCallback onActivated,
   required final VoidCallback onSoloActivated,
+
+  /// Group rollups only: the chevron shows or hides the member columns.
+  required final VoidCallback? onExpandToggled,
 }) extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
@@ -354,14 +354,7 @@ class const _DistributionColumn({
                         overflow: TextOverflow.ellipsis,
                       ),
                     ),
-                    if (canExpand)
-                      Icon(
-                        isExpanded ? Icons.expand_more : Icons.chevron_right,
-                        size: 16,
-                        color: isHidden
-                            ? EColors.textMuted
-                            : EColors.textSecondary,
-                      ),
+                    if (onExpandToggled != null) _groupMembersChevron(),
                   ],
                 ),
                 Text(
@@ -453,6 +446,21 @@ class const _DistributionColumn({
           ),
         ),
       ],
+    );
+  }
+
+  Widget _groupMembersChevron() {
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: onExpandToggled,
+      child: Padding(
+        padding: const EdgeInsets.only(left: 2),
+        child: Icon(
+          isExpanded ? Icons.expand_more : Icons.chevron_right,
+          size: 16,
+          color: isHidden ? EColors.textMuted : EColors.textSecondary,
+        ),
+      ),
     );
   }
 }

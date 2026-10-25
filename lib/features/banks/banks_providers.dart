@@ -26,6 +26,9 @@ final pullSimpleFinTransactionsProvider =
         client: ref.watch(simpleFinClientProvider),
         accessStore: ref.watch(simpleFinAccessStoreProvider),
         accountsRepository: await ref.watch(accountsRepositoryProvider.future),
+        snapshotsRepository: await ref.watch(
+          accountBalanceSnapshotsRepositoryProvider.future,
+        ),
         transactionsRepository: await ref.watch(
           transactionsRepositoryProvider.future,
         ),
@@ -49,7 +52,7 @@ final accountsMapProvider = FutureProvider<Map<String, Account>>((ref) async {
   return {for (final account in accounts) account.id: account};
 });
 
-/// Recorded balances of manual accounts, oldest first.
+/// Recorded account balances, oldest first.
 final accountBalanceSnapshotsProvider =
     FutureProvider<List<AccountBalanceSnapshot>>((ref) async {
       ref.watch(spendDataChangedProvider);

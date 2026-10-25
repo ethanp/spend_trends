@@ -210,7 +210,10 @@ class const _LifeEventListTile({
               style: EText.section.copyWith(fontWeight: FontWeight.w600),
             ),
             const SizedBox(height: ELayout.spaceXs),
-            Text(lifeEvent.dateCaption, style: EText.caption),
+            Text(
+              '${lifeEvent.kind.label} · ${lifeEvent.dateCaption}',
+              style: EText.caption,
+            ),
             if (lifeEvent.note != null) ...[
               const SizedBox(height: ELayout.spaceXs),
               Text(lifeEvent.note!, style: EText.caption),

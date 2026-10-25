@@ -31,6 +31,19 @@ class const ProjectionHeadlineCard({
             )
           else ...[
             Text(_earliestRetirementCaption(), style: EText.section),
+            if (projection.savingsTarget
+                case final RetirementSavingsTarget target) ...[
+              const SizedBox(height: ELayout.spaceXs),
+              Text(
+                'Retiring at ${target.retirementAge}: invest '
+                '${target.requiredInvestingPercent}% of take-home '
+                '(${formatCentsWholeDollars((target.requiredInvestingAnnual * 100).round())}/yr), '
+                'spend up to '
+                '${formatCentsWholeDollars((target.maxNonHousingSpendingAnnual * 100).round())}/yr '
+                'outside housing',
+                style: EText.body.medium,
+              ),
+            ],
             const SizedBox(height: ELayout.spaceXs),
             Text(_plannedRetirementCaption(), style: EText.caption),
           ],

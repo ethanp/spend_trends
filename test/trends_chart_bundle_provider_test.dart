@@ -59,6 +59,8 @@ void main() {
         categoriesListProvider.overrideWith((ref) async => const []),
         categoryGroupsProvider.overrideWith((ref) async => const []),
         accountsMapProvider.overrideWith((ref) async => accounts),
+        accountBalanceSnapshotsProvider.overrideWith((ref) async => const []),
+        importedNetWorthDaysProvider.overrideWith((ref) async => const []),
         ownedAssetsListProvider.overrideWith((ref) async => ownedAssets),
       ],
     );

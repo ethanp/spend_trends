@@ -25,13 +25,20 @@ class CategoryTrendPlot._({
   factory from({
     required Size size,
     required List<CategoryTrendSeries> seriesList,
+    EChartVisibleRange? visibleRange,
     StayChain? housingChain,
     StayChain? jobChain,
     List<LifeEvent> lifeEvents = const [],
   }) {
-    final drawableSeries = [
+    final plottableSeries = [
       for (final series in seriesList)
         if (series.canPlot) series,
+    ];
+    final plottedDates = _plottedDates(plottableSeries, visibleRange);
+    final drawableSeries = [
+      for (final series in plottableSeries)
+        if (series.hasPointsBetween(plottedDates.start, plottedDates.end))
+          series,
     ];
     var nextLane = 0;
     final housingLane = housingChain != null && !housingChain.isEmpty
@@ -39,13 +46,31 @@ class CategoryTrendPlot._({
         : null;
     final jobLane = jobChain != null && !jobChain.isEmpty ? nextLane++ : null;
     final lifeEventLane = lifeEvents.isNotEmpty ? nextLane++ : null;
-    final highestSmoothedCents = _highestSmoothedCents(drawableSeries);
+    var highestSmoothedCents = 0.0;
+    for (final series in drawableSeries) {
+      highestSmoothedCents = math.max(
+        highestSmoothedCents,
+        series.highestSmoothedCentsBetween(
+          plottedDates.start,
+          plottedDates.end,
+        ),
+      );
+    }
     return CategoryTrendPlot._(
-      chart: _dateRangeLayout(
-        size,
-        drawableSeries,
-        overlayLaneCount: nextLane,
-        highestSmoothedCents: highestSmoothedCents,
+      chart: EChartPlot(
+        size: size,
+        leftPadding: leftPadding,
+        rightPadding: rightPadding,
+        topPadding: nextLane == 0
+            ? _plotTopInset
+            : nextLane * overlayLaneHeight,
+        bottomPadding: bottomPadding,
+        start: plottedDates.start,
+        end: plottedDates.end,
+        valueScale: EChartValueScale.nice(
+          highestSmoothedCents,
+          fallbackMax: 10000,
+        ),
       ),
       scale: TrendValueScale.niceForMax(highestSmoothedCents),
       drawableSeries: drawableSeries,
@@ -55,45 +80,30 @@ class CategoryTrendPlot._({
     );
   }
 
-  static double _highestSmoothedCents(
-    List<CategoryTrendSeries> drawableSeries,
+  /// This chart's own history, narrowed to [visibleRange] where they overlap.
+  static DateTimeRange _plottedDates(
+    List<CategoryTrendSeries> plottableSeries,
+    EChartVisibleRange? visibleRange,
   ) {
-    var highest = 0.0;
-    for (final series in drawableSeries) {
-      for (final point in series.points) {
-        highest = math.max(highest, point.smoothedCents);
-      }
-    }
-    return highest;
-  }
-
-  static EChartPlot _dateRangeLayout(
-    Size size,
-    List<CategoryTrendSeries> drawableSeries, {
-    required int overlayLaneCount,
-    required double highestSmoothedCents,
-  }) {
-    final firstDate = drawableSeries
+    final firstDate = plottableSeries
         .map((series) => series.points.first.date)
         .reduce((earlier, later) => earlier.isBefore(later) ? earlier : later);
-    final lastDate = drawableSeries
+    final lastDate = plottableSeries
         .map((series) => series.points.last.date)
         .reduce((earlier, later) => earlier.isAfter(later) ? earlier : later);
-    return EChartPlot(
-      size: size,
-      leftPadding: leftPadding,
-      rightPadding: rightPadding,
-      topPadding: overlayLaneCount == 0
-          ? _plotTopInset
-          : overlayLaneCount * overlayLaneHeight,
-      bottomPadding: bottomPadding,
-      start: firstDate,
-      end: lastDate,
-      valueScale: EChartValueScale.nice(
-        highestSmoothedCents,
-        fallbackMax: 10000,
-      ),
-    );
+    if (visibleRange == null) {
+      return DateTimeRange(start: firstDate, end: lastDate);
+    }
+    final start = visibleRange.start.isAfter(firstDate)
+        ? visibleRange.start
+        : firstDate;
+    final end = visibleRange.end.isBefore(lastDate)
+        ? visibleRange.end
+        : lastDate;
+    if (!start.isBefore(end)) {
+      return DateTimeRange(start: visibleRange.start, end: visibleRange.end);
+    }
+    return DateTimeRange(start: start, end: end);
   }
 
   DateTime dateForX(double x) => chart.dateForX(x);

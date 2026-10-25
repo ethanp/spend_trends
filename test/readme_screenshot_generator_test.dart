@@ -1,3 +1,4 @@
+import 'package:ethan_sync/ethan_sync.dart';
 import 'package:ethan_ui/ethan_ui.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -14,6 +15,7 @@ import 'package:spend_trends/domain/owned_asset_kind.dart';
 import 'package:spend_trends/domain/special_category.dart';
 import 'package:spend_trends/domain/stay_chain.dart';
 import 'package:spend_trends/domain/transaction.dart';
+import 'package:spend_trends/features/trends/trends_providers.dart';
 import 'package:spend_trends/features/trends/trends_screen.dart';
 import 'package:spend_trends/features/activity/transactions_list_provider.dart';
 import 'package:spend_trends/features/banks/banks_providers.dart';
@@ -49,6 +51,10 @@ void main() {
             ),
             categoryGroupsProvider.overrideWith((ref) async => fixtures.groups),
             accountsMapProvider.overrideWith((ref) async => fixtures.accounts),
+            accountBalanceSnapshotsProvider.overrideWith(
+              (ref) async => const [],
+            ),
+            importedNetWorthDaysProvider.overrideWith((ref) async => const []),
             ownedAssetsListProvider.overrideWith(
               (ref) async => fixtures.ownedAssets,
             ),
@@ -57,6 +63,13 @@ void main() {
               (ref) async => fixtures.housingChain,
             ),
             jobChainProvider.overrideWith((ref) async => StayChain(const [])),
+            syncStatusDetailsProvider.overrideWithValue(
+              SyncStatusDetails(
+                phase: SyncPhase.synced,
+                caption: 'Synced',
+                connected: true,
+              ),
+            ),
             connectionStatusProvider.overrideWith(
               (ref) async => ConnectionStatus(
                 isConnected: true,
@@ -84,7 +97,7 @@ void main() {
     } finally {
       debugDefaultTargetPlatformOverride = null;
     }
-  });
+  }, tags: 'readme-screenshot');
 }
 
 class _OverviewSpend() {
@@ -171,7 +184,7 @@ class _OverviewSpend() {
   ];
 
   final lifeEvents = [
-    LifeEvent(
+    Milestone(
       id: 'moved',
       title: 'Moved',
       startedOn: DateTime(2024, 6, 1),

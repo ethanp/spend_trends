@@ -122,6 +122,8 @@ class CategorizationSnapshot({
       'balanceCents': account.balanceCents,
       'balanceAsOf': account.balanceAsOf?.dayKey,
       'source': account.sourceName,
+      'taxTreatment': account.taxTreatment.name,
+      'taxTreatmentIsAutomatic': account.chosenTaxTreatment == null,
       'belongsToAccountId': account.belongsToAccountId,
       'transactionCount': _transactionCountByAccountId[account.id] ?? 0,
     };

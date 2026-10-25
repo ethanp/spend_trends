@@ -4,7 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:powersync/powersync.dart';
 import 'package:spend_trends/domain/account_balance_snapshot.dart';
 
-/// Recorded balances for manual accounts.
+/// Recorded balances: manual updates, one per SimpleFIN pull day, and
+/// history imported from Empower.
 class AccountBalanceSnapshotsRepository(final PowerSyncDatabase _powerSync) {
   /// Oldest first.
   Future<List<AccountBalanceSnapshot>> listAll() async {
@@ -28,6 +29,20 @@ class AccountBalanceSnapshotsRepository(final PowerSyncDatabase _powerSync) {
         snapshot.recordedOn.startOfDay.millisecondsSinceEpoch,
       ],
     );
+  }
+
+  /// One snapshot per account per day: a later pull the same day replaces it.
+  Future<void> recordDailyBalance({
+    required String accountId,
+    required int balanceCents,
+    required DateTime day,
+  }) async {
+    await _powerSync.upsert('account_balance_snapshots', {
+      'id': '$accountId@${day.dayKey}',
+      'account_id': accountId,
+      'balance_cents': balanceCents,
+      'recorded_on': day.startOfDay.millisecondsSinceEpoch,
+    });
   }
 
   Future<void> delete(String snapshotId) async {

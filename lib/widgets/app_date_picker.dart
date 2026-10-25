@@ -7,6 +7,9 @@ Future<DateTime?> pickAppDate(
   required DateTime initialDate,
   DateTime? minimumDate,
   DateTime? maximumDate,
+
+  /// [DatePickerMode.year] for dates far from today, like a birth date.
+  DatePickerMode initialMode = DatePickerMode.day,
 }) async {
   final firstDate = (minimumDate ?? DateTime(1970)).startOfDay;
   final lastDate = (maximumDate ?? DateTime(2100)).startOfDay;
@@ -19,6 +22,7 @@ Future<DateTime?> pickAppDate(
     initialDate: initial,
     firstDate: firstDate,
     lastDate: lastDate,
+    initialDatePickerMode: initialMode,
   );
   return picked?.startOfDay;
 }

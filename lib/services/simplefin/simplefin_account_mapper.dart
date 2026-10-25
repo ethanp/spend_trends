@@ -1,13 +1,16 @@
 import 'package:spend_trends/domain/account.dart';
 import 'package:spend_trends/domain/account_kind.dart';
 import 'package:spend_trends/services/simplefin/simplefin_models.dart';
+import 'package:spend_trends/services/sqlite/account_balance_snapshots_repository.dart';
 import 'package:spend_trends/services/sqlite/accounts_repository.dart';
 import 'package:ethan_utils/ethan_utils.dart';
 import 'package:uuid/uuid.dart';
 
-/// Maps SimpleFIN remote accounts into local [Account] rows.
+/// Maps SimpleFIN remote accounts into local [Account] rows, saving each
+/// pulled balance as that day's snapshot for net worth history.
 class SimpleFinAccountMapper({
   required final AccountsRepository _accountsRepository,
+  required final AccountBalanceSnapshotsRepository _snapshotsRepository,
   Uuid? uuid,
 }) {
   final Uuid _uuid = uuid ?? const Uuid();
@@ -69,6 +72,11 @@ class SimpleFinAccountMapper({
       draft.copyWith(
         kind: existing?.kind ?? AccountKindClassifier.classify(draft),
       ),
+    );
+    await _snapshotsRepository.recordDailyBalance(
+      accountId: localId,
+      balanceCents: draft.balanceCents,
+      day: (draft.balanceAsOf ?? syncedAt).toLocal(),
     );
     return localId;
   }

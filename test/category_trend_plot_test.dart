@@ -1,3 +1,4 @@
+import 'package:ethan_ui/ethan_ui.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:spend_trends/features/trends/category_trend_plot.dart';
@@ -85,6 +86,58 @@ void main() {
 
     test('is 0.5 for a single sample', () {
       expect(PaceLineSamples.percentileRank(const [7], 7), 0.5);
+    });
+  });
+
+  group('CategoryTrendPlot.from with a visible range', () {
+    const plotSize = Size(260, 560);
+    final rising = _series([
+      _point(DateTime(2024, 1, 1), 100),
+      _point(DateTime(2024, 2, 1), 200),
+      _point(DateTime(2024, 3, 1), 900),
+    ]);
+
+    test('plots only the visible window and scales Y to it', () {
+      final plot = CategoryTrendPlot.from(
+        size: plotSize,
+        seriesList: [rising],
+        visibleRange: EChartVisibleRange(
+          start: DateTime(2024, 1, 1),
+          end: DateTime(2024, 2, 1),
+        ),
+      );
+      expect(plot.chart.start, DateTime(2024, 1, 1));
+      expect(plot.chart.end, DateTime(2024, 2, 1));
+      expect(plot.scale.maxCents, lessThan(900));
+    });
+
+    test('narrows the window to the chart\'s own history', () {
+      final plot = CategoryTrendPlot.from(
+        size: plotSize,
+        seriesList: [rising],
+        visibleRange: EChartVisibleRange(
+          start: DateTime(2020, 1, 1),
+          end: DateTime(2024, 2, 1),
+        ),
+      );
+      expect(plot.chart.start, DateTime(2024, 1, 1));
+      expect(plot.chart.end, DateTime(2024, 2, 1));
+    });
+
+    test('drops series with no points in the window', () {
+      final earlier = _series([
+        _point(DateTime(2020, 1, 1), 100),
+        _point(DateTime(2020, 6, 1), 100),
+      ]);
+      final plot = CategoryTrendPlot.from(
+        size: plotSize,
+        seriesList: [earlier],
+        visibleRange: EChartVisibleRange(
+          start: DateTime(2024, 1, 1),
+          end: DateTime(2024, 2, 1),
+        ),
+      );
+      expect(plot.drawableSeries, isEmpty);
     });
   });
 

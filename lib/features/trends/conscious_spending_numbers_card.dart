@@ -4,10 +4,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:spend_trends/domain/conscious_spending_area.dart';
 import 'package:spend_trends/domain/projection/retirement_projection.dart';
+import 'package:spend_trends/domain/trend_spend_rate.dart';
 import 'package:spend_trends/features/projections/projections_providers.dart';
 import 'package:spend_trends/features/trends/conscious_spending_numbers.dart';
 import 'package:spend_trends/theme/finance_colors.dart';
 import 'package:spend_trends/widgets/app_card.dart';
+
+import 'trends_providers.dart';
 
 /// The three numbers over 2y · 1y · 6mo against their guidelines. Investments'
 /// guideline is what retiring at the planned age needs, once the projection
@@ -25,6 +28,7 @@ class const ConsciousSpendingNumbersCard({
         .asData
         ?.value
         .savingsTarget;
+    final TrendSpendRate spendRate = ref.watch(trendSpendRateProvider);
     return AppCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -40,6 +44,7 @@ class const ConsciousSpendingNumbersCard({
           const SizedBox(height: ELayout.spaceMd),
           _ConsciousSpendingNumbersTable(
             consciousSpendingNumbers: consciousSpendingNumbers,
+            spendRate: spendRate,
             guidelineByArea: {
               for (final area in ConsciousSpendingArea.values)
                 area: ConsciousSpendingGuideline.forArea(
@@ -51,14 +56,15 @@ class const ConsciousSpendingNumbersCard({
           const SizedBox(height: ELayout.spaceSm),
           Text(
             'Plain totals over the ${consciousSpendingNumbers.periodLabel}. '
-            'Dollars are per year. Implied range uses the last year’s '
+            'Dollars are ${spendRate.nameAsCapitalizedWords.toLowerCase()}. '
+            'Implied range uses the last year’s '
             '${formatCentsWholeDollars(lastYear.takeHomeCents)} take-home pay.',
             style: EText.caption,
           ),
           if (retirementTarget != null) ...[
             const SizedBox(height: ELayout.spaceXs),
             Text(
-              _retirementTargetCaption(retirementTarget),
+              _retirementTargetCaption(retirementTarget, spendRate),
               style: EText.caption,
             ),
           ],
@@ -67,21 +73,30 @@ class const ConsciousSpendingNumbersCard({
     );
   }
 
-  String _retirementTargetCaption(RetirementSavingsTarget target) {
+  String _retirementTargetCaption(
+    RetirementSavingsTarget target,
+    TrendSpendRate spendRate,
+  ) {
     final spending = formatCentsWholeDollars(
-      (target.maxNonHousingSpendingAnnual * 100).round(),
+      spendRate.displayCents(
+        (target.maxNonHousingSpendingAnnual * 100).round(),
+      ),
     );
     final investing = formatCentsWholeDollars(
-      (target.requiredInvestingAnnual.clamp(0, double.infinity) * 100).round(),
+      spendRate.displayCents(
+        (target.requiredInvestingAnnual.clamp(0, double.infinity) * 100)
+            .round(),
+      ),
     );
     return 'Investments target: retiring at ${target.retirementAge} (Projections) '
-        'allows up to $spending/yr outside housing, which leaves $investing/yr '
-        'to invest.';
+        'allows up to $spending/${spendRate.toggleLabel} outside housing, which '
+        'leaves $investing/${spendRate.toggleLabel} to invest.';
   }
 }
 
 class const _ConsciousSpendingNumbersTable({
   required final ConsciousSpendingNumbers consciousSpendingNumbers,
+  required final TrendSpendRate spendRate,
   required final Map<ConsciousSpendingArea, ConsciousSpendingGuideline>
   guidelineByArea,
 }) extends StatelessWidget {
@@ -108,7 +123,7 @@ class const _ConsciousSpendingNumbersTable({
             _header('Guideline %'),
             _windowedHeader('Actual %'),
             _header('Implied \$ (1y)'),
-            _windowedHeader('Actual \$/yr'),
+            _windowedHeader('Actual \$/${spendRate.toggleLabel}'),
           ],
         ),
         for (final area in ConsciousSpendingArea.values) _areaRow(area),
@@ -138,12 +153,22 @@ class const _ConsciousSpendingNumbersTable({
               guideline,
             ),
         ]),
-        _cell(guideline.impliedTakeHomeLabel(lastYear.takeHomeCents)),
+        FittedBox(
+          fit: BoxFit.scaleDown,
+          alignment: Alignment.centerRight,
+          child: _cell(
+            guideline.impliedTakeHomeLabel(
+              spendRate.displayCents(lastYear.takeHomeCents),
+            ),
+          ),
+        ),
         _windowedCell([
           for (final window in _windows)
             _cell(
               formatCentsWholeDollars(
-                consciousSpendingNumbers.totalsFor(window).annualCents(area),
+                spendRate.displayCents(
+                  consciousSpendingNumbers.totalsFor(window).annualCents(area),
+                ),
               ),
               rightPadding: 0,
             ),

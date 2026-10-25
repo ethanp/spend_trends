@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:spend_trends/agent_api/categorization_snapshot.dart';
 import 'package:spend_trends/domain/projection/retirement_projection.dart';
+import 'package:spend_trends/services/sqlite/life_events_repository.dart';
 import 'package:spend_trends/services/sqlite/owned_assets_repository.dart';
 import 'package:spend_trends/services/sqlite/projection_settings_repository.dart';
 
@@ -16,6 +17,9 @@ class const LiveRetirementProjection({
     );
     final ProjectionSettingsRepository settingsRepository = await container
         .read(projectionSettingsRepositoryProvider.future);
+    final LifeEventsRepository lifeEventsRepository = await container.read(
+      lifeEventsRepositoryProvider.future,
+    );
     return RetirementProjection.fromLiveData(
       today: DateTime.now(),
       assumptions: await settingsRepository.loadAssumptions(),
@@ -23,6 +27,7 @@ class const LiveRetirementProjection({
       ownedAssets: await ownedAssetsRepository.listWithValuations(),
       transactions: snapshot.transactions,
       categories: snapshot.categories,
+      lifeEvents: await lifeEventsRepository.listNewestFirst(),
     );
   }
 }

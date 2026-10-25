@@ -52,11 +52,10 @@ class _BanksScreenState() extends ConsumerState<BanksScreen> {
         child: connectionAsync.when(
           skipLoadingOnReload: true,
           loading: () => const Center(child: CircularProgressIndicator()),
-          error: (error, _) => Center(
-            child: Text(
-              '$error',
-              style: EText.body.medium.copyWith(color: EColors.danger),
-            ),
+          error: (error, stackTrace) => ELoadErrorView(
+            screenName: 'Banks',
+            error: error,
+            stackTrace: stackTrace,
           ),
           data: (status) {
             final BankTransaction? selectedPullTransaction =

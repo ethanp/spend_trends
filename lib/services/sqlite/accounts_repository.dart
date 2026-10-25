@@ -1,5 +1,6 @@
 import 'package:spend_trends/domain/account.dart';
 import 'package:spend_trends/domain/account_kind.dart';
+import 'package:spend_trends/domain/account_tax_treatment.dart';
 import 'package:ethan_sync/ethan_sync.dart';
 import 'package:ethan_utils/ethan_utils.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -137,6 +138,17 @@ WHERE conn_name = ?
     );
   }
 
+  /// Null goes back to the inferred tax treatment.
+  Future<void> updateTaxTreatment({
+    required String accountId,
+    required AccountTaxTreatment? taxTreatment,
+  }) async {
+    await _powerSync.execute(
+      'UPDATE accounts SET tax_treatment = ? WHERE id = ?',
+      [taxTreatment?.name, accountId],
+    );
+  }
+
   Future<void> updateKind({
     required String accountId,
     required AccountKind kind,
@@ -209,6 +221,9 @@ WHERE conn_name = ?
       userLabel: columns['user_label'] as String?,
       connUserLabel: columns['conn_user_label'] as String?,
       belongsToAccountId: columns['belongs_to_account_id'] as String?,
+      chosenTaxTreatment: AccountTaxTreatment.tryFromStorage(
+        columns['tax_treatment'] as String?,
+      ),
     );
     final storedKind = AccountKind.tryFromStorage(
       columns['account_kind'] as String?,

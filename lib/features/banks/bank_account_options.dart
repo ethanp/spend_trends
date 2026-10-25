@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:spend_trends/domain/account.dart';
 import 'package:spend_trends/domain/account_kind.dart';
+import 'package:spend_trends/domain/account_tax_treatment.dart';
 import 'package:spend_trends/providers/spend_data_changed.dart';
 import 'package:spend_trends/services/sqlite/accounts_repository.dart';
 import 'package:spend_trends/widgets/app_sheet_panel.dart';
@@ -40,6 +41,19 @@ class _BankAccountOptionsState() extends ConsumerState<BankAccountOptions> {
           value: _priorAccountCaption(),
           onActivated: _saving ? null : () => _pickPriorAccount(context),
         ),
+        if (widget.account.countsTowardNetWorth) ...[
+          const SizedBox(height: ELayout.spaceLg),
+          _optionPicker(
+            label: 'Tax type',
+            helpMessage:
+                'How the Projections tab treats this money when spent in '
+                'retirement. Automatic guesses from the type and name.',
+            value: widget.account.chosenTaxTreatment == null
+                ? '${widget.account.taxTreatment.label} (automatic)'
+                : widget.account.taxTreatment.label,
+            onActivated: _saving ? null : () => _pickTaxTreatment(context),
+          ),
+        ],
       ],
     );
   }
@@ -156,6 +170,80 @@ class _BankAccountOptionsState() extends ConsumerState<BankAccountOptions> {
     }
   }
 
+  Future<void> _pickTaxTreatment(BuildContext context) async {
+    final chosen = widget.account.chosenTaxTreatment;
+    final inferred = AccountTaxTreatment.inferredFor(widget.account);
+    final selected = await showModalBottomSheet<_TaxTreatmentChoice>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (sheetContext) => AppSheetPanel.compact(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(
+                ELayout.spaceLg,
+                ELayout.spaceLg,
+                ELayout.spaceLg,
+                ELayout.spaceSm,
+              ),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: Text('Tax type', style: EText.section),
+              ),
+            ),
+            _taxTreatmentTile(
+              sheetContext,
+              title: 'Automatic (${inferred.label})',
+              current: chosen == null,
+              choice: const _TaxTreatmentChoice(null),
+            ),
+            for (final treatment in AccountTaxTreatment.values)
+              _taxTreatmentTile(
+                sheetContext,
+                title: treatment.label,
+                current: treatment == chosen,
+                choice: _TaxTreatmentChoice(treatment),
+              ),
+            const SizedBox(height: ELayout.spaceMd),
+          ],
+        ),
+      ),
+    );
+    if (selected == null || selected.treatment == chosen || !mounted) return;
+
+    setState(() => _saving = true);
+    try {
+      final repository = await ref.read(accountsRepositoryProvider.future);
+      await repository.updateTaxTreatment(
+        accountId: widget.account.id,
+        taxTreatment: selected.treatment,
+      );
+      ref.read(spendDataChangedProvider.notifier).notify();
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  Widget _taxTreatmentTile(
+    BuildContext sheetContext, {
+    required String title,
+    required bool current,
+    required _TaxTreatmentChoice choice,
+  }) {
+    return ListTile(
+      dense: true,
+      title: Text(
+        title,
+        style: current
+            ? EText.body.medium.copyWith(fontWeight: FontWeight.w600)
+            : EText.body.medium,
+      ),
+      onTap: () => Navigator.of(sheetContext).pop(choice),
+    );
+  }
+
   Future<void> _pickPriorAccount(BuildContext context) async {
     final Map<String, Account>? accounts = ref
         .read(accountsMapProvider)
@@ -242,3 +330,6 @@ class _BankAccountOptionsState() extends ConsumerState<BankAccountOptions> {
     }
   }
 }
+
+/// A tax-type sheet pick; a null [treatment] means automatic.
+class const _TaxTreatmentChoice(final AccountTaxTreatment? treatment);

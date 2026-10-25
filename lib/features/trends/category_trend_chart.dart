@@ -17,7 +17,6 @@ import 'package:spend_trends/features/trends/category_trend_series_legend.dart';
 import 'package:spend_trends/features/trends/trend_chart_catalog.dart';
 import 'package:spend_trends/features/trends/trend_point_contributors.dart';
 import 'package:spend_trends/features/trends/trend_point_contributors_sheet.dart';
-import 'package:spend_trends/theme/finance_colors.dart';
 import 'package:spend_trends/widgets/help_tooltip.dart';
 
 import 'trends_providers.dart';
@@ -45,9 +44,6 @@ class const CategoryTrendChart({
   final String? titleHelp,
   final Set<String> initiallyHiddenSeriesIds = const {},
 
-  /// When true, shows the shared yr/mo/day control (only one chart should).
-  final bool showSpendRateToggle = false,
-
   /// Shared-scale min/med/avg/max/now whiskers for ranked category/group series.
   final bool useDistributionLegend = false,
   final TrendValueKind valueKind = TrendValueKind.pace,
@@ -57,6 +53,9 @@ class const CategoryTrendChart({
 
   /// Optional labeled amounts under the title (e.g. current + smoothed NW).
   final List<ChartHeadlineFigure> headlineFigures = const [],
+
+  /// Shown between the plot and the legend; drives every Trends chart's window.
+  final Widget? rangeScrubber,
   final double chartHeight = 560,
 }) extends ConsumerStatefulWidget {
   @override
@@ -94,6 +93,9 @@ class _CategoryTrendChartState() extends ConsumerState<CategoryTrendChart> {
   @override
   Widget build(BuildContext context) {
     final TrendSpendRate spendRate = ref.watch(trendSpendRateProvider);
+    final EChartVisibleRange? visibleRange = ref.watch(
+      trendVisibleRangeProvider,
+    );
     return Container(
       padding: const EdgeInsets.all(ELayout.spaceMd),
       decoration: BoxDecoration(
@@ -111,10 +113,6 @@ class _CategoryTrendChartState() extends ConsumerState<CategoryTrendChart> {
                 const SizedBox(width: ELayout.spaceXs),
                 HelpTooltip(message: widget.titleHelp!),
               ],
-              if (widget.showSpendRateToggle) ...[
-                const Spacer(),
-                _spendRateToggle(spendRate),
-              ],
             ],
           ),
           if (widget.headlineFigures.isNotEmpty) ...[
@@ -126,7 +124,11 @@ class _CategoryTrendChartState() extends ConsumerState<CategoryTrendChart> {
             Text(widget.subtitle!, style: EText.caption),
           ],
           const SizedBox(height: ELayout.spaceMd),
-          _chartArea(),
+          _chartArea(spendRate, visibleRange),
+          if (widget.rangeScrubber != null) ...[
+            const SizedBox(height: ELayout.spaceSm),
+            widget.rangeScrubber!,
+          ],
           const SizedBox(height: ELayout.spaceMd),
           ValueListenableBuilder<CategoryTrendInspect?>(
             valueListenable: _inspect,
@@ -178,57 +180,10 @@ class _CategoryTrendChartState() extends ConsumerState<CategoryTrendChart> {
     );
   }
 
-  Widget _spendRateToggle(TrendSpendRate spendRate) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        for (final rate in TrendSpendRate.values) ...[
-          if (rate != TrendSpendRate.values.first)
-            const SizedBox(width: ELayout.spaceXs),
-          _settingsChip(
-            label: rate.toggleLabel,
-            isSelected: spendRate == rate,
-            onActivated: () =>
-                ref.read(trendSpendRateProvider.notifier).setRate(rate),
-          ),
-        ],
-      ],
-    );
-  }
-
-  Widget _settingsChip({
-    required String label,
-    required bool isSelected,
-    required VoidCallback onActivated,
-  }) {
-    return GestureDetector(
-      onTap: onActivated,
-      child: Container(
-        padding: const EdgeInsets.symmetric(
-          horizontal: ELayout.spaceSm,
-          vertical: 2,
-        ),
-        decoration: BoxDecoration(
-          color: isSelected
-              ? FinanceColors.accentPrimary.withValues(alpha: 0.25)
-              : EColors.surface,
-          borderRadius: ELayout.borderRadiusSm,
-          border: Border.all(
-            color: isSelected ? FinanceColors.accentPrimary : EColors.border,
-          ),
-        ),
-        child: Text(
-          label,
-          style: EText.caption.copyWith(
-            color: isSelected ? FinanceColors.accentPrimary : EColors.textMuted,
-            fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _chartArea() {
+  Widget _chartArea(
+    TrendSpendRate spendRate,
+    EChartVisibleRange? visibleRange,
+  ) {
     if (!_visibleSeries.any((series) => series.canPlot)) {
       return SizedBox(
         height: widget.chartHeight,
@@ -244,54 +199,77 @@ class _CategoryTrendChartState() extends ConsumerState<CategoryTrendChart> {
           final plot = CategoryTrendPlot.from(
             size: plotSize,
             seriesList: _visibleSeries,
+            visibleRange: visibleRange,
             housingChain: widget.housingChain,
             jobChain: widget.jobChain,
             lifeEvents: widget.lifeEvents,
           );
-          return MouseRegion(
-            onHover: (event) {
-              _inspect.value = CategoryTrendInspect(
-                date: plot.dateForX(event.localPosition.dx),
-              );
-            },
-            onExit: (_) => _inspect.value = null,
-            child: GestureDetector(
-              onTapUp: widget.enableContributors
-                  ? (details) =>
-                        _openContributorsAt(details.localPosition, plot)
-                  : null,
-              child: Stack(
-                fit: StackFit.expand,
-                children: [
-                  RepaintBoundary(
-                    child: CustomPaint(
-                      isComplex: true,
-                      willChange: false,
-                      size: plotSize,
-                      painter: CategoryTrendPainter(
-                        seriesList: _visibleSeries,
-                        lifeEvents: widget.lifeEvents,
-                        housingChain: widget.housingChain,
-                        jobChain: widget.jobChain,
-                      ),
-                    ),
-                  ),
-                  ValueListenableBuilder<CategoryTrendInspect?>(
-                    valueListenable: _inspect,
-                    builder: (context, inspect, _) => CustomPaint(
-                      willChange: inspect != null,
-                      size: plotSize,
-                      painter: CategoryTrendInspectPainter(
-                        plot: plot,
-                        inspect: inspect,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
+          if (plot.drawableSeries.isEmpty) {
+            return Center(
+              child: Text('No history in this range', style: EText.caption),
+            );
+          }
+          return _inspectablePlot(
+            plot,
+            plotSize: plotSize,
+            spendRate: spendRate,
+            visibleRange: visibleRange,
           );
         },
+      ),
+    );
+  }
+
+  /// Hover draws the inspect hairline; tap opens top contributors.
+  Widget _inspectablePlot(
+    CategoryTrendPlot plot, {
+    required Size plotSize,
+    required TrendSpendRate spendRate,
+    required EChartVisibleRange? visibleRange,
+  }) {
+    return MouseRegion(
+      onHover: (event) {
+        _inspect.value = CategoryTrendInspect(
+          date: plot.dateForX(event.localPosition.dx),
+        );
+      },
+      onExit: (_) => _inspect.value = null,
+      child: GestureDetector(
+        onTapUp: widget.enableContributors
+            ? (details) => _openContributorsAt(details.localPosition, plot)
+            : null,
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            RepaintBoundary(
+              child: CustomPaint(
+                isComplex: true,
+                willChange: false,
+                size: plotSize,
+                painter: CategoryTrendPainter(
+                  seriesList: _visibleSeries,
+                  visibleRange: visibleRange,
+                  lifeEvents: widget.lifeEvents,
+                  housingChain: widget.housingChain,
+                  jobChain: widget.jobChain,
+                  spendRate: spendRate,
+                  valueKind: widget.valueKind,
+                ),
+              ),
+            ),
+            ValueListenableBuilder<CategoryTrendInspect?>(
+              valueListenable: _inspect,
+              builder: (context, inspect, _) => CustomPaint(
+                willChange: inspect != null,
+                size: plotSize,
+                painter: CategoryTrendInspectPainter(
+                  plot: plot,
+                  inspect: inspect,
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

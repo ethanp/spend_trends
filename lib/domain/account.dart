@@ -1,5 +1,6 @@
 import 'package:ethan_utils/ethan_utils.dart';
 import 'package:spend_trends/domain/account_kind.dart';
+import 'package:spend_trends/domain/account_tax_treatment.dart';
 
 class const Account({
   required final String id,
@@ -29,7 +30,13 @@ class const Account({
   /// Live account this row is a prior version of (servicer handoff or
   /// Copilot history folded into SimpleFIN).
   final String? belongsToAccountId,
+
+  /// Set on Banks; null means [AccountTaxTreatment.inferredFor] decides.
+  final AccountTaxTreatment? chosenTaxTreatment,
 }) {
+  AccountTaxTreatment get taxTreatment =>
+      chosenTaxTreatment ?? AccountTaxTreatment.inferredFor(this);
+
   /// Name shown throughout the app.
   String get displayName {
     final label = userLabel?.trim();
@@ -121,6 +128,15 @@ class const Account({
   /// into a parent instead of adding a second balance.
   bool get countsTowardNetWorth => hasLiveBalance && !hasParent;
 
+  /// Root accounts whose past balances belong in net worth history, including
+  /// closed plans imported for their history (valued by imported snapshots).
+  bool get countsTowardNetWorthHistory =>
+      (hasLiveBalance || isHistoryImport) && !hasParent;
+
+  /// Valued only by recorded snapshots: nothing pulls a balance or walks
+  /// one back through transactions.
+  bool get isValuedBySnapshots => isManual || isHistoryImport;
+
   bool get isInvestment => kind == AccountKind.investment;
 
   Account copyWith({
@@ -142,6 +158,7 @@ class const Account({
     AccountKind? kind,
     String? belongsToAccountId,
     bool clearBelongsTo = false,
+    AccountTaxTreatment? chosenTaxTreatment,
   }) {
     return Account(
       id: id ?? this.id,
@@ -163,6 +180,7 @@ class const Account({
       belongsToAccountId: clearBelongsTo
           ? null
           : (belongsToAccountId ?? this.belongsToAccountId),
+      chosenTaxTreatment: chosenTaxTreatment ?? this.chosenTaxTreatment,
     );
   }
 }

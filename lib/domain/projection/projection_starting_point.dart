@@ -5,24 +5,22 @@ import 'package:spend_trends/domain/cash_flow_breakdown.dart';
 import 'package:spend_trends/domain/category.dart';
 import 'package:spend_trends/domain/owned_asset.dart';
 import 'package:spend_trends/domain/owned_asset_kind.dart';
-import 'package:spend_trends/domain/projection/projection_assumptions.dart';
-import 'package:spend_trends/domain/projection/projection_tax_treatment.dart';
+import 'package:spend_trends/domain/account_tax_treatment.dart';
 import 'package:spend_trends/domain/special_category.dart';
 import 'package:spend_trends/domain/transaction.dart';
 
 /// Where the projection starts, read from live data (dollars, today).
 ///
-/// Housing is modeled from the current mortgage (balance and latest payment)
-/// rather than last year's Housing spend, which can include a home since
-/// sold. Non-housing spending, take-home, and payroll contributions are the
-/// last 365 days.
+/// Home value and mortgage balance are today's; the home life event supplies
+/// the loan's terms and carrying costs (last year's Housing spend can include
+/// a home since sold). Non-housing spending, take-home, and payroll
+/// contributions are the last 365 days.
 class const ProjectionStartingPoint({
   required final DateTime today,
-  required final Map<ProjectionTaxTreatment, double> balanceByTreatment,
-  required final Map<String, ProjectionTaxTreatment> treatmentByAccountId,
+  required final Map<AccountTaxTreatment, double> balanceByTreatment,
+  required final Map<String, AccountTaxTreatment> treatmentByAccountId,
   required final double homeValue,
   required final double mortgageBalance,
-  required final double mortgagePaymentMonthly,
   required final double takeHomeAnnual,
   required final double nonHousingSpendingAnnual,
   required final double payrollContributionsAnnual,
@@ -37,20 +35,16 @@ class const ProjectionStartingPoint({
     required List<OwnedAssetWithValuations> ownedAssets,
     required List<BankTransaction> transactions,
     required List<SpendCategory> categories,
-    required ProjectionAssumptions assumptions,
   }) {
     final liveAccounts = [
       for (final account in accounts)
         if (account.countsTowardNetWorth) account,
     ];
     final treatmentByAccountId = {
-      for (final account in liveAccounts)
-        account.id:
-            assumptions.taxTreatmentByAccountId[account.id] ??
-            ProjectionTaxTreatment.inferredFor(account),
+      for (final account in liveAccounts) account.id: account.taxTreatment,
     };
     final balanceByTreatment = {
-      for (final treatment in ProjectionTaxTreatment.values) treatment: 0.0,
+      for (final treatment in AccountTaxTreatment.values) treatment: 0.0,
     };
     for (final account in liveAccounts) {
       final treatment = treatmentByAccountId[account.id]!;
@@ -64,7 +58,6 @@ class const ProjectionStartingPoint({
             -account.balanceCents / 100 >= _minimumMortgageDollars)
           account,
     ];
-    final mortgageIds = {for (final account in mortgages) account.id};
     final yearAgo = today.startOfDay.shiftedByDays(-364);
     final cashFlowBreakdown = CashFlowBreakdown(
       categories: categories,
@@ -73,14 +66,7 @@ class const ProjectionStartingPoint({
     var takeHomeCents = 0;
     var nonHousingSpendingCents = 0;
     var payrollContributionCents = 0;
-    BankTransaction? latestMortgagePayment;
     for (final transaction in transactions) {
-      if (mortgageIds.contains(transaction.accountId) &&
-          transaction.isInflow &&
-          (latestMortgagePayment == null ||
-              transaction.postedAt.isAfter(latestMortgagePayment.postedAt))) {
-        latestMortgagePayment = transaction;
-      }
       if (transaction.postedAt.startOfDay.isBefore(yearAgo)) continue;
       final contribution = cashFlowBreakdown.contributionOf(transaction);
       takeHomeCents += contribution.takeHomeCents;
@@ -89,7 +75,7 @@ class const ProjectionStartingPoint({
       }
       if (SpecialCategory.isInvestmentsId(transaction.categoryId) &&
           treatmentByAccountId[transaction.accountId] ==
-              ProjectionTaxTreatment.traditional) {
+              AccountTaxTreatment.traditional) {
         payrollContributionCents += transaction.amountCents;
       }
     }
@@ -108,13 +94,12 @@ class const ProjectionStartingPoint({
         0.0,
         (total, account) => total - account.balanceCents / 100,
       ),
-      mortgagePaymentMonthly: (latestMortgagePayment?.amountCents ?? 0) / 100,
       takeHomeAnnual: takeHomeCents / 100,
       nonHousingSpendingAnnual: nonHousingSpendingCents / 100,
       payrollContributionsAnnual: payrollContributionCents / 100,
     );
   }
 
-  double balanceFor(ProjectionTaxTreatment treatment) =>
+  double balanceFor(AccountTaxTreatment treatment) =>
       balanceByTreatment[treatment] ?? 0;
 }

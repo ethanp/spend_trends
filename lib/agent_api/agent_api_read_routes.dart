@@ -128,7 +128,8 @@ keep any existing note. Reasonable assumptions belong in notes too; mark them
     'GET /conscious-spending',
     'POST /banks/pull {fullHistory?} (SimpleFIN pull, then re-run rules; '
         'reports new accounts and moves)',
-    'PATCH /accounts/<accountId> {kind}',
+    'PATCH /accounts/<accountId> {kind?, taxTreatment? (traditional, roth, '
+        'college, taxable, excluded; null = automatic)}',
     'POST /accounts/manual {name, kind, institution?, fromHistoryAccountId?, '
         'balanceCents?, recordedOn?} (an account SimpleFIN can’t reach; '
         'fromHistoryAccountId keeps that history account’s transactions)',

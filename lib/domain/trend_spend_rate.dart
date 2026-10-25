@@ -1,3 +1,5 @@
+import 'package:ethan_utils/ethan_utils.dart';
+
 /// Whether a Trends chart plots annualized pace or absolute dollar levels.
 enum TrendValueKind() {
   /// Centered-year spend / cash-flow pace (yr/mo/day toggle applies).
@@ -7,7 +9,7 @@ enum TrendValueKind() {
   level,
 }
 
-/// Display rate for Trends legend / inspect amounts (chart series stay annualized).
+/// Display rate for Trends amounts (chart series stay annualized; only labels scale).
 enum TrendSpendRate({
   required final String shortLabel,
   required final String toggleLabel,
@@ -22,4 +24,8 @@ enum TrendSpendRate({
   /// Convert centered-year annualized cents into this display rate.
   int displayCents(int annualizedCents) =>
       (annualizedCents / annualDivisor).round();
+
+  /// Full-dollar pace at this rate, e.g. `$1,234.00 / mo`.
+  String paceLabel(int annualizedCents) =>
+      '${formatCents(displayCents(annualizedCents))} $shortLabel';
 }

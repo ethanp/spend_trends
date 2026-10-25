@@ -36,10 +36,7 @@ void main() {
   });
 
   test('manual account with no balance recorded is stale', () {
-    expect(
-      account(externalId: 'manual:hsa').isManualBalanceStale(now),
-      isTrue,
-    );
+    expect(account(externalId: 'manual:hsa').isManualBalanceStale(now), isTrue);
   });
 
   test('SimpleFIN balances are never flagged', () {

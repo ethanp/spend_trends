@@ -6,6 +6,7 @@ import 'package:spend_trends/agent_api/categorization_snapshot.dart';
 import 'package:spend_trends/agent_api/rule_change_request.dart';
 import 'package:spend_trends/domain/account.dart';
 import 'package:spend_trends/domain/account_kind.dart';
+import 'package:spend_trends/domain/account_tax_treatment.dart';
 import 'package:spend_trends/domain/categorizer.dart';
 import 'package:spend_trends/domain/manual_accounts.dart';
 import 'package:spend_trends/domain/pull_simplefin_transactions.dart';
@@ -63,20 +64,40 @@ class const AgentApiBankRoutes({required final ProviderContainer container}) {
     });
   }
 
-  /// `{kind}`, e.g. `investment` for a crypto exchange the name heuristics
-  /// missed.
+  /// `{kind?, taxTreatment?}`: kind e.g. `investment` for a crypto exchange
+  /// the name heuristics missed; taxTreatment for projections, `null` back
+  /// to automatic.
   Future<Response> _updateAccount(Request request, String accountId) async {
     final body = await request.readJsonObject();
-    final kind = _requiredKind(body);
     final AccountsRepository accountsRepository = await container.read(
       accountsRepositoryProvider.future,
     );
     if (await accountsRepository.findById(accountId) == null) {
       return jsonError('No account $accountId', status: 404);
     }
-    await accountsRepository.updateKind(accountId: accountId, kind: kind);
-    container.read(spendDataChangedProvider.notifier).notify();
-    return jsonOk({'id': accountId, 'kind': kind.name});
+    if (body.containsKey('kind')) {
+      await accountsRepository.updateKind(
+        accountId: accountId,
+        kind: _requiredKind(body),
+      );
+    }
+    if (body.containsKey('taxTreatment')) {
+      await accountsRepository.updateTaxTreatment(
+        accountId: accountId,
+        taxTreatment: _optionalTaxTreatment(body['taxTreatment']),
+      );
+    }
+    return _accountResponse(accountId);
+  }
+
+  static AccountTaxTreatment? _optionalTaxTreatment(Object? value) {
+    if (value == null) return null;
+    final treatment = AccountTaxTreatment.tryFromStorage(value as String);
+    if (treatment != null) return treatment;
+    throw ArgumentError(
+      'taxTreatment must be null or one of '
+      '${AccountTaxTreatment.values.map((option) => option.name).join(', ')}.',
+    );
   }
 
   /// `{name, kind, institution?, fromHistoryAccountId?, balanceCents?,
@@ -100,7 +121,7 @@ class const AgentApiBankRoutes({required final ProviderContainer container}) {
         recordedOn: _recordedOn(body),
       );
     }
-    return _manualAccountResponse(account.id);
+    return _accountResponse(account.id);
   }
 
   /// `{balanceCents, recordedOn?}` (YYYY-MM-DD, default today).
@@ -110,7 +131,9 @@ class const AgentApiBankRoutes({required final ProviderContainer container}) {
   ) async {
     final body = await request.readJsonObject();
     final balanceCents = body['balanceCents'];
-    if (balanceCents is! int) throw ArgumentError('"balanceCents" is required.');
+    if (balanceCents is! int) {
+      throw ArgumentError('"balanceCents" is required.');
+    }
     final AccountsRepository accountsRepository = await container.read(
       accountsRepositoryProvider.future,
     );
@@ -126,10 +149,10 @@ class const AgentApiBankRoutes({required final ProviderContainer container}) {
       balanceCents: balanceCents,
       recordedOn: _recordedOn(body),
     );
-    return _manualAccountResponse(accountId);
+    return _accountResponse(accountId);
   }
 
-  Future<Response> _manualAccountResponse(String accountId) async {
+  Future<Response> _accountResponse(String accountId) async {
     container.read(spendDataChangedProvider.notifier).notify();
     final snapshot = await CategorizationSnapshot.load(container);
     final Account account = snapshot.accounts.firstWhere(

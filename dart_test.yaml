@@ -1,0 +1,5 @@
+tags:
+  readme-screenshot:
+    skip: >-
+      Regenerates README screenshots; run with
+      flutter test --run-skipped --update-goldens -t readme-screenshot

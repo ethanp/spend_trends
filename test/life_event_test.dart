@@ -4,7 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 void main() {
   group('LifeEvent kinds', () {
     test('point when endedOn equals startedOn', () {
-      final event = LifeEvent(
+      final event = Milestone(
         id: '1',
         title: 'Bought car',
         startedOn: DateTime(2024, 3, 15),
@@ -17,7 +17,7 @@ void main() {
     });
 
     test('open-ended when endedOn is null', () {
-      final event = LifeEvent(
+      final event = Milestone(
         id: '2',
         title: 'Current job',
         startedOn: DateTime(2022, 1, 1),
@@ -30,7 +30,7 @@ void main() {
     });
 
     test('closed range when endedOn is after startedOn', () {
-      final event = LifeEvent(
+      final event = Milestone(
         id: '3',
         title: 'Lived in house',
         startedOn: DateTime(2019, 6, 1),
@@ -48,7 +48,7 @@ void main() {
     final chartMax = DateTime(2024, 12, 31);
 
     test('point inside window', () {
-      final event = LifeEvent(
+      final event = Milestone(
         id: '1',
         title: 'Move',
         startedOn: DateTime(2023, 6, 1),
@@ -61,7 +61,7 @@ void main() {
     });
 
     test('point outside window', () {
-      final event = LifeEvent(
+      final event = Milestone(
         id: '1',
         title: 'Move',
         startedOn: DateTime(2022, 6, 1),
@@ -74,7 +74,7 @@ void main() {
     });
 
     test('closed range overlapping window start', () {
-      final event = LifeEvent(
+      final event = Milestone(
         id: '1',
         title: 'House',
         startedOn: DateTime(2022, 1, 1),
@@ -87,7 +87,7 @@ void main() {
     });
 
     test('closed range entirely before window', () {
-      final event = LifeEvent(
+      final event = Milestone(
         id: '1',
         title: 'House',
         startedOn: DateTime(2020, 1, 1),
@@ -100,7 +100,7 @@ void main() {
     });
 
     test('open-ended started before window still intersects', () {
-      final event = LifeEvent(
+      final event = Milestone(
         id: '1',
         title: 'Job',
         startedOn: DateTime(2020, 1, 1),
@@ -112,7 +112,7 @@ void main() {
     });
 
     test('open-ended starting after window does not intersect', () {
-      final event = LifeEvent(
+      final event = Milestone(
         id: '1',
         title: 'Job',
         startedOn: DateTime(2025, 1, 1),

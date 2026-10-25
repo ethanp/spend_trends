@@ -12,13 +12,15 @@ import 'package:spend_trends/theme/finance_colors.dart';
 import 'package:spend_trends/widgets/app_sheet_panel.dart';
 import 'package:spend_trends/widgets/app_spreadsheet.dart';
 
+import 'trends_providers.dart';
+
 /// Modal listing the top transactions feeding a trendline at a tap date.
 class const TrendPointContributorsSheet({
   required final String seriesName,
   required final DateTime tapDate,
   required final List<TrendPointContributor> contributors,
 
-  /// Series smoothed value at [tapDate], annualized (/ yr).
+  /// Series smoothed value at [tapDate], annualized; shown at the Trends rate.
   required final int linePaceCents,
 }) extends ConsumerStatefulWidget {
   static const _contentMaxWidth = 720.0;
@@ -80,7 +82,9 @@ class _TrendPointContributorsSheetState()
   }
 
   Widget _sheetHeader() {
-    final linePaceLabel = _ContributorRow.formatPaceCents(widget.linePaceCents);
+    final linePaceLabel = ref
+        .watch(trendSpendRateProvider)
+        .paceLabel(widget.linePaceCents);
     return Padding(
       padding: const EdgeInsets.fromLTRB(
         ELayout.spaceLg,
@@ -122,48 +126,54 @@ class _TrendPointContributorsSheetState()
     final categoryById = {
       for (final category in categories) category.id: category,
     };
+    final TrendSpendRate spendRate = ref.watch(trendSpendRateProvider);
     final columnWidths = _ContributorColumnWidths.measure(
       contributors: widget.contributors,
+      spendRate: spendRate,
       categoryNameFor: (contributor) =>
           _categoryFor(contributor, categoryById)?.name ?? 'Uncategorized',
     );
 
     return Expanded(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(
-              ELayout.spaceLg,
-              ELayout.spaceXs,
-              ELayout.spaceLg,
-              0,
-            ),
-            child: _ContributorHeaderRow(columnWidths: columnWidths),
-          ),
-          Expanded(
-            child: ListView.builder(
+      child: ECopyableRowsSelectionArea(
+        headerCells: _ContributorHeaderRow.copiedCells,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Padding(
               padding: const EdgeInsets.fromLTRB(
                 ELayout.spaceLg,
+                ELayout.spaceXs,
+                ELayout.spaceLg,
                 0,
-                ELayout.spaceLg,
-                ELayout.spaceLg,
               ),
-              itemCount: widget.contributors.length,
-              itemBuilder: (context, index) {
-                final contributor = widget.contributors[index];
-                return _ContributorRow(
-                  contributor: contributor,
-                  rank: index + 1,
-                  columnWidths: columnWidths,
-                  showDivider: index < widget.contributors.length - 1,
-                  category: _categoryFor(contributor, categoryById),
-                  onCategorySelected: () => _changeCategory(contributor),
-                );
-              },
+              child: _ContributorHeaderRow(columnWidths: columnWidths),
             ),
-          ),
-        ],
+            Expanded(
+              child: ListView.builder(
+                padding: const EdgeInsets.fromLTRB(
+                  ELayout.spaceLg,
+                  0,
+                  ELayout.spaceLg,
+                  ELayout.spaceLg,
+                ),
+                itemCount: widget.contributors.length,
+                itemBuilder: (context, index) {
+                  final contributor = widget.contributors[index];
+                  return _ContributorRow(
+                    contributor: contributor,
+                    rank: index + 1,
+                    spendRate: spendRate,
+                    columnWidths: columnWidths,
+                    showDivider: index < widget.contributors.length - 1,
+                    category: _categoryFor(contributor, categoryById),
+                    onCategorySelected: () => _changeCategory(contributor),
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -206,6 +216,7 @@ class const _ContributorColumnWidths({
 
   static _ContributorColumnWidths measure({
     required List<TrendPointContributor> contributors,
+    required TrendSpendRate spendRate,
     required String Function(TrendPointContributor contributor) categoryNameFor,
   }) {
     final rankStyle = EText.body.medium.copyWith(
@@ -240,7 +251,7 @@ class const _ContributorColumnWidths({
       final merchantName = transaction.normalizedMerchant.trim().isNotEmpty
           ? transaction.normalizedMerchant
           : transaction.rawDescription;
-      final paceLabel = _ContributorRow.formatPaceCents(
+      final paceLabel = spendRate.paceLabel(
         contributor.smoothedContributionCents.round(),
       );
       final categoryLabel = categoryNameFor(contributor);
@@ -280,6 +291,15 @@ class const _ContributorColumnWidths({
 class const _ContributorHeaderRow({
   required final _ContributorColumnWidths columnWidths,
 }) extends StatelessWidget {
+  static const copiedCells = [
+    '#',
+    'Date',
+    'Merchant',
+    _ContributorColumnWidths.paceHeader,
+    _ContributorColumnWidths.amountHeader,
+    'Category',
+  ];
+
   @override
   Widget build(BuildContext context) {
     return Padding(
@@ -337,6 +357,7 @@ class const _ContributorHeaderRow({
 class const _ContributorRow({
   required final TrendPointContributor contributor,
   required final int rank,
+  required final TrendSpendRate spendRate,
   required final _ContributorColumnWidths columnWidths,
   required final bool showDivider,
   required final SpendCategory? category,
@@ -344,24 +365,34 @@ class const _ContributorRow({
 }) extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: ELayout.spaceSm),
-      decoration: showDivider ? _rowDivider : null,
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          _rankLabel(),
-          const SizedBox(width: ELayout.spaceSm),
-          _postedDateLabel(),
-          const SizedBox(width: ELayout.spaceSm),
-          _merchantTitle(),
-          const SizedBox(width: ELayout.spaceMd),
-          _paceLabel(),
-          const SizedBox(width: ELayout.spaceMd),
-          _amountLabel(),
-          const SizedBox(width: ELayout.spaceSm),
-          _categoryPicker(),
-        ],
+    return ECopyableRow(
+      cells: [
+        '$rank',
+        _postedDate,
+        _merchantName,
+        _pace,
+        formatCents(contributor.transaction.amountCents),
+        _categoryName,
+      ],
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: ELayout.spaceSm),
+        decoration: showDivider ? _rowDivider : null,
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            _rankLabel(),
+            const SizedBox(width: ELayout.spaceSm),
+            _postedDateLabel(),
+            const SizedBox(width: ELayout.spaceSm),
+            _merchantTitle(),
+            const SizedBox(width: ELayout.spaceMd),
+            _paceLabel(),
+            const SizedBox(width: ELayout.spaceMd),
+            _amountLabel(),
+            const SizedBox(width: ELayout.spaceSm),
+            _categoryPicker(),
+          ],
+        ),
       ),
     );
   }
@@ -388,7 +419,7 @@ class const _ContributorRow({
     return AppSpreadsheetCell(
       width: columnWidths.date,
       child: Text(
-        DateFormat.yMMMd().format(contributor.transaction.postedAt),
+        _postedDate,
         style: EText.body.medium.copyWith(color: EColors.textMuted),
         maxLines: 1,
       ),
@@ -420,7 +451,7 @@ class const _ContributorRow({
       width: columnWidths.pace,
       alignment: Alignment.centerRight,
       child: Text(
-        formatPaceCents(contributor.smoothedContributionCents.round()),
+        _pace,
         style: EText.body.medium.copyWith(
           fontWeight: FontWeight.w600,
           color: EColors.textMuted,
@@ -455,7 +486,7 @@ class const _ContributorRow({
             mainAxisSize: MainAxisSize.min,
             children: [
               Text(
-                category?.name ?? 'Uncategorized',
+                _categoryName,
                 style: EText.caption.copyWith(
                   fontWeight: FontWeight.w600,
                   color: FinanceColors.accentPrimary,
@@ -474,16 +505,19 @@ class const _ContributorRow({
     );
   }
 
+  String get _postedDate =>
+      DateFormat.yMMMd().format(contributor.transaction.postedAt);
+
+  String get _pace =>
+      spendRate.paceLabel(contributor.smoothedContributionCents.round());
+
+  String get _categoryName => category?.name ?? 'Uncategorized';
+
   String get _merchantName {
     final transaction = contributor.transaction;
     if (transaction.normalizedMerchant.trim().isNotEmpty) {
       return transaction.normalizedMerchant;
     }
     return transaction.rawDescription;
-  }
-
-  /// Annualized pace label always in `/ yr` (full dollars, not compact `$3.4k`).
-  static String formatPaceCents(int annualizedCents) {
-    return '${formatCents(annualizedCents)}${TrendSpendRate.perYear.shortLabel}';
   }
 }

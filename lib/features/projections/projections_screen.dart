@@ -16,7 +16,7 @@ class const ProjectionsScreen() extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final AsyncValue<RetirementProjection> projectionAsync = ref.watch(
-      retirementProjectionProvider,
+      draftedRetirementProjectionProvider,
     );
     return Scaffold(
       backgroundColor: Colors.transparent,
@@ -30,14 +30,10 @@ class const ProjectionsScreen() extends ConsumerWidget {
         bottom: false,
         child: projectionAsync.when(
           loading: () => const Center(child: CircularProgressIndicator()),
-          error: (error, _) => Center(
-            child: Padding(
-              padding: const EdgeInsets.all(ELayout.spaceLg),
-              child: Text(
-                '$error',
-                style: EText.body.medium.copyWith(color: EColors.danger),
-              ),
-            ),
+          error: (error, stackTrace) => ELoadErrorView(
+            screenName: 'Projections',
+            error: error,
+            stackTrace: stackTrace,
           ),
           data: (projection) => _projectionBody(context, projection),
         ),
@@ -58,10 +54,38 @@ class const ProjectionsScreen() extends ConsumerWidget {
           ProjectionChartCard(projection: projection),
         ],
         const SizedBox(height: ELayout.spaceLg),
-        ProjectionStartingPointCard(projection: projection),
-        const SizedBox(height: ELayout.spaceLg),
-        ProjectionAssumptionsCard(assumptions: projection.assumptions),
+        _assumptionsBesideStartingPoint(projection),
       ],
     );
   }
+
+  /// Two columns when there is room; stacked otherwise.
+  Widget _assumptionsBesideStartingPoint(RetirementProjection projection) {
+    final assumptions = ProjectionAssumptionsCard(projection: projection);
+    final startingPoint = ProjectionStartingPointCard(projection: projection);
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        if (constraints.maxWidth < _twoColumnMinWidth) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              assumptions,
+              const SizedBox(height: ELayout.spaceLg),
+              startingPoint,
+            ],
+          );
+        }
+        return Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(child: assumptions),
+            const SizedBox(width: ELayout.spaceLg),
+            Expanded(child: startingPoint),
+          ],
+        );
+      },
+    );
+  }
+
+  static const _twoColumnMinWidth = 1000.0;
 }

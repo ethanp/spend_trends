@@ -8,6 +8,12 @@ This is a personal app (not a product). The repo is public-safe: bank Access URL
 
 ![Trends](screenshots/trends.png)
 
+Regenerate from fixtures (skipped in plain `flutter test`):
+
+```bash
+flutter test --run-skipped --update-goldens -t readme-screenshot
+```
+
 ## What it does
 
 - **See whether a category is drifting up or down** — smoothed trailing-year spend lines (total + per category) so long-term shape is readable, not drowned in daily noise.

@@ -15,7 +15,8 @@ CREATE TABLE IF NOT EXISTS accounts (
     user_label TEXT,
     conn_user_label TEXT,
     account_kind TEXT,
-    belongs_to_account_id TEXT REFERENCES accounts(id) ON DELETE SET NULL
+    belongs_to_account_id TEXT REFERENCES accounts(id) ON DELETE SET NULL,
+    tax_treatment TEXT CHECK (tax_treatment IN ('traditional', 'roth', 'college', 'taxable', 'excluded'))
 );
 
 CREATE TABLE IF NOT EXISTS category_groups (
@@ -70,7 +71,10 @@ CREATE TABLE IF NOT EXISTS life_events (
     title TEXT NOT NULL,
     started_on BIGINT NOT NULL,
     ended_on BIGINT,
-    note TEXT
+    note TEXT,
+    kind TEXT NOT NULL DEFAULT 'milestone'
+        CHECK (kind IN ('milestone', 'job', 'home', 'childBirth')),
+    details_json TEXT
 );
 
 CREATE TABLE IF NOT EXISTS housing_stays (
@@ -148,3 +152,9 @@ CREATE TABLE IF NOT EXISTS account_balance_snapshots (
 
 CREATE INDEX IF NOT EXISTS account_balance_snapshots_account_recorded
     ON account_balance_snapshots (account_id, recorded_on);
+
+CREATE TABLE IF NOT EXISTS imported_net_worth_days (
+    id TEXT PRIMARY KEY,
+    recorded_on BIGINT NOT NULL UNIQUE,
+    net_worth_cents BIGINT NOT NULL
+);

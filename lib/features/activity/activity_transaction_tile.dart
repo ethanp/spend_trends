@@ -1,5 +1,7 @@
 import 'package:ethan_ui/ethan_ui.dart';
+import 'package:ethan_utils/ethan_utils.dart';
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:spend_trends/domain/account.dart';
 import 'package:spend_trends/domain/category.dart';
 import 'package:spend_trends/domain/special_category.dart';
@@ -21,6 +23,14 @@ class const ActivityTransactionTile({
   final Widget? extraTrailing,
   final String? categoryCaption,
 }) extends StatelessWidget {
+  static const copiedHeaderCells = [
+    'Date',
+    'Category',
+    'Account',
+    'Merchant',
+    'Amount',
+  ];
+
   @override
   Widget build(BuildContext context) {
     final categoryColor = CategoryColor.forCategoryId(
@@ -32,37 +42,49 @@ class const ActivityTransactionTile({
         ? transaction.normalizedMerchant
         : transaction.rawDescription;
 
-    return TransactionListRow(
-      categoryColor: categoryColor,
-      title: merchantName,
-      amountCents: transaction.amountCents,
-      amountColor: _amountColor,
-      selected: selected,
-      onActivated: onActivated,
-      leadingCells: [
-        TransactionListRow.cell(
-          width: columnWidths.category,
-          child: Text(
-            categoryCaption ?? category?.name ?? 'Uncategorized',
-            style: EText.caption.copyWith(
-              fontWeight: FontWeight.w600,
-              color: categoryColor,
-            ),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-          ),
-        ),
-        TransactionListRow.cell(
-          width: columnWidths.account,
-          child: Text(
-            account?.displayNameWithInstitution ?? '—',
-            style: EText.caption.copyWith(color: EColors.textMuted),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-          ),
-        ),
+    final categoryLabel = categoryCaption ?? category?.name ?? 'Uncategorized';
+    final accountLabel = account?.displayNameWithInstitution ?? '—';
+
+    return ECopyableRow(
+      cells: [
+        DateFormat.yMMMd().format(transaction.postedAt),
+        categoryLabel,
+        accountLabel,
+        merchantName,
+        formatCents(transaction.amountCents),
       ],
-      trailing: _trailing(),
+      child: TransactionListRow(
+        categoryColor: categoryColor,
+        title: merchantName,
+        amountCents: transaction.amountCents,
+        amountColor: _amountColor,
+        selected: selected,
+        onActivated: onActivated,
+        leadingCells: [
+          TransactionListRow.cell(
+            width: columnWidths.category,
+            child: Text(
+              categoryLabel,
+              style: EText.caption.copyWith(
+                fontWeight: FontWeight.w600,
+                color: categoryColor,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          TransactionListRow.cell(
+            width: columnWidths.account,
+            child: Text(
+              accountLabel,
+              style: EText.caption.copyWith(color: EColors.textMuted),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+        ],
+        trailing: _trailing(),
+      ),
     );
   }
 

@@ -11,6 +11,7 @@ import 'package:spend_trends/features/activity/activity_column_widths.dart';
 import 'package:spend_trends/features/activity/activity_day_list.dart';
 import 'package:spend_trends/features/activity/activity_detail_pane.dart';
 import 'package:spend_trends/features/activity/activity_filter_bar.dart';
+import 'package:spend_trends/features/activity/activity_transaction_tile.dart';
 import 'package:spend_trends/features/activity/activity_visible_transactions.dart';
 import 'package:spend_trends/features/activity/manage_rule_sheet.dart';
 import 'package:spend_trends/features/activity/recategorize_sheet.dart';
@@ -96,11 +97,10 @@ class _ActivityScreenState() extends ConsumerState<ActivityScreen> {
         child: browseAsync.when(
           skipLoadingOnReload: true,
           loading: () => const Center(child: CircularProgressIndicator()),
-          error: (error, _) => Center(
-            child: Text(
-              '$error',
-              style: EText.body.medium.copyWith(color: EColors.danger),
-            ),
+          error: (error, stackTrace) => ELoadErrorView(
+            screenName: 'Activity',
+            error: error,
+            stackTrace: stackTrace,
           ),
           data: _transactionList,
         ),
@@ -225,27 +225,30 @@ class _ActivityScreenState() extends ConsumerState<ActivityScreen> {
         final columnWidths = naturalColumnWidths.allocate(constraints.maxWidth);
         return RefreshIndicator(
           onRefresh: () => ActivityScreen.refresh(context, ref),
-          child: CustomScrollView(
-            physics: const AlwaysScrollableScrollPhysics(),
-            slivers: [
-              if (filtered.visible.isEmpty)
-                _noResultsSliver(
-                  hasSearch: hasSearch,
-                  searchMatchCount: filtered.searchMatchCount,
-                )
-              else
-                ActivityDayListSliver(
-                  transactions: filtered.visible,
-                  accounts: accounts,
-                  categories: categories,
-                  ruleMatchIndex: filtered.ruleMatchIndex,
-                  selectedTransactionId: _selectedTransactionId,
-                  columnWidths: columnWidths,
-                  onTransactionSelected: _selectTransaction,
-                  onRuleSelected: (rule) =>
-                      ManageRuleSheet.show(context, ref: ref, rule: rule),
-                ),
-            ],
+          child: ECopyableRowsSelectionArea(
+            headerCells: ActivityTransactionTile.copiedHeaderCells,
+            child: CustomScrollView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              slivers: [
+                if (filtered.visible.isEmpty)
+                  _noResultsSliver(
+                    hasSearch: hasSearch,
+                    searchMatchCount: filtered.searchMatchCount,
+                  )
+                else
+                  ActivityDayListSliver(
+                    transactions: filtered.visible,
+                    accounts: accounts,
+                    categories: categories,
+                    ruleMatchIndex: filtered.ruleMatchIndex,
+                    selectedTransactionId: _selectedTransactionId,
+                    columnWidths: columnWidths,
+                    onTransactionSelected: _selectTransaction,
+                    onRuleSelected: (rule) =>
+                        ManageRuleSheet.show(context, ref: ref, rule: rule),
+                  ),
+              ],
+            ),
           ),
         );
       },

@@ -3,6 +3,7 @@ import 'package:ethan_utils/ethan_utils.dart';
 import 'package:flutter/material.dart';
 import 'package:spend_trends/domain/life_event.dart';
 import 'package:spend_trends/domain/stay_chain.dart';
+import 'package:spend_trends/domain/trend_spend_rate.dart';
 import 'package:spend_trends/features/trends/category_trend_plot.dart';
 import 'package:spend_trends/features/trends/category_trend_series.dart';
 import 'package:spend_trends/features/trends/pace_line_samples.dart';
@@ -11,9 +12,12 @@ import 'package:spend_trends/theme/finance_colors.dart';
 
 class CategoryTrendPainter({
   required final List<CategoryTrendSeries> seriesList,
+  final EChartVisibleRange? visibleRange,
   final List<LifeEvent> lifeEvents = const [],
   final StayChain? housingChain,
   final StayChain? jobChain,
+  required final TrendSpendRate spendRate,
+  required final TrendValueKind valueKind,
 }) extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
@@ -24,6 +28,7 @@ class CategoryTrendPainter({
       plot: CategoryTrendPlot.from(
         size: size,
         seriesList: seriesList,
+        visibleRange: visibleRange,
         housingChain: housingChain,
         jobChain: jobChain,
         lifeEvents: lifeEvents,
@@ -31,15 +36,20 @@ class CategoryTrendPainter({
       lifeEvents: lifeEvents,
       housingChain: housingChain,
       jobChain: jobChain,
+      spendRate: spendRate,
+      valueKind: valueKind,
     ).paint();
   }
 
   @override
   bool shouldRepaint(covariant CategoryTrendPainter oldDelegate) =>
       seriesList != oldDelegate.seriesList ||
+      visibleRange != oldDelegate.visibleRange ||
       lifeEvents != oldDelegate.lifeEvents ||
       housingChain != oldDelegate.housingChain ||
-      jobChain != oldDelegate.jobChain;
+      jobChain != oldDelegate.jobChain ||
+      spendRate != oldDelegate.spendRate ||
+      valueKind != oldDelegate.valueKind;
 }
 
 /// One chart frame: canvas + date-range layout + value scale.
@@ -49,6 +59,8 @@ class _CategoryTrendChartFrame({
   required final List<LifeEvent> lifeEvents,
   required final StayChain? housingChain,
   required final StayChain? jobChain,
+  required final TrendSpendRate spendRate,
+  required final TrendValueKind valueKind,
 }) {
   static const _labelFontSize = 14.0;
   static const _labelStackStep = 18.0;
@@ -454,7 +466,11 @@ class _CategoryTrendChartFrame({
   void _paintValueTickLabels() {
     final axisStyle = EChartAxis.tickLabel;
     for (final tickCents in plot.scale.tickCents) {
-      final label = formatAxisCents(tickCents);
+      final label = formatAxisCents(
+        valueKind == TrendValueKind.pace
+            ? tickCents / spendRate.annualDivisor
+            : tickCents,
+      );
       final textPainter = TextPainter(
         text: TextSpan(text: label, style: axisStyle),
         textDirection: TextDirection.ltr,

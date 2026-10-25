@@ -1,6 +1,7 @@
 import 'package:spend_trends/domain/account.dart';
 import 'package:spend_trends/domain/account_balance_snapshot.dart';
 import 'package:spend_trends/domain/account_kind.dart';
+import 'package:spend_trends/domain/imported_net_worth_day.dart';
 import 'package:spend_trends/domain/owned_asset.dart';
 import 'package:spend_trends/domain/owned_asset_kind.dart';
 import 'package:spend_trends/domain/transaction.dart';
@@ -1057,4 +1058,132 @@ void main() {
       expect(series.points.last.rollingCents, 3831619);
     },
   );
+
+  test(
+    'linked account resets to its snapshot so market moves do not drift',
+    () {
+      final chartDates = [
+        for (var dayOffset = 0; dayOffset < 5; dayOffset++)
+          DateTime(2026, 10, 20 + dayOffset),
+      ];
+      final brokerage = Account(
+        id: 'brokerage',
+        externalId: 'ext-brokerage',
+        name: 'Brokerage',
+        currency: 'USD',
+        balanceCents: 120000,
+        balanceAsOf: chartDates.last,
+        status: AccountStatus.ok,
+        kind: AccountKind.investment,
+      );
+      final transactions = [
+        BankTransaction(
+          id: 'deposit',
+          accountId: 'brokerage',
+          externalId: 'deposit',
+          postedAt: chartDates[3],
+          amountCents: 10000,
+          rawDescription: 'Deposit',
+          normalizedMerchant: 'DEPOSIT',
+          pending: false,
+        ),
+      ];
+      final balanceSnapshots = [
+        AccountBalanceSnapshot(
+          id: 'brokerage@2026-10-21',
+          accountId: 'brokerage',
+          balanceCents: 90000,
+          recordedOn: chartDates[1],
+        ),
+      ];
+
+      final daily = NetWorthTrend.dailyCents(
+        accounts: [brokerage],
+        transactions: transactions,
+        chartDates: chartDates,
+        balanceSnapshots: balanceSnapshots,
+      );
+
+      // Walk-back alone would give 110000 before the deposit; the 10/21
+      // snapshot pins that day, and nothing is known before it.
+      expect(daily, [0.0, 90000.0, 110000.0, 120000.0, 120000.0]);
+    },
+  );
+
+  test('closed history account counts toward net worth from its snapshots', () {
+    final chartDates = [
+      for (var dayOffset = 0; dayOffset < 4; dayOffset++)
+        DateTime(2023, 11, 27 + dayOffset),
+    ];
+    const closed401k = Account(
+      id: 'google-401k',
+      externalId: 'history:empower-google-401k-3926',
+      name: 'Google 401(k)',
+      currency: 'USD',
+      balanceCents: 0,
+      status: AccountStatus.ok,
+      kind: AccountKind.investment,
+    );
+    final balanceSnapshots = [
+      AccountBalanceSnapshot(
+        id: 'google-401k@2023-11-27',
+        accountId: 'google-401k',
+        balanceCents: 500000,
+        recordedOn: chartDates[0],
+      ),
+      AccountBalanceSnapshot(
+        id: 'google-401k@2023-11-29',
+        accountId: 'google-401k',
+        balanceCents: 0,
+        recordedOn: chartDates[2],
+      ),
+    ];
+
+    final daily = NetWorthTrend.dailyCents(
+      accounts: [closed401k],
+      transactions: const [],
+      chartDates: chartDates,
+      balanceSnapshots: balanceSnapshots,
+    );
+
+    expect(daily, [500000.0, 500000.0, 0.0, 0.0]);
+  });
+
+  test('imported net worth replaces the total on the days it covers', () {
+    final chartDates = [
+      for (var dayOffset = 0; dayOffset < 30; dayOffset++)
+        DateTime(2026, 10, 1 + dayOffset),
+    ];
+    final checking = Account(
+      id: 'checking',
+      externalId: 'ext-checking',
+      name: 'Checking',
+      currency: 'USD',
+      balanceCents: 5000,
+      balanceAsOf: chartDates.first,
+      status: AccountStatus.ok,
+      kind: AccountKind.checking,
+    );
+    final importedNetWorthDays = [
+      for (var dayIndex = 0; dayIndex < 20; dayIndex++)
+        ImportedNetWorthDay(
+          recordedOn: chartDates[dayIndex],
+          netWorthCents: 777700,
+        ),
+    ];
+
+    final series = NetWorthTrend.series(
+      accounts: [checking],
+      transactions: const [],
+      chartDates: chartDates,
+      importedNetWorthDays: importedNetWorthDays,
+    );
+    final netWorthPoints = series
+        .firstWhere((built) => built.id == TrendChartCatalog.netWorthSeriesId)
+        .points;
+
+    expect(netWorthPoints[19].rollingCents, 777700);
+    expect(netWorthPoints[20].rollingCents, 5000);
+    expect(netWorthPoints.last.rollingCents, 5000);
+  });
 }

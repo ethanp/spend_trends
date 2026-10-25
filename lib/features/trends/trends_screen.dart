@@ -16,6 +16,8 @@ import 'package:spend_trends/features/trends/category_trend_series.dart';
 import 'package:spend_trends/features/trends/conscious_spending_numbers_card.dart';
 import 'package:spend_trends/features/trends/net_worth_trend.dart';
 import 'package:spend_trends/features/trends/trend_chart_catalog.dart';
+import 'package:spend_trends/features/trends/trend_range_scrubber.dart';
+import 'package:spend_trends/features/trends/trend_spend_rate_toggle.dart';
 import 'package:spend_trends/features/trends/trends_chart_bundle.dart';
 import 'package:spend_trends/features/activity/transactions_list_provider.dart';
 import 'package:spend_trends/features/banks/banks_providers.dart';
@@ -46,19 +48,16 @@ class const TrendsScreen() extends ConsumerWidget {
         title: 'Trends',
         leading: ESyncPhaseIcon(),
         automaticallyImplyLeading: false,
+        actions: [TrendSpendRateToggle()],
       ),
       body: SafeArea(
         bottom: false,
         child: trendsAsync.when(
           loading: () => const Center(child: CircularProgressIndicator()),
-          error: (error, _) => Center(
-            child: Padding(
-              padding: const EdgeInsets.all(ELayout.spaceLg),
-              child: Text(
-                '$error',
-                style: EText.body.medium.copyWith(color: EColors.danger),
-              ),
-            ),
+          error: (error, stackTrace) => ELoadErrorView(
+            screenName: 'Trends',
+            error: error,
+            stackTrace: stackTrace,
           ),
           data: (bundle) => _trendsBody(
             context,
@@ -120,22 +119,6 @@ class const TrendsScreen() extends ConsumerWidget {
         ConsciousSpendingNumbersCard(
           consciousSpendingNumbers: bundle.consciousSpendingNumbers,
         ),
-        if (bundle.categorySpend.isNotEmpty) ...[
-          const SizedBox(height: ELayout.spaceLg),
-          CategoryTrendChart(
-            title: 'Category spend',
-            seriesList: bundle.categorySpend,
-            transactions: transactions,
-            categories: categories,
-            groups: groups,
-            accounts: accounts,
-            lifeEvents: lifeEvents,
-            housingChain: housingChain,
-            jobChain: jobChain,
-            showSpendRateToggle: true,
-            useDistributionLegend: true,
-          ),
-        ],
         if (bundle.cashFlows.isNotEmpty) ...[
           const SizedBox(height: ELayout.spaceLg),
           CategoryTrendChart(
@@ -149,10 +132,10 @@ class const TrendsScreen() extends ConsumerWidget {
             lifeEvents: lifeEvents,
             housingChain: housingChain,
             jobChain: jobChain,
-            showSpendRateToggle: bundle.categorySpend.isEmpty,
             initiallyHiddenSeriesIds: const {
               TrendChartCatalog.transferSeriesId,
             },
+            rangeScrubber: _rangeScrubber(bundle),
           ),
         ],
         if (bundle.netWorth.isNotEmpty) ...[
@@ -178,7 +161,31 @@ class const TrendsScreen() extends ConsumerWidget {
             enableContributors: false,
           ),
         ],
+        if (bundle.categorySpend.isNotEmpty) ...[
+          const SizedBox(height: ELayout.spaceLg),
+          CategoryTrendChart(
+            title: 'Category spend',
+            seriesList: bundle.categorySpend,
+            transactions: transactions,
+            categories: categories,
+            groups: groups,
+            accounts: accounts,
+            lifeEvents: lifeEvents,
+            housingChain: housingChain,
+            jobChain: jobChain,
+            useDistributionLegend: true,
+          ),
+        ],
       ],
+    );
+  }
+
+  static Widget? _rangeScrubber(TrendsChartBundle bundle) {
+    final DateTimeRange? chartedDateRange = bundle.chartedDateRange;
+    if (chartedDateRange == null) return null;
+    return TrendRangeScrubber(
+      chartedDateRange: chartedDateRange,
+      cashFlowLines: TrendRangeScrubber.cashFlowLinesFrom(bundle.cashFlows),
     );
   }
 

@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:spend_trends/features/trends/category_trend_point.dart';
 import 'package:spend_trends/features/trends/trend_chart_catalog.dart';
@@ -56,6 +58,21 @@ class const CategoryTrendSeries({
       id == TrendChartCatalog.uncategorizedSeriesId;
 
   bool get canPlot => points.length >= 2;
+
+  bool hasPointsBetween(DateTime start, DateTime end) =>
+      points.isNotEmpty &&
+      !points.first.date.isAfter(end) &&
+      !points.last.date.isBefore(start);
+
+  /// Peak of the plotted line from [start] to [end], edges interpolated.
+  double highestSmoothedCentsBetween(DateTime start, DateTime end) {
+    var highest = math.max(smoothedCentsAt(start), smoothedCentsAt(end));
+    for (final point in points) {
+      if (point.date.isBefore(start) || point.date.isAfter(end)) continue;
+      highest = math.max(highest, point.smoothedCents);
+    }
+    return highest;
+  }
 
   /// Linear interpolation of [smoothedCents] at [sampleDate].
   double smoothedCentsAt(DateTime sampleDate) {

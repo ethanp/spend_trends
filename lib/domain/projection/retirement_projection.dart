@@ -2,10 +2,13 @@ import 'dart:math' as math;
 
 import 'package:spend_trends/domain/account.dart';
 import 'package:spend_trends/domain/category.dart';
+import 'package:spend_trends/domain/life_event.dart';
 import 'package:spend_trends/domain/owned_asset.dart';
+import 'package:spend_trends/domain/projection/life_plan.dart';
 import 'package:spend_trends/domain/projection/projection_assumptions.dart';
 import 'package:spend_trends/domain/projection/projection_starting_point.dart';
-import 'package:spend_trends/domain/projection/projection_tax_treatment.dart';
+import 'package:spend_trends/domain/projection/savings_balances.dart';
+import 'package:spend_trends/domain/account_tax_treatment.dart';
 import 'package:spend_trends/domain/transaction.dart';
 
 /// One simulated year, valued at the end of the year you turn [age], in
@@ -13,17 +16,27 @@ import 'package:spend_trends/domain/transaction.dart';
 class const ProjectionYear({
   required final int age,
   required final int year,
+  @override
   required final double taxable,
+  @override
   required final double traditional,
+  @override
   required final double roth,
+  @override
+  required final double college,
+  @override
   required final double homeEquity,
   required final double income,
   required final double spending,
-  required final double housing,
-}) {
-  double get liquid => taxable + traditional + roth;
 
-  double get netWorth => liquid + homeEquity;
+  /// Mortgage principal and interest plus the home's carrying costs.
+  required final double housing,
+
+  /// What goes to the mortgage servicer: principal and interest, plus tax
+  /// and insurance when the loan has escrow.
+  required final double mortgagePayment,
+}) extends SavingsBalances {
+  double get netWorth => liquid + college + homeEquity;
 }
 
 /// What a retirement age asks of today's budget: the most you can spend
@@ -50,20 +63,25 @@ class const RetirementSavingsTarget({
   }
 }
 
-/// budget_for_retirement's yearly model, started from live data and run in
-/// today's dollars (real returns; the fixed-rate mortgage shrinks with
-/// inflation).
+/// A yearly model started from live data and run in today's dollars (real
+/// returns; a fixed-rate mortgage shrinks with inflation).
 ///
 /// Each year: accounts grow; while working, take-home pays spending and
 /// housing, payroll contributions go to traditional, and the surplus goes to
 /// taxable. A shortfall draws taxable first, then traditional, then Roth
 /// (penalized before 60), and only then becomes debt. Retired, Social
 /// Security starts at 62 and health insurance is self-paid until Medicare.
+///
+/// Life events change the plan from the first year they apply at mid-year:
+/// a job sets take-home, a home is bought (selling the one before it), and
+/// each child adds its yearly cost. College years are paid from 529 money
+/// first; what is left there never funds retirement.
 class RetirementProjection({
   required final ProjectionStartingPoint start,
   required final ProjectionAssumptions assumptions,
+  required final LifePlan lifePlan,
 }) {
-  /// From live accounts, homes, and transactions, as of [today].
+  /// From live accounts, homes, transactions, and life events, as of [today].
   factory fromLiveData({
     required DateTime today,
     required ProjectionAssumptions assumptions,
@@ -71,15 +89,16 @@ class RetirementProjection({
     required List<OwnedAssetWithValuations> ownedAssets,
     required List<BankTransaction> transactions,
     required List<SpendCategory> categories,
+    required List<LifeEvent> lifeEvents,
   }) => RetirementProjection(
     assumptions: assumptions,
+    lifePlan: LifePlan(lifeEvents),
     start: ProjectionStartingPoint.from(
       today: today,
       accounts: accounts,
       ownedAssets: ownedAssets,
       transactions: transactions,
       categories: categories,
-      assumptions: assumptions,
     ),
   );
 
@@ -99,6 +118,9 @@ class RetirementProjection({
   static const _taxableRealizedShare = 0.1159;
   static const _earlyWithdrawalPenalty = 0.10;
   static const _debtApr = 0.09;
+
+  /// Agent commission and seller closing costs, as a share of the sale price.
+  static const _homeSellingCostShare = 0.06;
 
   /// Age today; null until [ProjectionAssumptions.birthDate] is set.
   int? get currentAge {
@@ -135,9 +157,7 @@ class RetirementProjection({
   /// budget; null without a birth date.
   late final RetirementSavingsTarget? savingsTarget = () {
     if (currentAge == null || years.isEmpty) return null;
-    final takeHomeAnnual =
-        assumptions.takeHomeOverrideAnnualDollars?.toDouble() ??
-        start.takeHomeAnnual;
+    final takeHomeAnnual = _takeHomeAnnualOn(start.today);
     return RetirementSavingsTarget(
       retirementAge: assumptions.retirementAge,
       maxNonHousingSpendingAnnual: _maxSpendingRetiringOnPlan(takeHomeAnnual),
@@ -147,11 +167,16 @@ class RetirementProjection({
     );
   }();
 
+  /// The job event's take-home on [day], or the last 365 days' without one.
+  double _takeHomeAnnualOn(DateTime day) =>
+      lifePlan.jobOn(day)?.takeHomeAnnual.toDouble() ?? start.takeHomeAnnual;
+
   /// Highest yearly non-housing spending (kept for life) that still retires
   /// at the planned age without running out, to the nearest \$100.
   double _maxSpendingRetiringOnPlan(double takeHomeAnnual) {
     bool staysSolvent(double spendingAnnual) => RetirementProjection(
       start: start,
+      lifePlan: lifePlan,
       assumptions: assumptions.merged({
         'spendingOverrideAnnualDollars': spendingAnnual.round(),
       }),
@@ -178,11 +203,7 @@ class RetirementProjection({
   List<ProjectionYear> yearsRetiringAt(int retirementAge) {
     final age = currentAge;
     if (age == null) return const [];
-    final run = _YearByYear(
-      start: start,
-      assumptions: assumptions,
-      retirementAge: retirementAge,
-    );
+    final run = _YearByYear(projection: this, retirementAge: retirementAge);
     return [
       for (var yearAge = age + 1; yearAge <= assumptions.endAge; yearAge++)
         run.advanceTo(yearAge, year: start.today.year + (yearAge - age)),
@@ -192,44 +213,68 @@ class RetirementProjection({
 
 /// Mutable balances for one simulation run.
 class _YearByYear({
-  required ProjectionStartingPoint start,
-  required final ProjectionAssumptions assumptions,
+  required final RetirementProjection projection,
   required final int retirementAge,
 }) {
-  double taxable = start.balanceFor(ProjectionTaxTreatment.taxable);
-  double traditional = start.balanceFor(ProjectionTaxTreatment.traditional);
-  double roth = start.balanceFor(ProjectionTaxTreatment.roth);
-  double mortgageBalanceNominal = start.mortgageBalance;
-  final double homeValue = start.homeValue;
-  final double mortgagePaymentAnnualNominal = start.mortgagePaymentMonthly * 12;
-  final double takeHomeAnnual =
-      assumptions.takeHomeOverrideAnnualDollars?.toDouble() ??
-      start.takeHomeAnnual;
-  final double spendingAnnual =
-      assumptions.spendingOverrideAnnualDollars?.toDouble() ??
-      start.nonHousingSpendingAnnual;
-  final double payrollContributionsAnnual = start.payrollContributionsAnnual;
-  late final double _realReturn = assumptions.realReturnPercent / 100;
-  late final double _inflation = assumptions.inflationPercent / 100;
-  late final double _retirementTax = assumptions.retirementTaxPercent / 100;
+  late double taxable = projection.start.balanceFor(
+    AccountTaxTreatment.taxable,
+  );
+  late double traditional = projection.start.balanceFor(
+    AccountTaxTreatment.traditional,
+  );
+  late double roth = projection.start.balanceFor(AccountTaxTreatment.roth);
+  late double college = projection.start.balanceFor(
+    AccountTaxTreatment.college,
+  );
+  late HomeOwnership? _home = projection.lifePlan.homeOn(
+    projection.start.today,
+  );
+
+  /// Today's value of the home you hold (today's dollars).
+  late double _homeValue = projection.start.homeValue;
+  late double _mortgageBalanceNominal = projection.start.mortgageBalance;
+  late double _principalAndInterestAnnualNominal =
+      _home?.mortgage?.principalAndInterestAnnual(
+        _home!.loanAmount.toDouble(),
+      ) ??
+      0;
+  late final double _spendingAnnual =
+      projection.assumptions.spendingOverrideAnnualDollars?.toDouble() ??
+      projection.start.nonHousingSpendingAnnual;
+  late final double _realReturn =
+      projection.assumptions.realReturnPercent / 100;
+  late final double _inflation = projection.assumptions.inflationPercent / 100;
+  late final double _retirementTax =
+      projection.assumptions.retirementTaxPercent / 100;
   int _yearsElapsed = 0;
 
   ProjectionYear advanceTo(int age, {required int year}) {
     _yearsElapsed++;
     final isRetired = age > retirementAge;
+    final midYear = DateTime(year, 7, 1);
     _growAccounts();
+    _moveIfTheHomeChanged(midYear);
 
     final double income = isRetired
         ? _socialSecurityAfterTax(age)
-        : takeHomeAnnual;
-    if (!isRetired) traditional += payrollContributionsAnnual;
+        : projection._takeHomeAnnualOn(midYear);
+    if (!isRetired) {
+      traditional += projection.start.payrollContributionsAnnual;
+    }
     final double spending =
-        spendingAnnual +
-        _childCosts(year) +
+        _spendingAnnual +
+        projection.lifePlan.childCostsIn(year) +
         (isRetired ? _healthInsurance(age) : 0);
-    final double housing = _housingThisYear();
+    final double principalAndInterest = _payTheMortgageForAYear();
+    final double housing =
+        principalAndInterest + (_home?.carryingCostAnnual(_homeValue) ?? 0);
+    final double paidFromCollege = math.min(
+      college,
+      projection.lifePlan.collegeCostsIn(year),
+    );
+    college -= paidFromCollege;
 
-    final surplus = income - spending - housing;
+    final surplus = income + paidFromCollege - spending - housing;
     if (surplus >= 0) {
       taxable += surplus;
     } else {
@@ -243,10 +288,13 @@ class _YearByYear({
       taxable: taxable,
       traditional: traditional,
       roth: roth,
-      homeEquity: homeValue - mortgageBalanceNominal / _priceLevel,
+      college: college,
+      homeEquity: _homeValue - _mortgageBalanceNominal / _priceLevel,
       income: income,
       spending: spending,
       housing: housing,
+      mortgagePayment:
+          principalAndInterest + _escrowedTaxAndInsurance(principalAndInterest),
     );
   }
 
@@ -255,6 +303,7 @@ class _YearByYear({
   void _growAccounts() {
     traditional += traditional * _realReturn;
     roth += roth * _realReturn;
+    college += college * _realReturn;
     if (taxable < 0) {
       taxable += taxable * RetirementProjection._debtApr;
       return;
@@ -268,7 +317,7 @@ class _YearByYear({
 
   double _socialSecurityAfterTax(int age) {
     if (age < RetirementProjection._socialSecurityFromAge) return 0;
-    final annual = assumptions.socialSecurityMonthlyDollars * 12.0;
+    final annual = projection.assumptions.socialSecurityMonthlyDollars * 12.0;
     return annual - annual * 0.85 * _retirementTax;
   }
 
@@ -278,39 +327,49 @@ class _YearByYear({
           ? RetirementProjection._medicarePremiumMonthly
           : RetirementProjection._selfPayHealthInsuranceMonthly);
 
-  /// The fixed nominal payment (incl. escrow) until payoff, then the
-  /// after-payoff ownership costs, in today's dollars.
-  double _housingThisYear() {
-    if (mortgageBalanceNominal <= 0) {
-      return assumptions.housingAfterPayoffMonthlyDollars * 12.0;
-    }
-    final interest =
-        mortgageBalanceNominal * assumptions.mortgageRatePercent / 100;
+  /// When a different home event applies, sells the home you hold (proceeds
+  /// after selling costs and the loan go to taxable) and buys the new one
+  /// (the cash part of its price comes from taxable).
+  void _moveIfTheHomeChanged(DateTime midYear) {
+    final HomeOwnership? nextHome = projection.lifePlan.homeOn(midYear);
+    if (nextHome?.id == _home?.id) return;
+    taxable +=
+        _homeValue * (1 - RetirementProjection._homeSellingCostShare) -
+        _mortgageBalanceNominal / _priceLevel;
+    _home = nextHome;
+    _homeValue = (nextHome?.price ?? 0).toDouble();
+    _mortgageBalanceNominal = (nextHome?.loanAmount ?? 0) * _priceLevel;
+    _principalAndInterestAnnualNominal =
+        nextHome?.mortgage?.principalAndInterestAnnual(
+          _mortgageBalanceNominal,
+        ) ??
+        0;
+    if (nextHome != null) taxable -= nextHome.price - nextHome.loanAmount;
+  }
+
+  /// The fixed nominal principal and interest until payoff, in today's
+  /// dollars; 0 without a home event's mortgage terms.
+  double _payTheMortgageForAYear() {
+    final Mortgage? mortgage = _home?.mortgage;
+    if (mortgage == null || _mortgageBalanceNominal <= 0) return 0;
+    final interest = _mortgageBalanceNominal * mortgage.ratePercent / 100;
     final paid = math.min(
-      mortgagePaymentAnnualNominal,
-      mortgageBalanceNominal + interest,
+      _principalAndInterestAnnualNominal,
+      _mortgageBalanceNominal + interest,
     );
-    mortgageBalanceNominal += interest - paid;
+    _mortgageBalanceNominal += interest - paid;
     return paid / _priceLevel;
   }
 
-  /// Per-child yearly cost by age (budget_for_retirement's estimates).
-  double _childCosts(int year) {
-    var total = 0.0;
-    for (final birthYear in assumptions.childBirthYears) {
-      final childAge = year - birthYear;
-      if (childAge < 0) continue;
-      total += childAge <= 5
-          ? 40e3
-          : childAge <= 18
-          ? 30e3
-          : childAge <= 22
-          ? 20e3
-          : childAge <= 26
-          ? 5e3
-          : 1e3;
+  /// Tax and insurance the servicer collects while the loan is being paid.
+  double _escrowedTaxAndInsurance(double principalAndInterest) {
+    final HomeOwnership? home = _home;
+    if (home == null ||
+        home.mortgage?.hasEscrow != true ||
+        principalAndInterest == 0) {
+      return 0;
     }
-    return total;
+    return home.propertyTaxAnnual(_homeValue) + home.insuranceAnnual;
   }
 
   /// Pays [shortfall] from taxable, then traditional, then Roth (penalized
