@@ -6,7 +6,6 @@ import 'package:intl/intl.dart';
 import 'package:spend_trends/domain/projection/assumption_sweep.dart';
 import 'package:spend_trends/domain/projection/retirement_projection.dart';
 import 'package:spend_trends/features/projections/projections_providers.dart';
-import 'package:spend_trends/widgets/app_card.dart';
 import 'package:spend_trends/widgets/app_date_picker.dart';
 
 import 'assumption_slider_row.dart';
@@ -19,7 +18,8 @@ class const ProjectionAssumptionsCard({
 }) extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    return AppCard(
+    return ECard(
+      kind: ESurfaceKind.row,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -27,7 +27,7 @@ class const ProjectionAssumptionsCard({
           const SizedBox(height: ELayout.spaceXs),
           Text(
             'Today’s dollars. The line under each slider is what it does '
-            'across its range: % of take-home to invest to retire at '
+            'across its range: % of pay to invest to retire at '
             '${projection.assumptions.retirementAge}, or for spending, the '
             'earliest retirement age. Jobs, homes, and children are life '
             'events.',

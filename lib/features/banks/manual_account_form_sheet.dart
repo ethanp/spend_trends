@@ -182,7 +182,7 @@ class _ManualAccountFormSheetState()
       await manualAccounts.recordBalance(
         account: account,
         balanceCents: balanceCents,
-        recordedOn: _recordedOn,
+        recordedDay: _recordedOn.calendarDay,
       );
       ref.read(spendDataChangedProvider.notifier).notify();
       if (mounted) Navigator.of(context).pop();

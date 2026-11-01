@@ -6,6 +6,8 @@ import 'package:ethan_utils/ethan_utils.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:powersync/powersync.dart';
 
+const _log = ELogger('TransactionsRepository');
+
 class const TransactionPresence({
   required final String id,
   required final bool hasNote,
@@ -23,8 +25,15 @@ class TransactionsRepository(final PowerSyncDatabase _powerSync) {
       'SELECT * FROM transactions ORDER BY posted_at DESC, id DESC',
     );
     if (limit != null) sql.write(' LIMIT $limit');
+    final stopwatch = Stopwatch()..start();
     final rows = await _powerSync.getAll(sql.toString());
-    return rows.map(_fromRow).toList();
+    final int queryMs = stopwatch.elapsedMilliseconds;
+    final transactions = rows.map(_fromRow).toList();
+    _log.log(
+      'listAll: query ${queryMs}ms, mapped ${rows.length} rows in '
+      '${stopwatch.elapsedMilliseconds - queryMs}ms',
+    );
+    return transactions;
   }
 
   Future<List<BankTransaction>> listForMonth(String yearMonth) async {
@@ -76,6 +85,24 @@ class TransactionsRepository(final PowerSyncDatabase _powerSync) {
     return listPostedBetween(end.subtract(Duration(days: days)), end);
   }
 
+  Future<List<BankTransaction>> listForAccount(String accountId) async {
+    final rows = await _powerSync.getAll(
+      'SELECT * FROM transactions WHERE account_id = ?',
+      [accountId],
+    );
+    return rows.map(_fromRow).toList();
+  }
+
+  Future<List<BankTransaction>> listByIds(Set<String> transactionIds) async {
+    if (transactionIds.isEmpty) return const [];
+    final rows = await _powerSync.getAll(
+      'SELECT * FROM transactions WHERE id IN '
+      '(${List.filled(transactionIds.length, '?').join(', ')})',
+      transactionIds.toList(),
+    );
+    return rows.map(_fromRow).toList();
+  }
+
   Future<BankTransaction?> findByAccountExternalId({
     required String accountId,
     required String externalId,
@@ -125,14 +152,15 @@ class TransactionsRepository(final PowerSyncDatabase _powerSync) {
             id, account_id, external_id, posted_at, amount_cents,
             raw_description, normalized_merchant, pending,
             category_id, category_rule_id, note,
-            transaction_type, excluded, recurring_series, imported_at
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            transaction_type, excluded, recurring_series, imported_at,
+            excluded_from_lifestyle_costs
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
           ''',
           [
             transaction.id,
             transaction.accountId,
             transaction.externalId,
-            transaction.postedAt.millisecondsSinceEpoch,
+            transaction.postedAtMillis,
             transaction.amountCents,
             transaction.rawDescription,
             transaction.normalizedMerchant,
@@ -143,7 +171,8 @@ class TransactionsRepository(final PowerSyncDatabase _powerSync) {
             transaction.transactionType,
             transaction.excluded ? 1 : 0,
             transaction.recurringSeries,
-            transaction.importedAt?.millisecondsSinceEpoch,
+            transaction.importedAtMillis,
+            transaction.excludedFromLifestyleCosts ? 1 : 0,
           ],
         );
       }
@@ -176,7 +205,7 @@ class TransactionsRepository(final PowerSyncDatabase _powerSync) {
       'id': id,
       'account_id': transaction.accountId,
       'external_id': transaction.externalId,
-      'posted_at': transaction.postedAt.millisecondsSinceEpoch,
+      'posted_at': transaction.postedAtMillis,
       'amount_cents': transaction.amountCents,
       'raw_description': transaction.rawDescription,
       'normalized_merchant': transaction.normalizedMerchant,
@@ -189,8 +218,12 @@ class TransactionsRepository(final PowerSyncDatabase _powerSync) {
       'transaction_type': transaction.transactionType,
       'excluded': transaction.excluded ? 1 : 0,
       'recurring_series': transaction.recurringSeries,
-      'imported_at': (existing?.importedAt ?? transaction.importedAt)
-          ?.millisecondsSinceEpoch,
+      'imported_at': existing?.importedAtMillis ?? transaction.importedAtMillis,
+      'excluded_from_lifestyle_costs':
+          (existing?.excludedFromLifestyleCosts ??
+              transaction.excludedFromLifestyleCosts)
+          ? 1
+          : 0,
     });
     return existing == null;
   }
@@ -251,8 +284,14 @@ class TransactionsRepository(final PowerSyncDatabase _powerSync) {
     await _powerSync.writeTransaction((tx) async {
       for (final move in moves) {
         await tx.execute(
-          'UPDATE transactions SET category_id = ?, category_rule_id = ? WHERE id = ?',
-          [move.categoryId, move.rule?.id, move.transaction.id],
+          'UPDATE transactions SET category_id = ?, category_rule_id = ?, '
+          'excluded_from_lifestyle_costs = ? WHERE id = ?',
+          [
+            move.categoryId,
+            move.rule?.id,
+            move.excludedFromLifestyleCosts ? 1 : 0,
+            move.transaction.id,
+          ],
         );
       }
     });
@@ -332,7 +371,7 @@ class TransactionsRepository(final PowerSyncDatabase _powerSync) {
       id: columns['id'] as String,
       accountId: columns['account_id'] as String,
       externalId: columns['external_id'] as String,
-      postedAt: columns['posted_at'].asInt().dateTimeFromMillis,
+      postedAtMillis: columns['posted_at'].asInt(),
       amountCents: columns['amount_cents'].asInt(),
       rawDescription: columns['raw_description'] as String,
       normalizedMerchant: columns['normalized_merchant'] as String,
@@ -343,7 +382,9 @@ class TransactionsRepository(final PowerSyncDatabase _powerSync) {
       transactionType: columns['transaction_type'] as String?,
       excluded: columns['excluded'] != null && columns['excluded'].asInt() == 1,
       recurringSeries: columns['recurring_series'] as String?,
-      importedAt: columns['imported_at'].asIntOrNull().dateTimeFromMillis,
+      importedAtMillis: columns['imported_at'].asIntOrNull(),
+      excludedFromLifestyleCosts:
+          columns['excluded_from_lifestyle_costs'].asIntOrNull() == 1,
     );
   }
 }

@@ -2,9 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:spend_trends/domain/remove_copilot_duplicates.dart';
 import 'package:spend_trends/features/categories/categories_providers.dart';
-import 'package:spend_trends/features/settings/settings_section.dart';
+import 'package:spend_trends/features/settings/settings_action_row.dart';
 import 'package:spend_trends/providers/spend_data_changed.dart';
-import 'package:spend_trends/services/csv/copilot_csv_file.dart';
 import 'package:spend_trends/services/csv/import_copilot_transactions_csv.dart';
 import 'package:spend_trends/services/sqlite/accounts_repository.dart';
 import 'package:spend_trends/services/sqlite/transactions_repository.dart';
@@ -24,27 +23,24 @@ class _CopilotImportTileState() extends ConsumerState<CopilotImportTile> {
 
   @override
   Widget build(BuildContext context) {
-    return SettingsToolRow(
+    return SettingsActionRow(
       icon: Icons.download,
       title: 'Import Copilot CSV',
-      caption:
-          'Load $copilotTransactionsRelativePath (gitignored). '
-          'Skips SimpleFIN matches; backfills notes; then removes duplicates.',
+      caption: 'Load your Copilot export, skipping repeats',
       onActivated: _importLocal,
-      onDismiss: _busy ? _cancelImport : null,
-      style: SettingsSectionStyle.maintenance,
+      onCancel: _cancelImport,
+      style: SettingsSectionStyle.copilotMigration,
       busy: _busy,
-      message: _message,
-      progress: _progress == null
-          ? null
-          : SettingsProgressBar(
-              fraction: _progress!.fraction,
-              label: _progress!.total <= 0
-                  ? 'Starting…'
-                  : '${_progress!.completed} / ${_progress!.total}',
-              style: SettingsSectionStyle.maintenance,
-            ),
+      message: _message ?? _progressLabel,
+      progressFraction: _progress?.fraction,
     );
+  }
+
+  String? get _progressLabel {
+    final CopilotImportProgress? progress = _progress;
+    if (progress == null) return null;
+    if (progress.total <= 0) return 'Starting…';
+    return 'Imported ${progress.completed} / ${progress.total}';
   }
 
   void _cancelImport() {

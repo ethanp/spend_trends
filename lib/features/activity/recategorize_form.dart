@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:spend_trends/domain/account.dart';
 import 'package:spend_trends/domain/category.dart';
+import 'package:spend_trends/domain/categorizer.dart';
 import 'package:spend_trends/domain/category_group.dart';
 import 'package:spend_trends/domain/rule_change_plan.dart';
 import 'package:spend_trends/domain/transaction.dart';
@@ -16,8 +17,8 @@ import 'package:spend_trends/features/activity/rule_impact_match_row.dart';
 import 'package:spend_trends/features/banks/banks_providers.dart';
 import 'package:spend_trends/features/categories/categories_providers.dart';
 import 'package:spend_trends/providers/spend_data_changed.dart';
-import 'package:spend_trends/services/sqlite/transactions_repository.dart';
 import 'package:spend_trends/widgets/category_picker.dart';
+import 'package:spend_trends/widgets/exclude_from_lifestyle_costs_switch.dart';
 
 /// Inline / sheet body for categorizing a transaction. Picking a category
 /// always creates (or retargets) a rule; categories come only from rules.
@@ -34,6 +35,10 @@ class const RecategorizeForm({
 
 class _RecategorizeFormState() extends ConsumerState<RecategorizeForm> {
   bool _limitRuleToThisAccount = false;
+
+  /// Null until the switch is touched: the rule keeps the existing rule's
+  /// value, or is off when the rule is new.
+  bool? _excludesFromLifestyleCostsChoice;
   bool _savingNote = false;
   late final TextEditingController _patternController;
   late final TextEditingController _noteController;
@@ -130,6 +135,8 @@ class _RecategorizeFormState() extends ConsumerState<RecategorizeForm> {
           ref.watch(accountsMapProvider).asData?.value ?? const {},
         ),
         const SizedBox(height: ELayout.spaceSm),
+        _lifestyleCostsExclusionSwitch(),
+        const SizedBox(height: ELayout.spaceSm),
         _patternAndImpactPreview(),
         if (_error != null) ...[
           const SizedBox(height: ELayout.spaceSm),
@@ -143,7 +150,7 @@ class _RecategorizeFormState() extends ConsumerState<RecategorizeForm> {
 
   Widget _formHeader() {
     final dateLabel = DateFormat.yMMMd().format(
-      widget.transaction.postedAt.toLocal(),
+      widget.transaction.postedDay.localMidnight,
     );
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -230,6 +237,24 @@ class _RecategorizeFormState() extends ConsumerState<RecategorizeForm> {
     );
   }
 
+  Widget _lifestyleCostsExclusionSwitch() {
+    final List<CategorizationRule> existingRules =
+        ref.watch(categorizationRulesProvider).asData?.value ??
+        const <CategorizationRule>[];
+    final CategorizationRule? updatedRule = _ruleDraft(
+      pattern: _patternController.text,
+      categoryId: '',
+    ).updatedRuleIn(existingRules);
+    return ExcludeFromLifestyleCostsSwitch(
+      excludes:
+          _excludesFromLifestyleCostsChoice ??
+          updatedRule?.excludesFromLifestyleCosts ??
+          false,
+      onChanged: (excludes) =>
+          setState(() => _excludesFromLifestyleCostsChoice = excludes),
+    );
+  }
+
   RuleDraft _ruleDraft({required String pattern, required String categoryId}) =>
       RuleDraft(
         pattern: pattern,
@@ -237,6 +262,7 @@ class _RecategorizeFormState() extends ConsumerState<RecategorizeForm> {
         accountId: _limitRuleToThisAccount
             ? widget.transaction.accountId
             : null,
+        excludesFromLifestyleCosts: _excludesFromLifestyleCostsChoice,
       );
 
   Widget _patternAndImpactPreview() {
@@ -392,8 +418,8 @@ class _RecategorizeFormState() extends ConsumerState<RecategorizeForm> {
 
   Future<void> _persistNoteIfNeeded() async {
     if (!_noteDirty) return;
-    final repository = await ref.read(transactionsRepositoryProvider.future);
-    await repository.setNote(
+    final Categorizer categorizer = await ref.read(categorizerProvider.future);
+    await categorizer.setNote(
       transactionId: widget.transaction.id,
       note: _noteController.text,
     );

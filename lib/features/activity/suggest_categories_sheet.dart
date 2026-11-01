@@ -245,10 +245,7 @@ class _SuggestCategoriesSheetState()
     if (confirmedGroups == null) return false;
 
     await categorizer.applyRuleChanges(
-      drafts: [
-        for (final group in confirmedGroups)
-          RuleDraft(pattern: group.pattern, categoryId: group.categoryId),
-      ],
+      drafts: [for (final group in confirmedGroups) group.ruleDraft],
     );
     ref.read(spendDataChangedProvider.notifier).notify();
     return true;

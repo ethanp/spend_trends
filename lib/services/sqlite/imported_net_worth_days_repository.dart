@@ -18,7 +18,7 @@ class ImportedNetWorthDaysRepository(final PowerSyncDatabase _powerSync) {
   static ImportedNetWorthDay _fromRow(dynamic row) {
     final columns = (row as Map).cast<String, Object?>();
     return ImportedNetWorthDay(
-      recordedOn: columns['recorded_on'].asInt().dateTimeFromMillis,
+      day: CalendarDay.fromLocalMillis(columns['recorded_on'].asInt()),
       netWorthCents: columns['net_worth_cents'].asInt(),
     );
   }

@@ -103,23 +103,30 @@ except `/health` needs `Authorization: Bearer $AGENT_API_TOKEN`.
 
 ```bash
 scripts/agent_api GET /context
-scripts/agent_api GET '/merchants?category=none'
-scripts/agent_api POST /rules/preview '{"pattern":"trader joe"}'
+scripts/agent_api GET '/transactions/totals?groupBy=merchant&area=fixedCosts&since=2026-01-01'
+scripts/agent_api POST /transactions/notes '{"query":{"search":"cinco mud","since":"2026-01-01"},"note":"Old house utility","dryRun":true}'
 ```
 
-Start with `GET /context`. It returns a guide to category roles (spend,
-income, transfer, asset sale) and categorization sources (user lock, rule,
-import), conscious spending areas, every category with counts and trailing
-year spend, accounts, and the endpoint list.
+Start with `GET /context`. It returns a guide to category roles, rules,
+conscious spending areas, lifestyle costs, every category with counts and
+trailing-year spend, accounts, and the full endpoint list (the source of
+truth; this table is a map).
 
-| Read | Write |
-|------|-------|
-| `GET /conscious-spending` (the dashboard card), `/categories`, `/accounts`, `/rules` | `POST /transactions/categorize` lock or clear a category |
-| `GET /rules/<id>/transactions` | `POST /transactions/release` user lock → suggested |
-| `GET /transactions?category=&source=&account=&search=&since=&until=&minAmountCents=&direction=&limit=` | `PATCH /transactions/<id>` note |
-| `GET /transactions/<id>` | `POST /rules`, `PATCH /rules/<id>`, `DELETE /rules/<id>` |
-| `GET /merchants` (same filters) | `POST /categories`, `PATCH /categories/<id>`, `POST /categories/<id>/merge` |
-| `POST /rules/preview` (dry run) | `POST /groups` |
+| Need | Endpoint |
+|------|----------|
+| Find rows | `GET /transactions` with any of `ids`, `category`, `area`, `account`, `accountKind`, `rule`, `search`, `note`, `hasNote`, `excludedFromLifestyleCosts`, `since`, `until`, `minAmountCents`, `maxAmountCents`, `direction` (lists comma-separated) |
+| Total them | `GET /transactions/totals?groupBy=category\|area\|merchant\|account\|accountKind\|month\|rule` plus the same filters |
+| Where a window's pay went | `GET /cash-flow?since=&until=`, and `GET /conscious-spending` (the dashboard card) |
+| Balance history | `GET /accounts/<id>/balances?every=month\|day` |
+| Note many rows | `POST /transactions/notes {ids \| query, note, mode, dryRun}`; re-runs rules once, so a contains rule on the note phrase takes them |
+| Rules | `GET /rules?search=&category=`, `POST /rules/plan` (dry run), `POST /rules`, `PATCH`/`DELETE /rules/<id>` |
+| Duplicate imports | `GET /duplicates` (preview), `POST /duplicates/remove {linked, sameAccount}` |
+| Categories, groups | `GET /categories`, `POST /categories`, `PATCH /categories/<id>`, `POST /categories/<id>/merge`, `POST /groups` |
+| Banks, accounts, imports | `POST /banks/pull`, `PATCH /accounts/<id>`, `POST /accounts/manual`, `POST /accounts`, `POST /transactions/import` |
+| Empower history | `GET`/`POST /imports/empower`; the pull itself is in [docs/empower_transactions_pull.md](docs/empower_transactions_pull.md) |
+| Projections | `GET /projections`, `PATCH /projections/assumptions` |
+
+Writes that delete or rewrite rows take a dry run or preview first; use it.
 
 ## Infra
 

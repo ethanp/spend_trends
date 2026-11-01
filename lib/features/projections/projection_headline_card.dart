@@ -2,7 +2,6 @@ import 'package:ethan_ui/ethan_ui.dart';
 import 'package:ethan_utils/ethan_utils.dart';
 import 'package:flutter/material.dart';
 import 'package:spend_trends/domain/projection/retirement_projection.dart';
-import 'package:spend_trends/widgets/app_card.dart';
 
 /// Earliest safe retirement age next to the planned one.
 class const ProjectionHeadlineCard({
@@ -11,7 +10,8 @@ class const ProjectionHeadlineCard({
   @override
   Widget build(BuildContext context) {
     final int? currentAge = projection.currentAge;
-    return AppCard(
+    return ECard(
+      kind: ESurfaceKind.row,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -36,7 +36,7 @@ class const ProjectionHeadlineCard({
               const SizedBox(height: ELayout.spaceXs),
               Text(
                 'Retiring at ${target.retirementAge}: invest '
-                '${target.requiredInvestingPercent}% of take-home '
+                '${target.requiredInvestingPercent}% of pay '
                 '(${formatCentsWholeDollars((target.requiredInvestingAnnual * 100).round())}/yr), '
                 'spend up to '
                 '${formatCentsWholeDollars((target.maxNonHousingSpendingAnnual * 100).round())}/yr '

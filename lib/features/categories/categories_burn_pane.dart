@@ -8,6 +8,7 @@ import 'package:spend_trends/domain/special_category.dart';
 import 'package:spend_trends/widgets/app_primary_button.dart';
 
 import 'categories_providers.dart';
+import 'rule_match_caption_line.dart';
 
 class const CategoriesBurnPane({
   required final String? selectedCategoryId,
@@ -155,8 +156,7 @@ class const CategoriesBurnPane({
                 : '${categoryRules.length} rules',
             style: EText.body.medium,
           ),
-          for (final rule in categoryRules)
-            Text(rule.matchCaption, style: EText.caption),
+          for (final rule in categoryRules) RuleMatchCaptionLine(rule: rule),
         ],
         const SizedBox(height: ELayout.spaceLg),
         AppPrimaryButton(

@@ -13,10 +13,10 @@ import 'package:flutter/material.dart';
 /// Daily take-home pay / spending / transfer / conscious-spending-area totals
 /// for cash-flow Trends, summed from [CashFlowBreakdown] contributions.
 class const CashFlowDailyMaps({
-  required final Map<DateTime, double> incomeByDay,
-  required final Map<DateTime, double> spendingByDay,
-  required final Map<DateTime, double> transferByDay,
-  final Map<ConsciousSpendingArea, Map<DateTime, double>>
+  required final Map<CalendarDay, double> incomeByDay,
+  required final Map<CalendarDay, double> spendingByDay,
+  required final Map<CalendarDay, double> transferByDay,
+  final Map<ConsciousSpendingArea, Map<CalendarDay, double>>
       consciousSpendingByArea =
       const {},
 }) {
@@ -29,17 +29,17 @@ class const CashFlowDailyMaps({
       categories: categories,
       accounts: accounts,
     );
-    final incomeByDay = <DateTime, double>{};
-    final spendingByDay = <DateTime, double>{};
-    final transferByDay = <DateTime, double>{};
+    final incomeByDay = <CalendarDay, double>{};
+    final spendingByDay = <CalendarDay, double>{};
+    final transferByDay = <CalendarDay, double>{};
     final consciousSpendingByArea = {
       for (final area in ConsciousSpendingArea.values)
-        area: <DateTime, double>{},
+        area: <CalendarDay, double>{},
     };
 
     for (final transaction in transactions) {
       final contribution = cashFlowBreakdown.contributionOf(transaction);
-      final day = transaction.postedAt.startOfDay;
+      final CalendarDay day = transaction.postedDay;
       _addCents(incomeByDay, day, contribution.takeHomeCents);
       _addCents(spendingByDay, day, contribution.spendingCents);
       _addCents(transferByDay, day, contribution.transferCents);
@@ -58,8 +58,8 @@ class const CashFlowDailyMaps({
   }
 
   static void _addCents(
-    Map<DateTime, double> centsByDay,
-    DateTime day,
+    Map<CalendarDay, double> centsByDay,
+    CalendarDay day,
     int cents,
   ) {
     if (cents == 0) return;
@@ -138,7 +138,7 @@ class const CashFlowTrendBuilder({
     required String id,
     required String name,
     required Color lineColor,
-    required Map<DateTime, double> dailyCents,
+    required Map<CalendarDay, double> dailyCents,
     bool guide = false,
     bool percentileAreaFill = false,
     String? legendCaption,
@@ -156,9 +156,9 @@ class const CashFlowTrendBuilder({
     );
   }
 
-  static Map<DateTime, double> _dailySavingsMap({
-    required Map<DateTime, double> incomeByDay,
-    required Map<DateTime, double> spendingByDay,
+  static Map<CalendarDay, double> _dailySavingsMap({
+    required Map<CalendarDay, double> incomeByDay,
+    required Map<CalendarDay, double> spendingByDay,
   }) {
     final days = {...incomeByDay.keys, ...spendingByDay.keys};
     return {

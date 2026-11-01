@@ -40,17 +40,19 @@ void main() {
     required String accountId,
     required int amountCents,
     String? categoryId,
+    bool excludedFromLifestyleCosts = false,
   }) => cashFlowBreakdown.contributionOf(
     BankTransaction(
       id: 't',
       accountId: accountId,
       externalId: 't',
-      postedAt: DateTime(2026, 1, 1),
+      postedAtMillis: DateTime(2026, 1, 1).millisecondsSinceEpoch,
       amountCents: amountCents,
       rawDescription: 'x',
       normalizedMerchant: 'X',
       pending: false,
       categoryId: categoryId,
+      excludedFromLifestyleCosts: excludedFromLifestyleCosts,
     ),
   );
 
@@ -108,6 +110,7 @@ void main() {
     );
     expect(brokerageDeposit.area, ConsciousSpendingArea.investments);
     expect(brokerageDeposit.areaCents, 100000);
+    expect(brokerageDeposit.payrollContributionCents, 0);
 
     final marginDrawBack = contributionOf(
       accountId: 'checking',
@@ -147,15 +150,29 @@ void main() {
     expect(cardPayment.takeHomeCents, 0);
   });
 
-  test('401(k) contributions fill investments, not take-home pay', () {
+  test('401(k) contributions fill investments and count as pay', () {
     final contribution = contributionOf(
       accountId: 'brokerage',
       amountCents: 84800,
       categoryId: SpecialCategory.investments.id,
     );
     expect(contribution.takeHomeCents, 0);
+    expect(contribution.payrollContributionCents, 84800);
     expect(contribution.area, ConsciousSpendingArea.investments);
     expect(contribution.areaCents, 84800);
+  });
+
+  test('spending excluded from lifestyle costs fills no area', () {
+    final movingDinner = contributionOf(
+      accountId: 'checking',
+      amountCents: -12000,
+      categoryId: 'cat_dining',
+      excludedFromLifestyleCosts: true,
+    );
+    expect(movingDinner.spendingCents, 12000);
+    expect(movingDinner.excludedFromLifestyleCents, 12000);
+    expect(movingDinner.lifestyleSpendingCents, 0);
+    expect(movingDinner.area, isNull);
   });
 
   test('asset sales count nowhere', () {

@@ -16,21 +16,20 @@ import 'package:spend_trends/domain/transaction.dart';
 class const ProjectionYear({
   required final int age,
   required final int year,
-  @override
-  required final double taxable,
-  @override
-  required final double traditional,
-  @override
-  required final double roth,
-  @override
-  required final double college,
-  @override
-  required final double homeEquity,
+  @override required final double taxable,
+  @override required final double traditional,
+  @override required final double roth,
+  @override required final double college,
+  @override required final double homeEquity,
   required final double income,
   required final double spending,
 
   /// Mortgage principal and interest plus the home's carrying costs.
   required final double housing,
+
+  /// The principal part of [housing]: it builds home equity, so the three
+  /// numbers count it as Investments.
+  required final double mortgagePrincipal,
 
   /// What goes to the mortgage servicer: principal and interest, plus tax
   /// and insurance when the loan has escrow.
@@ -42,24 +41,31 @@ class const ProjectionYear({
 /// What a retirement age asks of today's budget: the most you can spend
 /// outside housing each year (kept for life) without running out, and the
 /// investing that leaves (Three Numbers' Investments: brokerage deposits
-/// from take-home plus 401(k) payroll contributions).
+/// from take-home, 401(k) payroll contributions, and mortgage principal).
 class const RetirementSavingsTarget({
   required final int retirementAge,
   required final double maxNonHousingSpendingAnnual,
   required final double takeHomeAnnual,
+
+  /// Housing including mortgage principal.
   required final double housingAnnual,
+  required final double mortgagePrincipalAnnual,
   required final double payrollContributionsAnnual,
 }) {
+  /// Pay left after spending and housing, with principal counted as
+  /// investing rather than housing, as the three numbers count it.
   double get requiredInvestingAnnual =>
       takeHomeAnnual -
       maxNonHousingSpendingAnnual -
-      housingAnnual +
+      (housingAnnual - mortgagePrincipalAnnual) +
       payrollContributionsAnnual;
 
-  /// Share of take-home, rounded up; 0 when savings already cover the plan.
+  /// Share of pay (take-home plus payroll contributions, the Three Numbers'
+  /// denominator), rounded up; 0 when savings already cover the plan.
   int get requiredInvestingPercent {
-    if (takeHomeAnnual <= 0) return 0;
-    return (math.max(0, requiredInvestingAnnual) / takeHomeAnnual * 100).ceil();
+    final payAnnual = takeHomeAnnual + payrollContributionsAnnual;
+    if (payAnnual <= 0) return 0;
+    return (math.max(0, requiredInvestingAnnual) / payAnnual * 100).ceil();
   }
 }
 
@@ -163,6 +169,7 @@ class RetirementProjection({
       maxNonHousingSpendingAnnual: _maxSpendingRetiringOnPlan(takeHomeAnnual),
       takeHomeAnnual: takeHomeAnnual,
       housingAnnual: years.first.housing,
+      mortgagePrincipalAnnual: years.first.mortgagePrincipal,
       payrollContributionsAnnual: start.payrollContributionsAnnual,
     );
   }();
@@ -265,7 +272,8 @@ class _YearByYear({
         _spendingAnnual +
         projection.lifePlan.childCostsIn(year) +
         (isRetired ? _healthInsurance(age) : 0);
-    final double principalAndInterest = _payTheMortgageForAYear();
+    final _MortgagePaidInAYear mortgagePaid = _payTheMortgageForAYear();
+    final double principalAndInterest = mortgagePaid.principalAndInterest;
     final double housing =
         principalAndInterest + (_home?.carryingCostAnnual(_homeValue) ?? 0);
     final double paidFromCollege = math.min(
@@ -293,6 +301,7 @@ class _YearByYear({
       income: income,
       spending: spending,
       housing: housing,
+      mortgagePrincipal: mortgagePaid.principal,
       mortgagePayment:
           principalAndInterest + _escrowedTaxAndInsurance(principalAndInterest),
     );
@@ -348,17 +357,22 @@ class _YearByYear({
   }
 
   /// The fixed nominal principal and interest until payoff, in today's
-  /// dollars; 0 without a home event's mortgage terms.
-  double _payTheMortgageForAYear() {
+  /// dollars; none without a home event's mortgage terms.
+  _MortgagePaidInAYear _payTheMortgageForAYear() {
     final Mortgage? mortgage = _home?.mortgage;
-    if (mortgage == null || _mortgageBalanceNominal <= 0) return 0;
+    if (mortgage == null || _mortgageBalanceNominal <= 0) {
+      return const _MortgagePaidInAYear(principalAndInterest: 0, principal: 0);
+    }
     final interest = _mortgageBalanceNominal * mortgage.ratePercent / 100;
     final paid = math.min(
       _principalAndInterestAnnualNominal,
       _mortgageBalanceNominal + interest,
     );
     _mortgageBalanceNominal += interest - paid;
-    return paid / _priceLevel;
+    return _MortgagePaidInAYear(
+      principalAndInterest: paid / _priceLevel,
+      principal: (paid - interest) / _priceLevel,
+    );
   }
 
   /// Tax and insurance the servicer collects while the loan is being paid.
@@ -417,3 +431,11 @@ class _YearByYear({
     taxable += withdrawal * (1 - _retirementTax);
   }
 }
+
+/// One year's mortgage payments, today's dollars.
+class const _MortgagePaidInAYear({
+  required final double principalAndInterest,
+
+  /// The part of [principalAndInterest] that paid down the loan.
+  required final double principal,
+});

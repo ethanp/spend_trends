@@ -43,6 +43,7 @@ const Schema spendTrendsSchema = Schema([
     Column.integer('excluded'),
     Column.text('recurring_series'),
     Column.integer('imported_at'),
+    Column.integer('excluded_from_lifestyle_costs'),
   ]),
   Table('categorization_rules', [
     Column.text('match_type'),
@@ -50,6 +51,7 @@ const Schema spendTrendsSchema = Schema([
     Column.text('category_id'),
     Column.text('account_id'),
     Column.text('note'),
+    Column.integer('excludes_from_lifestyle_costs'),
   ]),
   Table('life_events', [
     Column.text('title'),

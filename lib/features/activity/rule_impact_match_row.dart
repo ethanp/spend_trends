@@ -25,7 +25,9 @@ class const RuleImpactMatchRow({
 
   @override
   Widget build(BuildContext context) {
-    final dateLabel = DateFormat.yMMMd().format(transaction.postedAt.toLocal());
+    final dateLabel = DateFormat.yMMMd().format(
+      transaction.postedDay.localMidnight,
+    );
     return Padding(
       padding: const EdgeInsets.only(bottom: ELayout.spaceSm),
       child: ESurface(

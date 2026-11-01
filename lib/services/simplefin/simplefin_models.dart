@@ -121,6 +121,10 @@ class SimpleFinClaimException(final String message, {final int? statusCode})
 
 class SimpleFinFetchException(final String message, {final int? statusCode})
     implements Exception {
+  /// SimpleFIN throttles a connection that pulls too often; older windows
+  /// can wait for a later pull.
+  bool get isRateLimited => statusCode == 429;
+
   @override
   String toString() => message;
 }

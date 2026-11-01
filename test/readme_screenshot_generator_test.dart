@@ -1,8 +1,8 @@
+import 'package:ethan_utils/ethan_utils.dart';
 import 'package:ethan_sync/ethan_sync.dart';
 import 'package:ethan_ui/ethan_ui.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:spend_trends/domain/account.dart';
@@ -177,7 +177,7 @@ class _OverviewSpend() {
           id: 'home-value',
           ownedAssetId: 'home',
           valueCents: 38500000,
-          valuedOn: DateTime(2024, 6, 1),
+          valuedOn: DateTime(2024, 6, 1).calendarDay,
         ),
       ],
     ),
@@ -220,7 +220,7 @@ class _OverviewSpend() {
             id: 'pay-$index',
             accountId: _checkingId,
             externalId: 'pay-$index',
-            postedAt: DateTime(year, month, 1),
+            postedAtMillis: DateTime(year, month, 1).millisecondsSinceEpoch,
             amountCents: 620000,
             rawDescription: 'Payroll',
             normalizedMerchant: 'PAYROLL',
@@ -231,7 +231,7 @@ class _OverviewSpend() {
             id: 'coffee-$index',
             accountId: _checkingId,
             externalId: 'coffee-$index',
-            postedAt: posted,
+            postedAtMillis: posted.millisecondsSinceEpoch,
             amountCents: -(4200 + month * 80),
             rawDescription: 'Coffee Shop',
             normalizedMerchant: 'COFFEE SHOP',
@@ -242,7 +242,7 @@ class _OverviewSpend() {
             id: 'grocery-$index',
             accountId: _checkingId,
             externalId: 'grocery-$index',
-            postedAt: DateTime(year, month, 14),
+            postedAtMillis: DateTime(year, month, 14).millisecondsSinceEpoch,
             amountCents: -(62000 + year * 200),
             rawDescription: 'Grocery',
             normalizedMerchant: 'GROCERY',
@@ -253,7 +253,7 @@ class _OverviewSpend() {
             id: 'housing-$index',
             accountId: _checkingId,
             externalId: 'housing-$index',
-            postedAt: DateTime(year, month, 3),
+            postedAtMillis: DateTime(year, month, 3).millisecondsSinceEpoch,
             amountCents: housingCents,
             rawDescription: 'Housing',
             normalizedMerchant: 'HOUSING',

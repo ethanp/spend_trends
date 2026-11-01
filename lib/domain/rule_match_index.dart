@@ -28,7 +28,8 @@ class RuleMatchIndex(List<CategorizationRule> rules) {
     return best?.rule;
   }
 
-  /// Case-insensitive match of [rule] against the transaction description.
+  /// Case-insensitive match of [rule] against the transaction's description,
+  /// merchant, and (for contains rules) note.
   static bool ruleMatches(
     BankTransaction transaction,
     CategorizationRule rule,
@@ -42,10 +43,15 @@ class RuleMatchIndex(List<CategorizationRule> rules) {
   }
 }
 
+/// The note joins the contains text so one transaction can take a category
+/// its bank text never would: write the context in the note, then a rule on
+/// that phrase.
 class _MatchText(BankTransaction transaction) {
   final String merchant = transaction.normalizedMerchant.toLowerCase();
   final String description = transaction.rawDescription.trim().toLowerCase();
-  late final String descriptionAndMerchant = '$description\n$merchant';
+  final String note = (transaction.note ?? '').trim().toLowerCase();
+  late final String descriptionMerchantAndNote =
+      '$description\n$merchant\n$note';
 }
 
 class const _PreparedRule({
@@ -59,7 +65,7 @@ class const _PreparedRule({
       RuleMatchType.merchantExact =>
         searchText.merchant == pattern || searchText.description == pattern,
       RuleMatchType.merchantContains =>
-        searchText.descriptionAndMerchant.contains(pattern),
+        searchText.descriptionMerchantAndNote.contains(pattern),
     };
   }
 

@@ -13,6 +13,23 @@ class const RemoveCopilotDuplicatesResult({
   final int deletedSameAccountCount = 0,
 });
 
+/// A row to delete because [keeper] records the same charge. [keeper]
+/// inherits its note when it has none.
+class const CopilotDuplicate({
+  required final BankTransaction duplicate,
+  required final BankTransaction keeper,
+});
+
+/// What [RemoveCopilotDuplicates.run] would delete, worked out first.
+class const CopilotDuplicatesPlan({
+  /// Copilot rows recorded again by the linked live-feed account.
+  required final List<CopilotDuplicate> linked,
+
+  /// Repeats on one account (same day, amount, and merchant).
+  required final List<CopilotDuplicate> sameAccount,
+  required final int linkedAccountMasks,
+});
+
 /// In-memory SimpleFIN matcher used by duplicate removal and Copilot CSV import.
 class MatchingSimplefinCharges._({
   required final Map<String, String> _copilotLinkKeyByAccountId,
@@ -34,9 +51,9 @@ class MatchingSimplefinCharges._({
       if (account == null || account.isCopilot) continue;
       final linkKeys = links.keysForSimplefin(account);
       if (linkKeys.isEmpty) continue;
-      final dayKey = transaction.postedAt.dayKey;
       for (final linkKey in linkKeys) {
-        final groupKey = '$linkKey|$dayKey|${transaction.amountCents}';
+        final groupKey =
+            '$linkKey|${transaction.postedDay.isoDate}|${transaction.amountCents}';
         simplefinByGroupKey.putIfAbsent(groupKey, () => []).add(transaction);
       }
     }
@@ -50,13 +67,13 @@ class MatchingSimplefinCharges._({
   /// Best unmatched SimpleFIN charge for a Copilot-shaped row, or null.
   BankTransaction? takeMatch({
     required String copilotAccountId,
-    required DateTime postedAt,
+    required CalendarDay postedDay,
     required int amountCents,
     required String normalizedMerchant,
   }) {
     final match = findMatch(
       copilotAccountId: copilotAccountId,
-      postedAt: postedAt,
+      postedDay: postedDay,
       amountCents: amountCents,
       normalizedMerchant: normalizedMerchant,
       unmatchedOnly: true,
@@ -66,29 +83,36 @@ class MatchingSimplefinCharges._({
     return match;
   }
 
+  /// The live feed often posts a charge a day or more from the day Copilot
+  /// dated it. Nearest day first.
+  static const _postingLagDays = [0, 1, -1, 2, -2, 3, -3];
+
   /// Like [takeMatch] but does not reserve the SimpleFIN row.
   BankTransaction? findMatch({
     required String copilotAccountId,
-    required DateTime postedAt,
+    required CalendarDay postedDay,
     required int amountCents,
     required String normalizedMerchant,
     bool unmatchedOnly = true,
   }) {
     final linkKey = _copilotLinkKeyByAccountId[copilotAccountId];
     if (linkKey == null) return null;
-    final groupKey = '$linkKey|${postedAt.dayKey}|$amountCents';
-    final candidates = _simplefinByGroupKey[groupKey];
-    if (candidates == null) return null;
-
-    final available = [
-      for (final candidate in candidates)
-        if (!unmatchedOnly || !_matchedSimplefinIds.contains(candidate.id))
-          candidate,
-    ];
-    return bestMerchantMatch(
-      normalizedMerchant: normalizedMerchant,
-      candidates: available,
-    );
+    for (final lagDays in _postingLagDays) {
+      final candidates =
+          _simplefinByGroupKey['$linkKey|${postedDay.plusDays(lagDays).isoDate}|$amountCents'];
+      if (candidates == null) continue;
+      final match = bestMerchantMatch(
+        normalizedMerchant: normalizedMerchant,
+        candidates: [
+          for (final candidate in candidates)
+            if (!unmatchedOnly || !_matchedSimplefinIds.contains(candidate.id))
+              candidate,
+        ],
+        postedSameDay: lagDays == 0,
+      );
+      if (match != null) return match;
+    }
+    return null;
   }
 
   /// Refresh Copilot→link keys after a new Copilot account is created mid-import.
@@ -109,116 +133,125 @@ class RemoveCopilotDuplicates({
   required final AccountsRepository _accountsRepository,
   required final TransactionsRepository _transactionsRepository,
 }) {
-  Future<RemoveCopilotDuplicatesResult> run() async {
-    final crossAccount = await _removeLinkedCopilotDuplicates();
-    final sameAccountDeleted = await removeSameAccountDuplicates();
-    return RemoveCopilotDuplicatesResult(
-      deletedCopilotCount: crossAccount.deletedCopilotCount,
-      linkedAccountMasks: crossAccount.linkedAccountMasks,
-      deletedSameAccountCount: sameAccountDeleted,
+  /// What [run] would delete, without deleting anything.
+  Future<CopilotDuplicatesPlan> plan() async {
+    final accounts = await _accountsRepository.listAccounts();
+    final transactions = await _transactionsRepository.listAll();
+    final matchingCharges = MatchingSimplefinCharges.from(
+      accounts: accounts,
+      transactions: transactions,
+    );
+    final linked = _linkedCopilotDuplicates(
+      accounts: accounts,
+      transactions: transactions,
+      matchingCharges: matchingCharges,
+    );
+    final linkedIds = {for (final pair in linked) pair.duplicate.id};
+    return CopilotDuplicatesPlan(
+      linked: linked,
+      sameAccount: _sameAccountDuplicates([
+        for (final transaction in transactions)
+          if (!linkedIds.contains(transaction.id)) transaction,
+      ]),
+      linkedAccountMasks: matchingCharges.linkCount,
     );
   }
 
-  /// Same account + day + amount + merchant fingerprint → keep one, delete rest.
-  Future<int> removeSameAccountDuplicates() async {
-    final transactions = await _transactionsRepository.listAll();
+  Future<RemoveCopilotDuplicatesResult> run() async => remove(await plan());
+
+  /// Deletes what [duplicatesPlan] lists; pass a narrowed plan to delete one
+  /// kind only.
+  Future<RemoveCopilotDuplicatesResult> remove(
+    CopilotDuplicatesPlan duplicatesPlan,
+  ) async {
+    await _deleteKeepingNotes(duplicatesPlan.linked);
+    await _deleteKeepingNotes(duplicatesPlan.sameAccount);
+    _log.log(
+      'Removed ${duplicatesPlan.linked.length} Copilot duplicates across '
+      '${duplicatesPlan.linkedAccountMasks} linked accounts and '
+      '${duplicatesPlan.sameAccount.length} same-account duplicates',
+    );
+    return RemoveCopilotDuplicatesResult(
+      deletedCopilotCount: duplicatesPlan.linked.length,
+      linkedAccountMasks: duplicatesPlan.linkedAccountMasks,
+      deletedSameAccountCount: duplicatesPlan.sameAccount.length,
+    );
+  }
+
+  /// Copies a duplicate's note onto a keeper that has none, then deletes it.
+  Future<void> _deleteKeepingNotes(List<CopilotDuplicate> duplicates) async {
+    final notedKeeperIds = <String>{};
+    for (final pair in duplicates) {
+      final duplicateNote = pair.duplicate.note?.trim() ?? '';
+      if (duplicateNote.isNotEmpty &&
+          (pair.keeper.note?.trim() ?? '').isEmpty &&
+          notedKeeperIds.add(pair.keeper.id)) {
+        await _transactionsRepository.setNote(
+          transactionId: pair.keeper.id,
+          note: duplicateNote,
+        );
+      }
+      await _transactionsRepository.deleteTransaction(pair.duplicate.id);
+    }
+  }
+
+  /// Same account + day + amount + merchant fingerprint, with a Copilot
+  /// import on either side → keep one. Two rows another source reported
+  /// under separate ids are two transactions (paired 401(k) contributions).
+  @visibleForTesting
+  static List<CopilotDuplicate> sameAccountDuplicates(
+    List<BankTransaction> transactions,
+  ) => _sameAccountDuplicates(transactions);
+
+  static List<CopilotDuplicate> _sameAccountDuplicates(
+    List<BankTransaction> transactions,
+  ) {
     final buckets = <String, List<BankTransaction>>{};
     for (final transaction in transactions) {
       final fingerprint = merchantFingerprint(transaction.normalizedMerchant);
       if (fingerprint.isEmpty) continue;
       final key =
-          '${transaction.accountId}|${transaction.postedAt.dayKey}|'
+          '${transaction.accountId}|${transaction.postedDay.isoDate}|'
           '${transaction.amountCents}|$fingerprint';
       buckets.putIfAbsent(key, () => []).add(transaction);
     }
-
-    final idsToDelete = <String>{};
-    var notesCopied = 0;
-
+    final duplicates = <CopilotDuplicate>[];
     for (final bucket in buckets.values) {
       if (bucket.length < 2) continue;
       bucket.sort(_compareKeepPreferred);
-      final keeper = bucket.first;
       for (final duplicate in bucket.skip(1)) {
-        final duplicateNote = duplicate.note?.trim() ?? '';
-        if (duplicateNote.isNotEmpty && (keeper.note?.trim() ?? '').isEmpty) {
-          await _transactionsRepository.setNote(
-            transactionId: keeper.id,
-            note: duplicateNote,
-          );
-          notesCopied++;
+        if (!duplicate.isCopilotImport && !bucket.first.isCopilotImport) {
+          continue;
         }
-        idsToDelete.add(duplicate.id);
+        duplicates.add(
+          CopilotDuplicate(duplicate: duplicate, keeper: bucket.first),
+        );
       }
     }
-
-    for (final transactionId in idsToDelete) {
-      await _transactionsRepository.deleteTransaction(transactionId);
-    }
-
-    _log.log(
-      'Removed ${idsToDelete.length} same-account duplicates '
-      '(merged $notesCopied notes)',
-    );
-    return idsToDelete.length;
+    return duplicates;
   }
 
-  Future<RemoveCopilotDuplicatesResult> _removeLinkedCopilotDuplicates() async {
-    final accounts = await _accountsRepository.listAccounts();
-    final transactions = await _transactionsRepository.listAll();
+  static List<CopilotDuplicate> _linkedCopilotDuplicates({
+    required List<Account> accounts,
+    required List<BankTransaction> transactions,
+    required MatchingSimplefinCharges matchingCharges,
+  }) {
+    if (matchingCharges.isEmpty) return const [];
     final accountsById = {for (final account in accounts) account.id: account};
-    final matchingCharges = MatchingSimplefinCharges.from(
-      accounts: accounts,
-      transactions: transactions,
-    );
-    if (matchingCharges.isEmpty) {
-      return const RemoveCopilotDuplicatesResult(
-        deletedCopilotCount: 0,
-        linkedAccountMasks: 0,
-      );
-    }
-
-    final copilotIdsToDelete = <String>{};
-
+    final duplicates = <CopilotDuplicate>[];
     for (final transaction in transactions) {
       final account = accountsById[transaction.accountId];
       if (account == null || !account.isCopilot) continue;
-
       final match = matchingCharges.takeMatch(
         copilotAccountId: account.id,
-        postedAt: transaction.postedAt,
+        postedDay: transaction.postedDay,
         amountCents: transaction.amountCents,
         normalizedMerchant: transaction.normalizedMerchant,
       );
       if (match == null) continue;
-
-      final noteToCopy = transaction.note?.trim() ?? '';
-      if (noteToCopy.isNotEmpty) {
-        final matchNote = match.note?.trim() ?? '';
-        if (matchNote.isEmpty) {
-          await _transactionsRepository.setNote(
-            transactionId: match.id,
-            note: noteToCopy,
-          );
-        }
-      }
-
-      copilotIdsToDelete.add(transaction.id);
+      duplicates.add(CopilotDuplicate(duplicate: transaction, keeper: match));
     }
-
-    for (final transactionId in copilotIdsToDelete) {
-      await _transactionsRepository.deleteTransaction(transactionId);
-    }
-
-    _log.log(
-      'Removed ${copilotIdsToDelete.length} Copilot duplicates across '
-      '${matchingCharges.linkCount} linked accounts',
-    );
-
-    return RemoveCopilotDuplicatesResult(
-      deletedCopilotCount: copilotIdsToDelete.length,
-      linkedAccountMasks: matchingCharges.linkCount,
-    );
+    return duplicates;
   }
 
   /// Higher-quality row first (kept); weaker duplicates deleted.
@@ -229,8 +262,8 @@ class RemoveCopilotDuplicates({
     final scoreCompare = _keepScore(right)
         .compareTo(_keepScore(left)); // higher first
     if (scoreCompare != 0) return scoreCompare;
-    final leftImported = left.importedAt ?? left.postedAt;
-    final rightImported = right.importedAt ?? right.postedAt;
+    final int leftImported = left.importedAtMillis ?? left.postedAtMillis;
+    final int rightImported = right.importedAtMillis ?? right.postedAtMillis;
     final importedCompare = leftImported.compareTo(rightImported);
     if (importedCompare != 0) return importedCompare;
     return left.id.compareTo(right.id);
@@ -240,7 +273,7 @@ class RemoveCopilotDuplicates({
     var score = 0;
     if ((transaction.note?.trim() ?? '').isNotEmpty) score += 50;
     // Prefer live-bank rows over Copilot re-imports when external ids differ.
-    if (!transaction.externalId.startsWith('copilot:')) score += 20;
+    if (!transaction.isCopilotImport) score += 20;
     return score;
   }
 
@@ -266,14 +299,17 @@ class RemoveCopilotDuplicates({
       _AccountLinks.fromAccounts(accounts).copilotKeyByAccountId;
 }
 
+/// A charge on a different day ([postedSameDay] false) also needs the
+/// merchants to agree, even when it is the only candidate.
 BankTransaction? bestMerchantMatch({
   required String normalizedMerchant,
   required List<BankTransaction> candidates,
+  bool postedSameDay = true,
 }) {
   if (candidates.isEmpty) return null;
 
   final copilotFingerprint = merchantFingerprint(normalizedMerchant);
-  if (candidates.length == 1) {
+  if (candidates.length == 1 && postedSameDay) {
     // Linked account + same day + same amount is enough when unique.
     return candidates.first;
   }

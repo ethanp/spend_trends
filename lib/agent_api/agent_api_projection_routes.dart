@@ -25,8 +25,8 @@ class const AgentApiProjectionRoutes({
     return jsonOk({
       'basis':
           'Today’s dollars (real returns). Live balances and the last 365 '
-          'days of take-home, non-housing spending, and 401(k) payroll '
-          'contributions. Life events apply from the first year they cover '
+          'days of take-home, non-housing spending, and payroll '
+          'contributions (401(k), HSA). Life events apply from the first year they cover '
           'at mid-year: a job sets take-home, a home sets mortgage terms and '
           'carrying costs (moving sells the previous home), and each child '
           'adds its yearly cost.',

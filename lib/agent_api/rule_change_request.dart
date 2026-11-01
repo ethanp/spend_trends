@@ -65,6 +65,7 @@ class const RuleChangeRequest({
       matchType: matchType,
       accountId: accountId,
       note: rule['note'] as String?,
+      excludesFromLifestyleCosts: rule['excludesFromLifestyleCosts'] as bool?,
     );
   }
 }
@@ -101,6 +102,7 @@ class const RuleChangeReport({
             'matchType': rule.matchType.storageValue,
             'accountId': rule.accountId,
             'category': snapshot.categoriesById[rule.categoryId]?.name,
+            'excludesFromLifestyleCosts': rule.excludesFromLifestyleCosts,
             'note': rule.note,
             'takes': takenCountByRuleId[rule.id] ?? 0,
           },
@@ -142,7 +144,7 @@ class const RuleChangeReport({
             for (final move in moves.take(samplesPerChange))
               {
                 'id': move.transaction.id,
-                'postedOn': move.transaction.postedAt.dayKey,
+                'postedOn': move.transaction.postedDay.isoDate,
                 'amount': formatCents(move.transaction.amountCents),
                 'description': move.transaction.rawDescription,
                 'rulePattern': move.rule?.pattern,

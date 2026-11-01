@@ -8,7 +8,6 @@ import 'package:spend_trends/features/banks/bank_institution_header.dart';
 import 'package:spend_trends/services/simplefin/simplefin_models.dart';
 import 'package:spend_trends/services/sqlite/simplefin_pull_history.dart';
 import 'package:spend_trends/theme/finance_colors.dart';
-import 'package:spend_trends/widgets/app_card.dart';
 
 import 'connection_status.dart';
 
@@ -109,7 +108,8 @@ class _BankAccountsListState() extends ConsumerState<BankAccountsList> {
   }) {
     final isCopilotGroup = group.accounts.first.isCopilot;
     final showAccountRows = !isCopilotGroup || _copilotAccountsExpanded;
-    return AppCard(
+    return ECard(
+      kind: ESurfaceKind.row,
       padding: const EdgeInsets.fromLTRB(
         ELayout.spaceMd,
         ELayout.spaceMd,

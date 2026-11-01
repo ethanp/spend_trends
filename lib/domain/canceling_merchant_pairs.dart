@@ -1,4 +1,3 @@
-import 'package:ethan_utils/ethan_utils.dart';
 import 'package:spend_trends/domain/account.dart';
 import 'package:spend_trends/domain/transaction.dart';
 
@@ -75,11 +74,7 @@ class CancelingMerchantPairs._() {
     if (isInvestment) {
       return '${transaction.accountId}|$absAmount';
     }
-    final local = transaction.postedAt.toLocal();
-    final month = local.month.toString().padLeft(2, '0');
-    final day = local.day.toString().padLeft(2, '0');
-    final dayKey = '${local.year}-$month-$day';
-    return '${transaction.accountId}|$dayKey|'
+    return '${transaction.accountId}|${transaction.postedDay.isoDate}|'
         '${transaction.normalizedMerchant}|$absAmount';
   }
 }
@@ -115,7 +110,7 @@ class _AmountBucket() {
       BankTransaction? bestOutflow;
       var bestDayDiff = maxCalendarDays + 1;
       for (final outflow in unmatchedOutflows) {
-        final dayDiff = inflow.postedAt.calendarDayDiff(outflow.postedAt);
+        final int dayDiff = inflow.postedDay.daysSince(outflow.postedDay).abs();
         if (dayDiff > maxCalendarDays) continue;
         if (dayDiff < bestDayDiff) {
           bestDayDiff = dayDiff;

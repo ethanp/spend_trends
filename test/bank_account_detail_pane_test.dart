@@ -36,7 +36,7 @@ void main() {
                 id: 't1',
                 accountId: account.id,
                 externalId: 'e1',
-                postedAt: firstPostedOn,
+                postedAtMillis: firstPostedOn.millisecondsSinceEpoch,
                 amountCents: 4000,
                 rawDescription: 'Pay',
                 normalizedMerchant: 'PAY',

@@ -1,32 +1,31 @@
 import 'package:ethan_utils/ethan_utils.dart';
 import 'package:spend_trends/domain/projection/retirement_projection.dart';
 
-/// Ramit Sethi's conscious-spending buckets (share of take-home pay), minus
-/// savings goals: planned expenses come straight from paychecks here, so
-/// there is no sinking fund to measure.
+/// Ramit Sethi's conscious-spending buckets (share of pay: take-home plus
+/// payroll contributions, as Ramit adds 401(k) back), minus savings goals:
+/// planned expenses come straight from paychecks here, so there is no
+/// sinking fund to measure. Each of Ramit's ranges is one round target near
+/// its middle (50–60% → 55%, 20–35% → 30%).
 enum ConsciousSpendingArea({
   required final ConsciousSpendingGuideline ramitGuideline,
   final String? _displayName,
 }) {
   fixedCosts(
     ramitGuideline: ConsciousSpendingGuideline(
-      minPercent: 50,
-      maxPercent: 60,
-      higherIsBetter: false,
+      targetPercent: 55,
+      betterSide: GuidelineBetterSide.lower,
     ),
   ),
   investments(
     ramitGuideline: ConsciousSpendingGuideline(
-      minPercent: 10,
-      maxPercent: 10,
-      higherIsBetter: true,
+      targetPercent: 10,
+      betterSide: GuidelineBetterSide.higher,
     ),
   ),
   guiltFree(
     ramitGuideline: ConsciousSpendingGuideline(
-      minPercent: 20,
-      maxPercent: 35,
-      higherIsBetter: false,
+      targetPercent: 30,
+      betterSide: GuidelineBetterSide.lower,
     ),
     displayName: 'Guilt-free',
   );
@@ -34,12 +33,6 @@ enum ConsciousSpendingArea({
   String get displayName => _displayName ?? nameAsCapitalizedWords;
 
   String get storageValue => name;
-
-  /// Rounded share of [incomeCents], or null when there is no take-home pay.
-  int? percentOfIncome({required int areaCents, required int incomeCents}) {
-    if (incomeCents <= 0) return null;
-    return (areaCents / incomeCents * 100).round();
-  }
 
   static ConsciousSpendingArea? fromStorage(String? value) {
     if (value == null || value.isEmpty) return null;
@@ -50,21 +43,36 @@ enum ConsciousSpendingArea({
   }
 }
 
-/// A target share of take-home pay for one area, and which way beats it.
-/// Spending areas are better lower (the FIRE goal is a bigger gap between
-/// take-home and spending); investing is better higher.
+/// Which side of a guideline's target beats it.
+enum GuidelineBetterSide() {
+  higher,
+  lower,
+
+  /// Any distance from the target misses it.
+  neither,
+}
+
+/// A target share of pay, and which side of it is better. Spending areas are
+/// better lower (the FIRE goal is a bigger gap between pay and spending);
+/// investing is better higher; savings aims at exactly its target.
 class const ConsciousSpendingGuideline({
-  required final int minPercent,
-  required final int maxPercent,
-  required final bool higherIsBetter,
+  required final int targetPercent,
+  required final GuidelineBetterSide betterSide,
 
   /// Where a non-Ramit target came from, e.g. `retire at 45`.
   final String? reason,
 }) {
-  /// Points past the guideline at which [score] saturates.
+  /// Points past the target at which [score] saturates.
   static const _fullScorePoints = 20;
 
-  /// Ramit's range, except Investments, which uses what retiring at the
+  /// Savings, the pay left after the three areas, aims at 0: cash should
+  /// neither pile up nor drain on net over time.
+  static const savings = ConsciousSpendingGuideline(
+    targetPercent: 0,
+    betterSide: GuidelineBetterSide.neither,
+  );
+
+  /// Ramit's target, except Investments, which uses what retiring at the
   /// planned age needs once a projection exists.
   factory forArea(
     ConsciousSpendingArea area, {
@@ -73,45 +81,34 @@ class const ConsciousSpendingGuideline({
     if (area != ConsciousSpendingArea.investments || retirementTarget == null) {
       return area.ramitGuideline;
     }
-    final percent = retirementTarget.requiredInvestingPercent;
     return ConsciousSpendingGuideline(
-      minPercent: percent,
-      maxPercent: percent,
-      higherIsBetter: true,
+      targetPercent: retirementTarget.requiredInvestingPercent,
+      betterSide: GuidelineBetterSide.higher,
       reason: 'retire at ${retirementTarget.retirementAge}',
     );
   }
 
-  /// e.g. `50–60%`, `10%`, or `≥31%` for a one-sided target.
-  String get rangeLabel {
-    if (minPercent != maxPercent) return '$minPercent–$maxPercent%';
-    if (reason == null) return '$minPercent%';
-    return higherIsBetter ? '≥$minPercent%' : '≤$minPercent%';
-  }
+  String get targetLabel => '$targetPercent%';
 
-  bool contains(int percent) => higherIsBetter && reason != null
-      ? percent >= minPercent
-      : percent >= minPercent && percent <= maxPercent;
+  /// At the target or on its better side.
+  bool isMetBy(int percent) => switch (betterSide) {
+    GuidelineBetterSide.higher => percent >= targetPercent,
+    GuidelineBetterSide.lower => percent <= targetPercent,
+    GuidelineBetterSide.neither => percent == targetPercent,
+  };
 
-  /// How far [percent] beats (toward 1) or misses (toward −1) the guideline:
-  /// 0 inside the range, ±1 at [_fullScorePoints] or more past its edge.
+  /// How far [percent] beats (toward 1) or misses (toward −1) the target:
+  /// 0 on it, ±1 at [_fullScorePoints] or more past it.
   double score(int percent) {
-    final int pointsAboveRange = percent > maxPercent
-        ? percent - maxPercent
-        : percent < minPercent
-        ? percent - minPercent
-        : 0;
-    final pointsBetter = higherIsBetter ? pointsAboveRange : -pointsAboveRange;
+    final int pointsAboveTarget = percent - targetPercent;
+    final int pointsBetter = switch (betterSide) {
+      GuidelineBetterSide.higher => pointsAboveTarget,
+      GuidelineBetterSide.lower => -pointsAboveTarget,
+      GuidelineBetterSide.neither => -pointsAboveTarget.abs(),
+    };
     return (pointsBetter / _fullScorePoints).clamp(-1.0, 1.0);
   }
 
-  /// Guideline percents applied to annual take-home [incomeCents].
-  String impliedTakeHomeLabel(int incomeCents) {
-    if (incomeCents <= 0) return '—';
-    final lowCents = (incomeCents * minPercent / 100).round();
-    final highCents = (incomeCents * maxPercent / 100).round();
-    final lowLabel = formatCentsWholeDollars(lowCents);
-    if (lowCents == highCents) return lowLabel;
-    return '$lowLabel–${formatCentsWholeDollars(highCents)}';
-  }
+  /// The target applied to [payCents].
+  int impliedCents(int payCents) => (payCents * targetPercent / 100).round();
 }

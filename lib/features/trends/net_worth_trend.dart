@@ -49,10 +49,12 @@ class NetWorthTrend._() {
     final totals = List<double>.filled(chartDates.length, 0);
     for (final component in _signedComponents(
       accounts: accounts,
-      transactions: transactions,
-      chartDates: chartDates,
+      accountRows: _AccountRows(
+        transactions: transactions,
+        balanceSnapshots: balanceSnapshots,
+      ),
+      chart: _ChartDays(chartDates),
       ownedAssets: ownedAssets,
-      balanceSnapshots: balanceSnapshots,
     )) {
       for (var dayIndex = 0; dayIndex < chartDates.length; dayIndex++) {
         totals[dayIndex] += component.history.rawDailyCents[dayIndex];
@@ -78,13 +80,16 @@ class NetWorthTrend._() {
   }) {
     return _accountHistory(
       account: account,
-      transactions: transactions,
-      chartDates: chartDates,
-      includeAccountIds: includeAccountIds,
+      accountRows: _AccountRows(transactions: transactions),
+      chart: _ChartDays(chartDates),
+      includeAccountIds: includeAccountIds ?? {account.id},
     ).rawDailyCents;
   }
 
   /// Total net worth plus per-account contribution lines.
+  ///
+  /// [chartDates] are consecutive local-midnight days, ascending. Day math
+  /// runs on their [CalendarDay]s; the dates only label the points.
   ///
   /// Account breakdowns plot [abs] magnitude so liabilities sit above zero;
   /// a dashed stroke marks that the signed balance is negative.
@@ -101,43 +106,44 @@ class NetWorthTrend._() {
       return const [];
     }
 
+    final chart = _ChartDays(chartDates);
     final components = _signedComponents(
       accounts: accounts,
-      transactions: transactions,
-      chartDates: chartDates,
+      accountRows: _AccountRows(
+        transactions: transactions,
+        balanceSnapshots: balanceSnapshots,
+      ),
+      chart: chart,
       ownedAssets: ownedAssets,
-      balanceSnapshots: balanceSnapshots,
     );
     final netWorthSeries = _totalSeries(
       components: components,
-      chartDates: chartDates,
+      chart: chart,
       importedNetWorthDays: importedNetWorthDays,
     );
     if (netWorthSeries == null) return const [];
 
-    return [
-      netWorthSeries,
-      ?_cumulativeAssetSalesSeries(
-        transactions: transactions,
-        chartDates: chartDates,
-      ),
-      ..._breakdownSeries(components, chartDates),
-    ];
+    final assetSales = _cumulativeAssetSalesSeries(
+      transactions: transactions,
+      chart: chart,
+    );
+    final breakdown = _breakdownSeries(components, chartDates);
+    return [netWorthSeries, ?assetSales, ...breakdown];
   }
 
   /// Running total of Asset sale proceeds as unsmoothed steps, so each sale
   /// reads as a lump sum beside net worth instead of a savings ramp.
   static CategoryTrendSeries? _cumulativeAssetSalesSeries({
     required List<BankTransaction> transactions,
-    required List<DateTime> chartDates,
+    required _ChartDays chart,
   }) {
-    final proceedsByDay = <DateTime, int>{};
+    final proceedsByDay = <CalendarDay, int>{};
     for (final transaction in transactions) {
       if (!SpecialCategory.isAssetSaleId(transaction.categoryId)) {
         continue;
       }
       proceedsByDay.update(
-        transaction.postedAt.startOfDay,
+        transaction.postedDay,
         (priorCents) => priorCents + transaction.amountCents,
         ifAbsent: () => transaction.amountCents,
       );
@@ -146,11 +152,11 @@ class NetWorthTrend._() {
 
     var runningCents = 0.0;
     final points = <CategoryTrendPoint>[];
-    for (final day in chartDates) {
-      runningCents += proceedsByDay[day.startOfDay] ?? 0;
+    for (var dayIndex = 0; dayIndex < chart.length; dayIndex++) {
+      runningCents += proceedsByDay[chart.days[dayIndex]] ?? 0;
       points.add(
         CategoryTrendPoint(
-          date: day,
+          date: chart.dates[dayIndex],
           rollingCents: runningCents,
           smoothedCents: runningCents,
         ),
@@ -177,55 +183,57 @@ class NetWorthTrend._() {
     List<AccountBalanceSnapshot> balanceSnapshots = const [],
     DateTime? endDate,
   }) {
-    final chartEnd = (endDate ?? DateTime.now()).startOfDay;
-    final historyFloor = TrendChartCatalog.chartHistoryStart.startOfDay;
+    final CalendarDay chartEnd = (endDate ?? DateTime.now()).calendarDay;
+    final CalendarDay historyFloor =
+        TrendChartCatalog.chartHistoryStart.calendarDay;
     final includeAccountIds = _historyAccountIds(account, accounts);
-    final postedAmounts = _postedDayAmounts(
+    final accountRows = _AccountRows(
       transactions: transactions,
-      accountIds: includeAccountIds,
+      balanceSnapshots: balanceSnapshots,
     );
-    final DateTime? firstSnapshotDay = _snapshotsFor(
-      account,
-      balanceSnapshots,
-    ).firstOrNull?.recordedOn.startOfDay;
-    final knownFrom = account.isValuedBySnapshots
-        ? (firstSnapshotDay ??
-                  postedAmounts.earliestDay ??
-                  account.balanceAsOf ??
-                  chartEnd)
-              .startOfDay
+    final postedAmounts = _postedDayAmounts(
+      accountRows.transactionsFor(includeAccountIds),
+    );
+    final CalendarDay? firstSnapshotDay = accountRows
+        .snapshotsFor(account.id)
+        .firstOrNull
+        ?.recordedDay;
+    final CalendarDay? balanceAsOfDay = account.balanceAsOf?.calendarDay;
+    final CalendarDay knownFrom = account.isValuedBySnapshots
+        ? firstSnapshotDay ??
+              postedAmounts.earliestDay ??
+              balanceAsOfDay ??
+              chartEnd
         : [
             ?firstSnapshotDay,
             ?postedAmounts.earliestDay,
-            (account.balanceAsOf ?? chartEnd).startOfDay,
+            balanceAsOfDay ?? chartEnd,
           ].reduce((earliest, day) => day.isBefore(earliest) ? day : earliest);
-    final chartStart = knownFrom.isBefore(historyFloor)
+    final CalendarDay chartStart = knownFrom.isBefore(historyFloor)
         ? historyFloor
         : knownFrom;
-    if (chartEnd.difference(chartStart).inDays < 1) return null;
+    if (chartEnd.daysSince(chartStart) < 1) return null;
 
-    final chartDates = _calendarDates(chartStart, chartEnd);
-    if (chartDates.length < 2) return null;
+    final chart = _ChartDays(_calendarDates(chartStart, chartEnd));
+    if (chart.length < 2) return null;
 
     return _seriesFromHistory(
       component: _accountComponent(
         account: account,
         kind: account.kind,
-        transactions: transactions,
-        balanceSnapshots: balanceSnapshots,
-        chartDates: chartDates,
+        accountRows: accountRows,
+        chart: chart,
         includeAccountIds: includeAccountIds,
       ),
-      chartDates: chartDates,
+      chartDates: chart.dates,
     );
   }
 
   static List<_SignedNetWorthComponent> _signedComponents({
     required List<Account> accounts,
-    required List<BankTransaction> transactions,
-    required List<DateTime> chartDates,
+    required _AccountRows accountRows,
+    required _ChartDays chart,
     required List<OwnedAssetWithValuations> ownedAssets,
-    required List<AccountBalanceSnapshot> balanceSnapshots,
   }) {
     final roots = _rootAccounts(accounts);
     final childIdsByParent = _childIdsByParent(accounts);
@@ -237,26 +245,22 @@ class NetWorthTrend._() {
           _accountComponent(
             account: account,
             kind: group.kind,
-            transactions: transactions,
-            balanceSnapshots: balanceSnapshots,
-            chartDates: chartDates,
+            accountRows: accountRows,
+            chart: chart,
             includeAccountIds: {account.id, ...?childIdsByParent[account.id]},
           ),
         );
       }
       if (group.kind == AccountKind.nonFinancialAssets) {
         components.addAll(
-          _ownedAssetComponents(
-            ownedAssets: ownedAssets,
-            chartDates: chartDates,
-          ),
+          _ownedAssetComponents(ownedAssets: ownedAssets, chart: chart),
         );
         emittedOwnedAssets = true;
       }
     }
     if (!emittedOwnedAssets) {
       components.addAll(
-        _ownedAssetComponents(ownedAssets: ownedAssets, chartDates: chartDates),
+        _ownedAssetComponents(ownedAssets: ownedAssets, chart: chart),
       );
     }
     return components;
@@ -265,9 +269,8 @@ class NetWorthTrend._() {
   static _SignedNetWorthComponent _accountComponent({
     required Account account,
     required AccountKind kind,
-    required List<BankTransaction> transactions,
-    required List<AccountBalanceSnapshot> balanceSnapshots,
-    required List<DateTime> chartDates,
+    required _AccountRows accountRows,
+    required _ChartDays chart,
     required Set<String> includeAccountIds,
   }) {
     return _SignedNetWorthComponent(
@@ -279,9 +282,8 @@ class NetWorthTrend._() {
       plotAbsoluteMagnitude: true,
       history: _balanceHistory(
         account: account,
-        transactions: transactions,
-        balanceSnapshots: balanceSnapshots,
-        chartDates: chartDates,
+        accountRows: accountRows,
+        chart: chart,
         includeAccountIds: includeAccountIds,
       ),
     );
@@ -297,13 +299,17 @@ class NetWorthTrend._() {
     required List<DateTime> chartDates,
   }) {
     final childIdsByParent = _childIdsByParent(accounts);
+    final accountRows = _AccountRows(
+      transactions: transactions,
+      balanceSnapshots: balanceSnapshots,
+    );
+    final chart = _ChartDays(chartDates);
     return {
       for (final account in _rootAccounts(accounts))
         account: _balanceHistory(
           account: account,
-          transactions: transactions,
-          balanceSnapshots: balanceSnapshots,
-          chartDates: chartDates,
+          accountRows: accountRows,
+          chart: chart,
           includeAccountIds: {account.id, ...?childIdsByParent[account.id]},
         ).smoothedDailyCents,
     };
@@ -316,37 +322,26 @@ class NetWorthTrend._() {
     required List<DateTime> chartDates,
   }) => _ownedAssetHistory(
     ownedAsset: ownedAsset,
-    chartDates: chartDates,
+    chart: _ChartDays(chartDates),
   ).smoothedDailyCents;
 
   static NetWorthComponentHistory _balanceHistory({
     required Account account,
-    required List<BankTransaction> transactions,
-    required List<AccountBalanceSnapshot> balanceSnapshots,
-    required List<DateTime> chartDates,
+    required _AccountRows accountRows,
+    required _ChartDays chart,
     required Set<String> includeAccountIds,
   }) => account.isValuedBySnapshots
       ? _recordedBalanceHistory(
           account: account,
-          snapshots: _snapshotsFor(account, balanceSnapshots),
-          chartDates: chartDates,
+          snapshots: accountRows.snapshotsFor(account.id),
+          chart: chart,
         )
       : _accountHistory(
           account: account,
-          transactions: transactions,
-          snapshots: _snapshotsFor(account, balanceSnapshots),
-          chartDates: chartDates,
+          accountRows: accountRows,
+          chart: chart,
           includeAccountIds: includeAccountIds,
         );
-
-  /// Oldest first.
-  static List<AccountBalanceSnapshot> _snapshotsFor(
-    Account account,
-    List<AccountBalanceSnapshot> balanceSnapshots,
-  ) => [
-    for (final snapshot in balanceSnapshots)
-      if (snapshot.accountId == account.id) snapshot,
-  ]..sort((left, right) => left.recordedOn.compareTo(right.recordedOn));
 
   /// A manual or history-import account steps between its recorded balances;
   /// before the first it is unknown. With none recorded, only today shows the
@@ -354,9 +349,9 @@ class NetWorthTrend._() {
   static NetWorthComponentHistory _recordedBalanceHistory({
     required Account account,
     required List<AccountBalanceSnapshot> snapshots,
-    required List<DateTime> chartDates,
+    required _ChartDays chart,
   }) {
-    if (chartDates.isEmpty) {
+    if (chart.isEmpty) {
       return NetWorthComponentHistory(
         rawDailyCents: const [],
         firstKnownDayIndex: 0,
@@ -365,19 +360,19 @@ class NetWorthTrend._() {
     if (snapshots.isEmpty) {
       return NetWorthComponentHistory(
         rawDailyCents: [
-          ...List<double>.filled(chartDates.length - 1, 0),
+          ...List<double>.filled(chart.length - 1, 0),
           account.balanceCents.toDouble(),
         ],
-        firstKnownDayIndex: chartDates.length - 1,
+        firstKnownDayIndex: chart.length - 1,
       );
     }
-    final values = List<double>.filled(chartDates.length, 0);
+    final values = List<double>.filled(chart.length, 0);
     var nextSnapshotIndex = 0;
     double? recordedCents;
-    for (var dayIndex = 0; dayIndex < chartDates.length; dayIndex++) {
-      final day = chartDates[dayIndex].startOfDay;
+    for (var dayIndex = 0; dayIndex < chart.length; dayIndex++) {
+      final CalendarDay day = chart.days[dayIndex];
       while (nextSnapshotIndex < snapshots.length &&
-          !snapshots[nextSnapshotIndex].recordedOn.startOfDay.isAfter(day)) {
+          !snapshots[nextSnapshotIndex].recordedDay.isAfter(day)) {
         recordedCents = snapshots[nextSnapshotIndex].balanceCents.toDouble();
         nextSnapshotIndex++;
       }
@@ -386,15 +381,15 @@ class NetWorthTrend._() {
     return NetWorthComponentHistory(
       rawDailyCents: values,
       firstKnownDayIndex: math.min(
-        _firstIndexOnOrAfter(chartDates, snapshots.first.recordedOn),
-        chartDates.length - 1,
+        _firstIndexOnOrAfter(chart.days, snapshots.first.recordedDay),
+        chart.length - 1,
       ),
     );
   }
 
   static List<_SignedNetWorthComponent> _ownedAssetComponents({
     required List<OwnedAssetWithValuations> ownedAssets,
-    required List<DateTime> chartDates,
+    required _ChartDays chart,
   }) {
     final components = <_SignedNetWorthComponent>[];
     final sorted = [...ownedAssets]
@@ -412,10 +407,7 @@ class NetWorthTrend._() {
             ownedAsset.asset.id,
           ),
           legendGroup: AccountKind.nonFinancialAssets.legendLabel,
-          history: _ownedAssetHistory(
-            ownedAsset: ownedAsset,
-            chartDates: chartDates,
-          ),
+          history: _ownedAssetHistory(ownedAsset: ownedAsset, chart: chart),
         ),
       );
     }
@@ -427,43 +419,43 @@ class NetWorthTrend._() {
   /// between snapshots do not accumulate.
   static NetWorthComponentHistory _accountHistory({
     required Account account,
-    required List<BankTransaction> transactions,
-    required List<DateTime> chartDates,
-    List<AccountBalanceSnapshot> snapshots = const [],
-    Set<String>? includeAccountIds,
+    required _AccountRows accountRows,
+    required _ChartDays chart,
+    required Set<String> includeAccountIds,
   }) {
-    if (chartDates.isEmpty) {
+    if (chart.isEmpty) {
       return NetWorthComponentHistory(
         rawDailyCents: const [],
         firstKnownDayIndex: 0,
       );
     }
 
-    final accountIds = includeAccountIds ?? {account.id};
-    final dayCount = chartDates.length;
+    final dayCount = chart.length;
     final postedAmounts = _postedDayAmounts(
-      transactions: transactions,
-      accountIds: accountIds,
+      accountRows.transactionsFor(includeAccountIds),
+    );
+    final List<AccountBalanceSnapshot> snapshots = accountRows.snapshotsFor(
+      account.id,
     );
     final snapshotCentsByDay = {
       for (final snapshot in snapshots)
-        snapshot.recordedOn.startOfDay: snapshot.balanceCents.toDouble(),
+        snapshot.recordedDay: snapshot.balanceCents.toDouble(),
     };
-    final knownFrom = [
+    final CalendarDay knownFrom = [
       ?postedAmounts.earliestDay,
-      ?snapshots.firstOrNull?.recordedOn.startOfDay,
-      (account.balanceAsOf ?? chartDates.last).startOfDay,
+      ?snapshots.firstOrNull?.recordedDay,
+      account.balanceAsOf?.calendarDay ?? chart.days.last,
     ].reduce((earliest, day) => day.isBefore(earliest) ? day : earliest);
     final lastDayIndex = dayCount - 1;
     // Live balance always belongs on the last chart day. A same-day
     // afternoon balanceAsOf must not zero the midnight endpoint.
-    var firstKnownDayIndex = _firstIndexOnOrAfter(chartDates, knownFrom);
+    var firstKnownDayIndex = _firstIndexOnOrAfter(chart.days, knownFrom);
     if (firstKnownDayIndex > lastDayIndex) firstKnownDayIndex = lastDayIndex;
 
     var balanceCents = account.balanceCents.toDouble();
     final values = List<double>.filled(dayCount, 0);
     for (var dayIndex = lastDayIndex; dayIndex >= 0; dayIndex--) {
-      final day = chartDates[dayIndex].startOfDay;
+      final CalendarDay day = chart.days[dayIndex];
       if (dayIndex < lastDayIndex && day.isBefore(knownFrom)) {
         values[dayIndex] = 0;
         continue;
@@ -482,28 +474,26 @@ class NetWorthTrend._() {
 
   static NetWorthComponentHistory _ownedAssetHistory({
     required OwnedAssetWithValuations ownedAsset,
-    required List<DateTime> chartDates,
+    required _ChartDays chart,
   }) {
-    final rawDailyCents = ownedAsset.dailyCents(chartDates);
-    final firstValuedOn = ownedAsset.firstValuedOn?.startOfDay;
-    final firstKnownDayIndex = firstValuedOn == null
-        ? chartDates.length
-        : _firstIndexOnOrAfter(chartDates, firstValuedOn);
+    final rawDailyCents = ownedAsset.dailyCents(chart.days);
+    final CalendarDay? firstValuedDay = ownedAsset.firstValuedOn;
+    final firstKnownDayIndex = firstValuedDay == null
+        ? chart.length
+        : _firstIndexOnOrAfter(chart.days, firstValuedDay);
     return NetWorthComponentHistory(
       rawDailyCents: rawDailyCents,
       firstKnownDayIndex: firstKnownDayIndex,
     );
   }
 
-  static _PostedDayAmounts _postedDayAmounts({
-    required List<BankTransaction> transactions,
-    required Set<String> accountIds,
-  }) {
-    final amountsByDay = <DateTime, double>{};
-    DateTime? earliestDay;
+  static _PostedDayAmounts _postedDayAmounts(
+    Iterable<BankTransaction> transactions,
+  ) {
+    final amountsByDay = <CalendarDay, double>{};
+    CalendarDay? earliestDay;
     for (final transaction in transactions) {
-      if (!accountIds.contains(transaction.accountId)) continue;
-      final day = transaction.postedAt.startOfDay;
+      final CalendarDay day = transaction.postedDay;
       amountsByDay.update(
         day,
         (prior) => prior + transaction.amountCents,
@@ -519,17 +509,23 @@ class NetWorthTrend._() {
     );
   }
 
+  /// Binary search over the ascending chart days; `chartDays.length` when
+  /// every day is before [knownFrom].
   static int _firstIndexOnOrAfter(
-    List<DateTime> chartDates,
-    DateTime knownFrom,
+    List<CalendarDay> chartDays,
+    CalendarDay knownFrom,
   ) {
-    final knownFromDay = knownFrom.startOfDay;
-    for (var dayIndex = 0; dayIndex < chartDates.length; dayIndex++) {
-      if (!chartDates[dayIndex].startOfDay.isBefore(knownFromDay)) {
-        return dayIndex;
+    var low = 0;
+    var high = chartDays.length;
+    while (low < high) {
+      final middle = (low + high) >> 1;
+      if (chartDays[middle].isBefore(knownFrom)) {
+        low = middle + 1;
+      } else {
+        high = middle;
       }
     }
-    return chartDates.length;
+    return low;
   }
 
   /// Signed sum of every component (smoothed per component, so an account
@@ -539,11 +535,11 @@ class NetWorthTrend._() {
   /// were not linked yet.
   static CategoryTrendSeries? _totalSeries({
     required List<_SignedNetWorthComponent> components,
-    required List<DateTime> chartDates,
+    required _ChartDays chart,
     required List<ImportedNetWorthDay> importedNetWorthDays,
   }) {
-    if (components.isEmpty || chartDates.isEmpty) return null;
-    final dayCount = chartDates.length;
+    if (components.isEmpty || chart.isEmpty) return null;
+    final dayCount = chart.length;
     final rollingCents = List<double>.filled(dayCount, 0);
     final smoothedCents = List<double>.filled(dayCount, 0);
     for (final component in components) {
@@ -555,7 +551,7 @@ class NetWorthTrend._() {
     }
     _replaceWithImportedNetWorth(
       importedNetWorthDays: importedNetWorthDays,
-      chartDates: chartDates,
+      chartDays: chart.days,
       rollingCents: rollingCents,
       smoothedCents: smoothedCents,
     );
@@ -567,7 +563,7 @@ class NetWorthTrend._() {
       points: [
         for (var dayIndex = 0; dayIndex < dayCount; dayIndex++)
           CategoryTrendPoint(
-            date: chartDates[dayIndex],
+            date: chart.dates[dayIndex],
             rollingCents: rollingCents[dayIndex],
             smoothedCents: smoothedCents[dayIndex],
           ),
@@ -579,25 +575,23 @@ class NetWorthTrend._() {
   /// its own so this app's days after it do not bleed in.
   static void _replaceWithImportedNetWorth({
     required List<ImportedNetWorthDay> importedNetWorthDays,
-    required List<DateTime> chartDates,
+    required List<CalendarDay> chartDays,
     required List<double> rollingCents,
     required List<double> smoothedCents,
   }) {
     final importedCentsByDay = {
       for (final importedDay in importedNetWorthDays)
-        importedDay.recordedOn.startOfDay: importedDay.netWorthCents,
+        importedDay.day: importedDay.netWorthCents,
     };
     final importedDayIndexes = [
-      for (var dayIndex = 0; dayIndex < chartDates.length; dayIndex++)
-        if (importedCentsByDay.containsKey(chartDates[dayIndex].startOfDay))
-          dayIndex,
+      for (var dayIndex = 0; dayIndex < chartDays.length; dayIndex++)
+        if (importedCentsByDay.containsKey(chartDays[dayIndex])) dayIndex,
     ];
     if (importedDayIndexes.isEmpty) return;
     final firstIndex = importedDayIndexes.first;
     final lastIndex = importedDayIndexes.last;
     for (var dayIndex = firstIndex; dayIndex <= lastIndex; dayIndex++) {
-      final int? importedCents =
-          importedCentsByDay[chartDates[dayIndex].startOfDay];
+      final int? importedCents = importedCentsByDay[chartDays[dayIndex]];
       if (importedCents != null) {
         rollingCents[dayIndex] = importedCents.toDouble();
       }
@@ -697,12 +691,16 @@ class NetWorthTrend._() {
     };
   }
 
-  static List<DateTime> _calendarDates(DateTime firstDate, DateTime endDate) {
-    if (firstDate.isAfter(endDate)) return [];
-    final dayCount = endDate.difference(firstDate).inDays + 1;
+  /// Every local midnight from [firstDay] through [endDay].
+  static List<DateTime> _calendarDates(
+    CalendarDay firstDay,
+    CalendarDay endDay,
+  ) {
+    final int dayCount = endDay.daysSince(firstDay) + 1;
+    if (dayCount <= 0) return [];
     return List.generate(
       dayCount,
-      (dayOffset) => firstDate.shiftedByDays(dayOffset),
+      (dayOffset) => firstDay.plusDays(dayOffset).localMidnight,
     );
   }
 
@@ -746,10 +744,58 @@ class NetWorthTrend._() {
   }
 }
 
+/// Transactions and recorded balances grouped by account, built once per
+/// chart so each account's history reads its own rows instead of filtering
+/// every table again.
+class _AccountRows({
+  required List<BankTransaction> transactions,
+  List<AccountBalanceSnapshot> balanceSnapshots = const [],
+}) {
+  final Map<String, List<BankTransaction>> _transactionsByAccountId =
+      _groupedByAccount(transactions, (transaction) => transaction.accountId);
+
+  /// Oldest first within each account.
+  final Map<String, List<AccountBalanceSnapshot>> _snapshotsByAccountId =
+      _groupedByAccount(balanceSnapshots, (snapshot) => snapshot.accountId)
+        ..forEach(
+          (_, snapshots) => snapshots.sort(
+            (left, right) => left.recordedDay.compareTo(right.recordedDay),
+          ),
+        );
+
+  /// Oldest first.
+  List<AccountBalanceSnapshot> snapshotsFor(String accountId) =>
+      _snapshotsByAccountId[accountId] ?? const [];
+
+  Iterable<BankTransaction> transactionsFor(Set<String> accountIds) => [
+    for (final accountId in accountIds) ...?_transactionsByAccountId[accountId],
+  ];
+
+  static Map<String, List<AccountRow>> _groupedByAccount<AccountRow>(
+    List<AccountRow> rows,
+    String Function(AccountRow row) accountIdOf,
+  ) {
+    final byAccountId = <String, List<AccountRow>>{};
+    for (final row in rows) {
+      byAccountId.putIfAbsent(accountIdOf(row), () => []).add(row);
+    }
+    return byAccountId;
+  }
+}
+
 class const _PostedDayAmounts({
-  required final Map<DateTime, double> amountsByDay,
-  final DateTime? earliestDay,
+  required final Map<CalendarDay, double> amountsByDay,
+  final CalendarDay? earliestDay,
 });
+
+/// The chart's consecutive days: local midnights for the plotted points and
+/// their [CalendarDay]s for every lookup and comparison.
+class _ChartDays(final List<DateTime> dates) {
+  final List<CalendarDay> days = [for (final date in dates) date.calendarDay];
+
+  int get length => dates.length;
+  bool get isEmpty => dates.isEmpty;
+}
 
 class const _SignedNetWorthComponent({
   required final String id,

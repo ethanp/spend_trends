@@ -13,7 +13,6 @@ import 'package:spend_trends/features/activity/manage_rule_sheet.dart';
 import 'package:spend_trends/features/activity/recategorize_sheet.dart';
 import 'package:spend_trends/features/categories/categories_providers.dart';
 import 'package:spend_trends/widgets/app_browse_split_shell.dart';
-import 'package:spend_trends/widgets/app_card.dart';
 
 import 'banks_providers.dart';
 
@@ -60,7 +59,8 @@ class _BanksPullTransactionListState()
     final ruleMatchIndex = RuleMatchIndex(rules);
 
     if (widget.transactions.isEmpty) {
-      return AppCard(
+      return ECard(
+        kind: ESurfaceKind.row,
         child: Text(
           'No new transactions in this pull yet.',
           style: EText.body.medium,
@@ -91,7 +91,8 @@ class _BanksPullTransactionListState()
         ],
         const SizedBox(height: ELayout.spaceMd),
         if (visible.isEmpty)
-          AppCard(
+          ECard(
+            kind: ESurfaceKind.row,
             child: Text(
               _uncategorizedOnly
                   ? 'No uncategorized transactions in this pull.'

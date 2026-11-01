@@ -9,6 +9,7 @@ import 'package:spend_trends/domain/transaction.dart';
 import 'package:spend_trends/features/activity/activity_column_widths.dart';
 import 'package:spend_trends/theme/finance_colors.dart';
 import 'package:spend_trends/util/category_color.dart';
+import 'package:spend_trends/widgets/excluded_from_lifestyle_costs_word.dart';
 import 'package:spend_trends/widgets/transaction_list_row.dart';
 
 /// One Activity row: [category | account | title | amount].
@@ -47,7 +48,7 @@ class const ActivityTransactionTile({
 
     return ECopyableRow(
       cells: [
-        DateFormat.yMMMd().format(transaction.postedAt),
+        DateFormat.yMMMd().format(transaction.postedDay.localMidnight),
         categoryLabel,
         accountLabel,
         merchantName,
@@ -61,7 +62,7 @@ class const ActivityTransactionTile({
         selected: selected,
         onActivated: onActivated,
         leadingCells: [
-          TransactionListRow.cell(
+          SizedBox(
             width: columnWidths.category,
             child: Text(
               categoryLabel,
@@ -73,7 +74,7 @@ class const ActivityTransactionTile({
               overflow: TextOverflow.ellipsis,
             ),
           ),
-          TransactionListRow.cell(
+          SizedBox(
             width: columnWidths.account,
             child: Text(
               accountLabel,
@@ -89,7 +90,7 @@ class const ActivityTransactionTile({
   }
 
   Widget? _trailing() {
-    final statusIcons = _statusIcons();
+    final statusMarks = _statusMarks();
     final ruleButton = onRuleSelected == null
         ? null
         : Tooltip(
@@ -114,14 +115,14 @@ class const ActivityTransactionTile({
               ),
             ),
           );
-    if (statusIcons == null && ruleButton == null && extraTrailing == null) {
+    if (statusMarks == null && ruleButton == null && extraTrailing == null) {
       return null;
     }
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        ?statusIcons,
-        if (statusIcons != null &&
+        ?statusMarks,
+        if (statusMarks != null &&
             (ruleButton != null || extraTrailing != null))
           const SizedBox(width: ELayout.spaceXs),
         ?ruleButton,
@@ -132,15 +133,18 @@ class const ActivityTransactionTile({
     );
   }
 
-  Widget? _statusIcons() {
+  Widget? _statusMarks() {
     if (!transaction.pending &&
         !transaction.excluded &&
-        transaction.recurringSeries == null) {
+        transaction.recurringSeries == null &&
+        !transaction.excludedFromLifestyleCosts) {
       return null;
     }
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
+        if (transaction.excludedFromLifestyleCosts)
+          const ExcludedFromLifestyleCostsWord(),
         if (transaction.pending)
           const Icon(Icons.schedule, size: 15, color: EColors.warning),
         if (transaction.excluded)

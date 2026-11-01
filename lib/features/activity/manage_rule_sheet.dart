@@ -14,8 +14,10 @@ import 'package:spend_trends/providers/spend_data_changed.dart';
 import 'package:spend_trends/theme/finance_colors.dart';
 import 'package:spend_trends/widgets/app_sheet_panel.dart';
 import 'package:spend_trends/widgets/category_picker.dart';
+import 'package:spend_trends/widgets/exclude_from_lifestyle_costs_switch.dart';
 
-/// Lists transactions where [rule] is primary; retarget or remove the rule.
+/// Lists transactions where [rule] is primary; retarget the rule, exclude
+/// what it categorizes from lifestyle costs, or remove it.
 class const ManageRuleSheet({required final CategorizationRule rule})
     extends ConsumerStatefulWidget {
   static Future<void> show(
@@ -82,6 +84,7 @@ class _ManageRuleSheetState() extends ConsumerState<ManageRuleSheet> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           _header(categoryName),
+          _lifestyleCostsExclusionSwitch(),
           Expanded(child: _body(categoryNameById)),
           _actions(),
         ],
@@ -146,6 +149,21 @@ class _ManageRuleSheetState() extends ConsumerState<ManageRuleSheet> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _lifestyleCostsExclusionSwitch() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+        ELayout.spaceLg,
+        0,
+        ELayout.spaceLg,
+        ELayout.spaceMd,
+      ),
+      child: ExcludeFromLifestyleCostsSwitch(
+        excludes: _rule.excludesFromLifestyleCosts,
+        onChanged: _busy ? null : _setExcludesFromLifestyleCosts,
       ),
     );
   }
@@ -303,18 +321,35 @@ class _ManageRuleSheetState() extends ConsumerState<ManageRuleSheet> {
     } catch (error) {
       if (!mounted) return;
       setState(() => _busy = false);
-      await showDialog<void>(
-        context: context,
-        builder: (dialogContext) => AlertDialog(
-          title: const Text('Could not change category'),
-          content: Text('$error'),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(dialogContext).pop(),
-              child: const Text('OK'),
-            ),
-          ],
-        ),
+      await _showFailure(title: 'Could not change category', error: error);
+    }
+  }
+
+  Future<void> _setExcludesFromLifestyleCosts(bool excludes) async {
+    setState(() => _busy = true);
+    try {
+      final categorizer = await ref.read(categorizerProvider.future);
+      await categorizer.applyRuleChanges(
+        drafts: [
+          RuleDraft.retargeting(
+            _rule,
+            categoryId: _rule.categoryId,
+            excludesFromLifestyleCosts: excludes,
+          ),
+        ],
+      );
+      ref.read(spendDataChangedProvider.notifier).notify();
+      if (!mounted) return;
+      setState(() {
+        _rule = _rule.copyWith(excludesFromLifestyleCosts: excludes);
+        _busy = false;
+      });
+    } catch (error) {
+      if (!mounted) return;
+      setState(() => _busy = false);
+      await _showFailure(
+        title: 'Could not change lifestyle costs exclusion',
+        error: error,
       );
     }
   }
@@ -363,20 +398,27 @@ class _ManageRuleSheetState() extends ConsumerState<ManageRuleSheet> {
     } catch (error) {
       if (!mounted) return;
       setState(() => _busy = false);
-      await showDialog<void>(
-        context: context,
-        builder: (dialogContext) => AlertDialog(
-          title: const Text('Could not remove rule'),
-          content: Text('$error'),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(dialogContext).pop(),
-              child: const Text('OK'),
-            ),
-          ],
-        ),
-      );
+      await _showFailure(title: 'Could not remove rule', error: error);
     }
+  }
+
+  Future<void> _showFailure({
+    required String title,
+    required Object error,
+  }) async {
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(title),
+        content: Text('$error'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: const Text('OK'),
+          ),
+        ],
+      ),
+    );
   }
 
   static String _categoryLabel(
@@ -441,7 +483,9 @@ class const _PrimaryMatchRow({
 
   @override
   Widget build(BuildContext context) {
-    final dateLabel = DateFormat.yMMMd().format(transaction.postedAt.toLocal());
+    final dateLabel = DateFormat.yMMMd().format(
+      transaction.postedDay.localMidnight,
+    );
     return Padding(
       padding: const EdgeInsets.only(bottom: ELayout.spaceSm),
       child: ESurface(

@@ -100,7 +100,7 @@ class ImportCopilotTransactionsCsv({
     final externalKey = '$accountId|${parsed.externalId}';
     final contentKey = copilotContentPresenceKey(
       accountId: accountId,
-      postedAt: parsed.postedAt,
+      postedDay: parsed.postedAt.calendarDay,
       amountCents: parsed.amountCents,
       normalizedMerchant: normalizedMerchant,
     );
@@ -202,7 +202,7 @@ class ImportCopilotTransactionsCsv({
           presence;
       final contentKey = copilotContentPresenceKey(
         accountId: transaction.accountId,
-        postedAt: transaction.postedAt,
+        postedDay: transaction.postedDay,
         amountCents: transaction.amountCents,
         normalizedMerchant: transaction.normalizedMerchant,
       );

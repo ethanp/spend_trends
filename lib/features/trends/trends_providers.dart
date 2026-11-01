@@ -1,22 +1,29 @@
+import 'dart:isolate';
+
 import 'package:ethan_ui/ethan_ui.dart';
+import 'package:ethan_utils/ethan_utils.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:spend_trends/domain/account.dart';
 import 'package:spend_trends/domain/account_balance_snapshot.dart';
 import 'package:spend_trends/domain/category.dart';
 import 'package:spend_trends/domain/category_group.dart';
 import 'package:spend_trends/domain/imported_net_worth_day.dart';
+import 'package:spend_trends/domain/life_event.dart';
 import 'package:spend_trends/domain/owned_asset.dart';
 import 'package:spend_trends/domain/transaction.dart';
 import 'package:spend_trends/domain/trend_spend_rate.dart';
 import 'package:spend_trends/features/activity/transactions_list_provider.dart';
 import 'package:spend_trends/features/banks/banks_providers.dart';
 import 'package:spend_trends/features/categories/categories_providers.dart';
+import 'package:spend_trends/features/life_events/life_events_providers.dart';
 import 'package:spend_trends/features/owned_assets/owned_assets_providers.dart';
 import 'package:spend_trends/providers/spend_data_changed.dart';
 import 'package:spend_trends/services/sqlite/imported_net_worth_days_repository.dart';
 
 import 'build_trends_charts.dart';
 import 'trends_chart_bundle.dart';
+
+const _log = ELogger('Trends');
 
 /// Shared yr/mo/day display rate for every Trends chart and the three numbers.
 final trendSpendRateProvider =
@@ -55,9 +62,13 @@ final importedNetWorthDaysProvider = FutureProvider<List<ImportedNetWorthDay>>((
   return repository.listAll();
 });
 
+/// Every Trends chart from the live tables. The series math scans every
+/// transaction against a three-year kernel, so it runs on another isolate
+/// and the spinner keeps turning.
 final trendsChartBundleProvider = FutureProvider<TrendsChartBundle>((
   ref,
 ) async {
+  final stopwatch = Stopwatch()..start();
   final List<BankTransaction> transactions = await ref.watch(
     transactionsListProvider.future,
   );
@@ -79,13 +90,26 @@ final trendsChartBundleProvider = FutureProvider<TrendsChartBundle>((
   final List<ImportedNetWorthDay> importedNetWorthDays = await ref.watch(
     importedNetWorthDaysProvider.future,
   );
-  return const BuildTrendsCharts().build(
-    transactions: transactions,
-    categories: categories,
-    groups: groups,
-    accounts: accounts.values.toList(),
-    ownedAssets: ownedAssets,
-    balanceSnapshots: balanceSnapshots,
-    importedNetWorthDays: importedNetWorthDays,
+  final List<LifeEvent> lifeEvents = await ref.watch(lifeEventsProvider.future);
+  final int inputsLoadedMs = stopwatch.elapsedMilliseconds;
+  final List<Account> accountList = accounts.values.toList();
+  final TrendsChartBundle bundle = await Isolate.run(
+    () => const BuildTrendsCharts().build(
+      transactions: transactions,
+      categories: categories,
+      groups: groups,
+      accounts: accountList,
+      ownedAssets: ownedAssets,
+      balanceSnapshots: balanceSnapshots,
+      importedNetWorthDays: importedNetWorthDays,
+      lifeEvents: lifeEvents,
+    ),
   );
+  _log.log(
+    'Chart bundle from ${transactions.length} transactions: inputs loaded in '
+    '${inputsLoadedMs}ms, series built in '
+    '${stopwatch.elapsedMilliseconds - inputsLoadedMs}ms '
+    '(${bundle.phaseSummary})',
+  );
+  return bundle;
 });

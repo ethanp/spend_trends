@@ -1,5 +1,3 @@
-import 'package:ethan_utils/ethan_utils.dart';
-
 import 'dart:convert';
 
 import 'package:spend_trends/services/simplefin/simplefin_client.dart';
@@ -9,20 +7,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 
 void main() {
-  group('asCents', () {
-    test('parses negative dollars', () {
-      expect('-12.34'.asCents, -1234);
-    });
-
-    test('parses fractional cents', () {
-      expect('0.1'.asCents, 10);
-    });
-
-    test('parses whole dollars', () {
-      expect('100'.asCents, 10000);
-    });
-  });
-
   group('SimpleFinClient.parseAccountSet', () {
     test('parses accounts and errors', () {
       final accountSet = SimpleFinClient.parseAccountSet({
@@ -148,6 +132,39 @@ void main() {
       );
     });
   });
+
+  group('fetch failure messages', () {
+    test('bridge HTML error page shows its title and retry advice', () async {
+      final client = SimpleFinClient(httpClient: _BridgeOutageClient());
+      await expectLater(
+        client.fetchAccounts(
+          accessUrl: Uri.parse(
+            'https://demo:demo@bridge.simplefin.org/simplefin',
+          ),
+        ),
+        throwsA(
+          isA<SimpleFinFetchException>().having(
+            (exception) => exception.message,
+            'message',
+            'SimpleFIN fetch failed (HTTP 500: Unexpected Error - SimpleFIN '
+                'Bridge). Wait a minute or two and retry.',
+          ),
+        ),
+      );
+    });
+  });
+}
+
+class _BridgeOutageClient() extends http.BaseClient {
+  @override
+  Future<http.StreamedResponse> send(http.BaseRequest request) async {
+    final body = utf8.encode(
+      '<!doctype html> <html lang="en"> <head> '
+      '<title>Unexpected Error - SimpleFIN Bridge</title> </head> '
+      '<body>Something broke</body></html>',
+    );
+    return http.StreamedResponse(Stream<List<int>>.fromIterable([body]), 500);
+  }
 }
 
 class _FakeClaimClient() extends http.BaseClient {

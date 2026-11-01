@@ -2,7 +2,6 @@ import 'package:ethan_ui/ethan_ui.dart';
 import 'package:ethan_utils/ethan_utils.dart';
 import 'package:flutter/material.dart';
 import 'package:spend_trends/domain/transaction.dart';
-import 'package:spend_trends/widgets/app_card.dart';
 
 /// Sticky Activity chrome: search and uncategorized-only.
 class const ActivityFilterBar({
@@ -56,7 +55,8 @@ class const _UncategorizedOnlyToggle({
 }) extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    return AppCard(
+    return ECard(
+      kind: ESurfaceKind.row,
       padding: const EdgeInsets.symmetric(
         horizontal: ELayout.spaceMd,
         vertical: ELayout.spaceSm,
@@ -113,7 +113,8 @@ class const ActivityVisibleSumBar({
         ? EColors.danger
         : EColors.textSecondary;
 
-    return AppCard(
+    return ECard(
+      kind: ESurfaceKind.row,
       padding: const EdgeInsets.symmetric(
         horizontal: ELayout.spaceMd,
         vertical: ELayout.spaceSm,

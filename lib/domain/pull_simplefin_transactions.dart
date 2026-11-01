@@ -1,3 +1,4 @@
+import 'package:spend_trends/domain/categorizer.dart';
 import 'package:spend_trends/services/simplefin/simplefin_access_store.dart';
 import 'package:spend_trends/services/simplefin/simplefin_bank_target.dart';
 import 'package:spend_trends/services/simplefin/simplefin_account_mapper.dart';
@@ -27,6 +28,9 @@ class PullSimpleFinTransactions({
   required AccountBalanceSnapshotsRepository snapshotsRepository,
   required TransactionsRepository transactionsRepository,
   required final SimpleFinPullHistory _simpleFinPullHistory,
+
+  /// Runs the rules over what each pull wrote, even when it fails partway.
+  required final Categorizer _categorizer,
 }) {
   final SimpleFinWindowIngester _ingester = SimpleFinWindowIngester(
     client: _client,
@@ -83,6 +87,7 @@ class PullSimpleFinTransactions({
       await _accountsRepository.listAccounts(),
     );
 
+    var rulesRun = false;
     try {
       final pullResult = kind == SimpleFinPullKind.full
           ? await _pullFullHistory(
@@ -125,10 +130,13 @@ class PullSimpleFinTransactions({
         '${pullResult.errors.length} bridge errors',
       );
 
+      final rulesRerun = await _categorizer.recategorizeAll();
+      rulesRun = true;
       final result = SimpleFinPullResult(
         accountCount: pulledAccountCount,
         transactionCount: pullResult.transactionCount,
         errors: pullResult.errors,
+        rulesRerun: rulesRerun,
       );
       onProgress?.call(
         SimpleFinPullProgress.finished(
@@ -145,6 +153,8 @@ class PullSimpleFinTransactions({
         message: '$error',
         accounts: outcomes.drafts,
       );
+      // Rows written before the failure still need their categories.
+      if (!rulesRun) await _categorizer.recategorizeAll();
       rethrow;
     }
   }
@@ -184,17 +194,34 @@ class PullSimpleFinTransactions({
         'History window #${index + 1} '
         '${window.start.toIso8601String()} → ${window.end.toIso8601String()}',
       );
-      final result = await _ingester.ingest(
-        accessUrl: accessUrl,
-        window: window,
-        syncedAt: now,
-        outcomes: outcomes,
-        newlyInsertedByAccountExternalId: newlyInsertedByAccountExternalId,
-        onProgress: onProgress,
-        windowIndex: index + 1,
-        windowCount: windows.length,
-        knownBanks: knownBanks,
-      );
+      final SimpleFinWindowIngestResult result;
+      try {
+        result = await _ingester.ingest(
+          accessUrl: accessUrl,
+          window: window,
+          syncedAt: now,
+          outcomes: outcomes,
+          newlyInsertedByAccountExternalId: newlyInsertedByAccountExternalId,
+          onProgress: onProgress,
+          windowIndex: index + 1,
+          windowCount: windows.length,
+          knownBanks: knownBanks,
+        );
+      } on SimpleFinFetchException catch (error) {
+        if (!error.isRateLimited) rethrow;
+        // Windows run newest first, so what is missing is the oldest
+        // history; stop instead of hammering a throttled bridge.
+        aggregatedErrors.add(
+          SimpleFinError(
+            code: 'rateLimited',
+            message:
+                'SimpleFIN rate-limited the pull; history before '
+                '${window.end.toIso8601String().substring(0, 10)} was not '
+                'fetched. Try a full-history pull again later.',
+          ),
+        );
+        break;
+      }
       transactionCount += result.transactionCount;
       aggregatedErrors.addAll(result.errors);
     }

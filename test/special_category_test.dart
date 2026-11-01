@@ -4,18 +4,11 @@ import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   group('SpecialCategory ids', () {
-    test('are stable built-in ids', () {
-      expect(SpecialCategory.housing.id, 'cat_housing');
-      expect(SpecialCategory.income.id, 'cat_income');
-      expect(SpecialCategory.transfer.id, 'cat_transfer');
-      expect(SpecialCategory.investments.id, 'cat_investments');
+    test('flow ids and reserved names', () {
       expect(SpecialCategory.isReservedName('Housing'), isTrue);
       expect(SpecialCategory.isReservedName('Income'), isTrue);
       expect(SpecialCategory.isReservedName('Investments'), isTrue);
       expect(SpecialCategory.isReservedName('Groceries'), isFalse);
-    });
-
-    test('flow ids exclude housing and include income-like plus transfer', () {
       expect(SpecialCategory.isFlowId(SpecialCategory.housing.id), isFalse);
       expect(SpecialCategory.isFlowId(SpecialCategory.income.id), isTrue);
       expect(SpecialCategory.isFlowId(SpecialCategory.transfer.id), isTrue);

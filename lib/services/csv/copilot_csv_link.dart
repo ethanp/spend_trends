@@ -1,3 +1,4 @@
+import 'package:ethan_utils/ethan_utils.dart';
 import 'package:spend_trends/domain/transaction.dart';
 import 'package:spend_trends/services/csv/copilot_csv_parse.dart';
 import 'package:spend_trends/services/csv/in_progress_copilot_csv_import.dart';
@@ -15,7 +16,7 @@ class CopilotCsvLink() {
   }) {
     final match = session.matchingCharges.takeMatch(
       copilotAccountId: accountId,
-      postedAt: parsed.postedAt,
+      postedDay: parsed.postedAt.calendarDay,
       amountCents: parsed.amountCents,
       normalizedMerchant: normalizedMerchant,
     );
@@ -86,7 +87,7 @@ class CopilotCsvLink() {
   }) {
     final match = session.matchingCharges.findMatch(
       copilotAccountId: accountId,
-      postedAt: parsed.postedAt,
+      postedDay: parsed.postedAt.calendarDay,
       amountCents: parsed.amountCents,
       normalizedMerchant: normalizedMerchant,
       unmatchedOnly: false,

@@ -15,6 +15,7 @@ import 'package:spend_trends/widgets/app_sheet_panel.dart';
 import 'categories_providers.dart';
 import 'category_editor_identity.dart';
 import 'category_editor_merge.dart';
+import 'rule_match_caption_line.dart';
 
 /// Create or edit a category name (and optional group membership).
 class const CategoryEditorSheet({final SpendCategory? category})
@@ -249,7 +250,7 @@ class _CategoryEditorSheetState() extends ConsumerState<CategoryEditorSheet> {
         for (final rule in preview)
           Padding(
             padding: const EdgeInsets.only(bottom: ELayout.spaceXs),
-            child: Text(rule.matchCaption, style: EText.caption),
+            child: RuleMatchCaptionLine(rule: rule),
           ),
         if (categoryRules.length > preview.length)
           Text(

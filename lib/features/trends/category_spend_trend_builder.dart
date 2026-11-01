@@ -11,27 +11,27 @@ import 'package:flutter/material.dart';
 
 /// Daily spend totals keyed by category (and rollups).
 class const CategorySpendDailyMaps({
-  required final Map<String, Map<DateTime, double>> byCategoryId,
-  required final Map<DateTime, double> uncategorizedByDay,
-  required final Map<DateTime, double> totalByDay,
+  required final Map<String, Map<CalendarDay, double>> byCategoryId,
+  required final Map<CalendarDay, double> uncategorizedByDay,
+  required final Map<CalendarDay, double> totalByDay,
 }) {
   static CategorySpendDailyMaps fromTransactions({
     required List<BankTransaction> transactions,
     required Set<String> flowCategoryIds,
   }) {
-    final byCategoryId = <String, Map<DateTime, double>>{};
-    final uncategorizedByDay = <DateTime, double>{};
-    final totalByDay = <DateTime, double>{};
+    final byCategoryId = <String, Map<CalendarDay, double>>{};
+    final uncategorizedByDay = <CalendarDay, double>{};
+    final totalByDay = <CalendarDay, double>{};
 
     for (final transaction in transactions) {
       // Outflows add spend; inflows in a spend category subtract (refunds).
-      if (transaction.excluded || transaction.isZeroAmount) continue;
+      if (transaction.isZeroAmount) continue;
       final categoryId = transaction.categoryId;
       if (categoryId != null && flowCategoryIds.contains(categoryId)) {
         continue;
       }
 
-      final day = transaction.postedAt.startOfDay;
+      final CalendarDay day = transaction.postedDay;
       final spendCents = -transaction.amountCents.toDouble();
       totalByDay.update(
         day,
@@ -68,7 +68,7 @@ class const CategorySpendDailyMaps({
 /// Builds category / group / all-spend / affordability guide series.
 class const CategorySpendTrendBuilder({
   required final CategorySpendDailyMaps spendMaps,
-  required final Map<DateTime, double> incomeByDay,
+  required final Map<CalendarDay, double> incomeByDay,
   required final List<SpendCategory> categories,
   required final List<CategoryGroup> groups,
   required final Set<String> flowCategoryIds,
@@ -159,7 +159,7 @@ class const CategorySpendTrendBuilder({
       final members = partitioned.membersByGroupId[group.id];
       if (members == null || members.isEmpty) continue;
 
-      final groupDaily = <DateTime, double>{};
+      final groupDaily = <CalendarDay, double>{};
       final memberSeries = <CategoryTrendSeries>[];
       for (final member in members) {
         final memberDaily = spendMaps.byCategoryId[member.id];
@@ -244,7 +244,7 @@ class const CategorySpendTrendBuilder({
     required String id,
     required String name,
     required Color lineColor,
-    required Map<DateTime, double> dailyCents,
+    required Map<CalendarDay, double> dailyCents,
     bool dotted = false,
     bool guide = false,
     String? memberOfGroupSeriesId,
@@ -263,8 +263,8 @@ class const CategorySpendTrendBuilder({
   }
 
   static void _mergeDailyMaps(
-    Map<DateTime, double> into,
-    Map<DateTime, double> from,
+    Map<CalendarDay, double> into,
+    Map<CalendarDay, double> from,
   ) {
     for (final entry in from.entries) {
       into.update(

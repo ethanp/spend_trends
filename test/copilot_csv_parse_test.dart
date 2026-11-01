@@ -1,3 +1,4 @@
+import 'package:ethan_utils/ethan_utils.dart';
 import 'package:spend_trends/services/csv/copilot_csv_parse.dart';
 import 'package:spend_trends/services/csv/in_progress_copilot_csv_import.dart';
 import 'package:spend_trends/util/merchant_normalize.dart';
@@ -48,13 +49,13 @@ void main() {
       final postedAt = DateTime(2024, 6, 15, 14, 30);
       final left = copilotContentPresenceKey(
         accountId: 'acct-1',
-        postedAt: postedAt,
+        postedDay: postedAt.calendarDay,
         amountCents: -4250,
         normalizedMerchant: normalizeMerchant('Amazon.com*nz8kv'),
       );
       final right = copilotContentPresenceKey(
         accountId: 'acct-1',
-        postedAt: DateTime(2024, 6, 15, 9, 0),
+        postedDay: DateTime(2024, 6, 15, 9, 0).calendarDay,
         amountCents: -4250,
         normalizedMerchant: normalizeMerchant('AMAZON.COM*NZ8964S40'),
       );
@@ -65,13 +66,13 @@ void main() {
       final postedAt = DateTime(2024, 6, 15);
       final left = copilotContentPresenceKey(
         accountId: 'acct-1',
-        postedAt: postedAt,
+        postedDay: postedAt.calendarDay,
         amountCents: -1000,
         normalizedMerchant: 'coffee shop',
       );
       final right = copilotContentPresenceKey(
         accountId: 'acct-2',
-        postedAt: postedAt,
+        postedDay: postedAt.calendarDay,
         amountCents: -1000,
         normalizedMerchant: 'coffee shop',
       );

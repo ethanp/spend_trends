@@ -53,6 +53,7 @@ class const TrendsScreen() extends ConsumerWidget {
       body: SafeArea(
         bottom: false,
         child: trendsAsync.when(
+          skipLoadingOnReload: true,
           loading: () => const Center(child: CircularProgressIndicator()),
           error: (error, stackTrace) => ELoadErrorView(
             screenName: 'Trends',

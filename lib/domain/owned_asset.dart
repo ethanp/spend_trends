@@ -6,16 +6,16 @@ class const OwnedAsset({
   required final String name,
   required final OwnedAssetKind kind,
   final String? note,
-  final DateTime? soldOn,
+  final CalendarDay? soldOn,
 }) {
   /// True when [soldOn] is on or before [day] (you no longer hold the asset).
-  bool isSoldAsOf(DateTime day) {
+  bool isSoldAsOf(CalendarDay day) {
     final soldOn = this.soldOn;
     if (soldOn == null) return false;
-    return !soldOn.startOfDay.isAfter(day.startOfDay);
+    return !soldOn.isAfter(day);
   }
 
-  bool get isSold => isSoldAsOf(DateTime.now());
+  bool get isSold => isSoldAsOf(CalendarDay.today());
 
   OwnedAsset copyWith({
     String? id,
@@ -23,7 +23,7 @@ class const OwnedAsset({
     OwnedAssetKind? kind,
     String? note,
     bool clearNote = false,
-    DateTime? soldOn,
+    CalendarDay? soldOn,
     bool clearSoldOn = false,
   }) {
     return OwnedAsset(
@@ -40,7 +40,7 @@ class const OwnedAssetValuation({
   required final String id,
   required final String ownedAssetId,
   required final int valueCents,
-  required final DateTime valuedOn,
+  required final CalendarDay valuedOn,
 });
 
 /// An owned asset plus its valuation snapshots, newest [valuedOn] first.
@@ -56,7 +56,7 @@ class OwnedAssetWithValuations({
     return valuations.first.valueCents;
   }
 
-  DateTime? get latestValuedOn {
+  CalendarDay? get latestValuedOn {
     if (valuations.isEmpty) return null;
     return valuations.first.valuedOn;
   }
@@ -67,26 +67,39 @@ class OwnedAssetWithValuations({
     return latestValueCents;
   }
 
-  DateTime? get firstValuedOn {
+  CalendarDay? get firstValuedOn {
     if (valuations.isEmpty) return null;
     return valuations.last.valuedOn;
   }
 
   /// Latest snapshot on or before [day]; 0 before the first valuation and on or
   /// after [OwnedAsset.soldOn].
-  int valueCentsOn(DateTime day) {
-    final target = day.startOfDay;
-    if (asset.isSoldAsOf(target)) return 0;
+  int valueCentsOn(CalendarDay day) {
+    if (asset.isSoldAsOf(day)) return 0;
     for (final valuation in valuations) {
-      if (!valuation.valuedOn.startOfDay.isAfter(target)) {
-        return valuation.valueCents;
-      }
+      if (!valuation.valuedOn.isAfter(day)) return valuation.valueCents;
     }
     return 0;
   }
 
-  List<double> dailyCents(List<DateTime> chartDates) {
-    return [for (final day in chartDates) valueCentsOn(day).toDouble()];
+  /// [valueCentsOn] for each of [chartDays] (ascending) in one pass over the
+  /// valuations.
+  List<double> dailyCents(List<CalendarDay> chartDays) {
+    final oldestFirst = valuations.reversed.toList(growable: false);
+    final CalendarDay? soldOn = asset.soldOn;
+    var nextValuationIndex = 0;
+    var latestValueCents = 0;
+    final dailyCents = <double>[];
+    for (final day in chartDays) {
+      while (nextValuationIndex < oldestFirst.length &&
+          !oldestFirst[nextValuationIndex].valuedOn.isAfter(day)) {
+        latestValueCents = oldestFirst[nextValuationIndex].valueCents;
+        nextValuationIndex++;
+      }
+      final bool sold = soldOn != null && !soldOn.isAfter(day);
+      dailyCents.add(sold ? 0 : latestValueCents.toDouble());
+    }
+    return dailyCents;
   }
 
   static List<OwnedAssetValuation> _newestFirst(

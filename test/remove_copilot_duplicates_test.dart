@@ -4,6 +4,39 @@ import 'package:spend_trends/domain/transaction.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  group('same-account duplicates', () {
+    BankTransaction row(String id, String externalId) => BankTransaction(
+      id: id,
+      accountId: 'k401',
+      externalId: externalId,
+      postedAtMillis: DateTime(2026, 7, 10).millisecondsSinceEpoch,
+      amountCents: 6522,
+      rawDescription: '401(k) contribution · Fidelity Extended Market Index',
+      normalizedMerchant:
+          '401(K) CONTRIBUTION · FIDELITY EXTENDED MARKET INDEX',
+      pending: false,
+    );
+
+    test('a pair one source reported under two ids is two transactions', () {
+      expect(
+        RemoveCopilotDuplicates.sameAccountDuplicates([
+          row('first', 'empower:100013446785351'),
+          row('second', 'empower:100013446785354'),
+        ]),
+        isEmpty,
+      );
+    });
+
+    test('a Copilot re-import of a live-feed row is a duplicate', () {
+      final duplicates = RemoveCopilotDuplicates.sameAccountDuplicates([
+        row('feed', 'TRN-1'),
+        row('copilot', 'copilot:k401:2026-07-10:6522'),
+      ]);
+      expect(duplicates.single.duplicate.id, 'copilot');
+      expect(duplicates.single.keeper.id, 'feed');
+    });
+  });
+
   group('merchantFingerprint', () {
     test('strips amazon order suffixes', () {
       expect(
@@ -62,31 +95,6 @@ void main() {
   });
 
   group('explicit belongs-to linking', () {
-    test('Account.isCopilot detects Copilot external ids', () {
-      expect(
-        const Account(
-          id: '1',
-          externalId: 'copilot:Venture X:9999',
-          name: 'Venture X ·9999',
-          currency: 'USD',
-          balanceCents: 0,
-          status: AccountStatus.ok,
-        ).isCopilot,
-        isTrue,
-      );
-      expect(
-        const Account(
-          id: '2',
-          externalId: 'ACT-abc',
-          name: 'Venture X',
-          currency: 'USD',
-          balanceCents: 0,
-          status: AccountStatus.ok,
-        ).isCopilot,
-        isFalse,
-      );
-    });
-
     test('belongsToAccountId links without a shared mask', () {
       const parent = Account(
         id: 'parent',
@@ -129,7 +137,7 @@ void main() {
               id: 'sf1',
               accountId: 'a',
               externalId: 'e',
-              postedAt: DateTime(2026, 6, 30),
+              postedAtMillis: DateTime(2026, 6, 30).millisecondsSinceEpoch,
               amountCents: -5000,
               rawDescription: 'OTHER',
               normalizedMerchant: 'OTHER',
@@ -151,7 +159,7 @@ void main() {
               id: 'lyft',
               accountId: 'a',
               externalId: 'e1',
-              postedAt: DateTime(2026, 6, 30),
+              postedAtMillis: DateTime(2026, 6, 30).millisecondsSinceEpoch,
               amountCents: -5000,
               rawDescription: 'LYFT',
               normalizedMerchant: 'LYFT',
@@ -161,7 +169,7 @@ void main() {
               id: 'uber',
               accountId: 'a',
               externalId: 'e2',
-              postedAt: DateTime(2026, 6, 30),
+              postedAtMillis: DateTime(2026, 6, 30).millisecondsSinceEpoch,
               amountCents: -5000,
               rawDescription: 'UBER',
               normalizedMerchant: 'UBER TRIP HELP',

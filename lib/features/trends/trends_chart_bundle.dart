@@ -7,7 +7,14 @@ class const TrendsChartBundle({
   required final List<CategoryTrendSeries> cashFlows,
   required final ConsciousSpendingNumbers consciousSpendingNumbers,
   final List<CategoryTrendSeries> netWorth = const [],
+
+  /// Milliseconds each build phase took, in build order, for the app log.
+  final Map<String, int> phaseMillis = const {},
 }) {
+  String get phaseSummary =>
+      [for (final phase in phaseMillis.entries) '${phase.key} ${phase.value}ms']
+          .join(', ');
+
   bool get isEmpty =>
       categorySpend.isEmpty && cashFlows.isEmpty && netWorth.isEmpty;
 

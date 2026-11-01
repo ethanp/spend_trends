@@ -63,6 +63,11 @@ class const CategorizationRule({
 
   /// Why this rule exists and any assumptions behind it.
   final String? note,
+
+  /// What this rule categorizes is left out of lifestyle costs (a home
+  /// overlap, a closing): it keeps its category but fills no conscious
+  /// spending area and stays out of the FIRE projection's baseline.
+  final bool excludesFromLifestyleCosts = false,
 }) {
   bool get isLimitedToOneAccount => accountId != null;
 
@@ -83,15 +88,20 @@ class const CategorizationRule({
     return account.displayNameWithInstitution;
   }
 
-  CategorizationRule copyWith({String? categoryId, String? note}) =>
-      CategorizationRule(
-        id: id,
-        matchType: matchType,
-        pattern: pattern,
-        categoryId: categoryId ?? this.categoryId,
-        accountId: accountId,
-        note: note ?? this.note,
-      );
+  CategorizationRule copyWith({
+    String? categoryId,
+    String? note,
+    bool? excludesFromLifestyleCosts,
+  }) => CategorizationRule(
+    id: id,
+    matchType: matchType,
+    pattern: pattern,
+    categoryId: categoryId ?? this.categoryId,
+    accountId: accountId,
+    note: note ?? this.note,
+    excludesFromLifestyleCosts:
+        excludesFromLifestyleCosts ?? this.excludesFromLifestyleCosts,
+  );
 }
 
 enum RuleMatchType({required final int specificity}) {

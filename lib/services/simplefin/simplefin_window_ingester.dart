@@ -131,9 +131,8 @@ class SimpleFinWindowIngester({
     await Future.wait([...knownPulls, discovery]);
 
     if (tally.everyBankFailed) {
-      throw SimpleFinFetchException(
-        tally.firstFailure ?? 'Every bank failed to load.',
-      );
+      throw tally.firstFailure ??
+          SimpleFinFetchException('Every bank failed to load.');
     }
 
     return SimpleFinWindowIngestResult(
@@ -222,9 +221,8 @@ class SimpleFinWindowIngester({
       restrictToRequestedIds: false,
     );
     if (tally.everyBankFailed) {
-      throw SimpleFinFetchException(
-        tally.firstFailure ?? 'SimpleFIN fetch failed.',
-      );
+      throw tally.firstFailure ??
+          SimpleFinFetchException('SimpleFIN fetch failed.');
     }
     return SimpleFinWindowIngestResult(
       transactionCount: tally.transactionCount,
@@ -309,7 +307,7 @@ class SimpleFinWindowIngester({
     } on SimpleFinFetchException catch (error) {
       if (error.statusCode == 403 || error.statusCode == 402) rethrow;
       tally.failedBanks += 1;
-      tally.firstFailure ??= error.message;
+      tally.firstFailure ??= error;
       tally.errors.add(
         SimpleFinError(
           code: 'fetch',
@@ -409,7 +407,9 @@ class _WindowIngestTally() {
   int transactionCount = 0;
   int attemptedBanks = 0;
   int failedBanks = 0;
-  String? firstFailure;
+
+  /// Kept whole so its status (e.g. a 429 rate limit) reaches the pull.
+  SimpleFinFetchException? firstFailure;
   final List<SimpleFinError> errors = [];
 
   bool get everyBankFailed =>

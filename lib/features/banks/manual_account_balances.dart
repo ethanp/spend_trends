@@ -54,7 +54,7 @@ class const ManualAccountBalances({
       children: [
         Expanded(
           child: Text(
-            DateFormat.yMMMd().format(snapshot.recordedOn),
+            DateFormat.yMMMd().format(snapshot.recordedDay.localMidnight),
             style: EText.body.medium,
           ),
         ),

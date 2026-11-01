@@ -75,7 +75,7 @@ class const ActivityDetailPane({
     for (final transaction in uncategorized) {
       final amount = transaction.amountCents.abs();
       if (transaction.isOutflow) outflowCents += amount;
-      if (transaction.postedAt.toLocal().yearMonthKey == yearMonth) {
+      if (transaction.postedDay.yearMonthKey == yearMonth) {
         thisMonthCount += 1;
         thisMonthCents += amount;
       } else {

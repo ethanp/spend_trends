@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:spend_trends/domain/account.dart';
 import 'package:spend_trends/domain/account_balance_snapshot.dart';
 import 'package:spend_trends/domain/pull_simplefin_transactions.dart';
+import 'package:spend_trends/features/categories/categories_providers.dart';
 import 'package:spend_trends/providers/spend_data_changed.dart';
 import 'package:spend_trends/services/simplefin/simplefin_access_store.dart';
 import 'package:spend_trends/services/sqlite/account_balance_snapshots_repository.dart';
@@ -35,6 +36,7 @@ final pullSimpleFinTransactionsProvider =
         simpleFinPullHistory: await ref.watch(
           simpleFinPullHistoryProvider.future,
         ),
+        categorizer: await ref.watch(categorizerProvider.future),
       );
     });
 

@@ -10,7 +10,6 @@ import 'package:spend_trends/domain/stay_chain.dart';
 import 'package:spend_trends/features/life_chains/life_chain_screen.dart';
 import 'package:spend_trends/features/life_events/life_event_form_sheet.dart';
 import 'package:spend_trends/features/life_chains/life_chain_providers.dart';
-import 'package:spend_trends/widgets/app_card.dart';
 import 'package:spend_trends/widgets/app_primary_button.dart';
 
 import 'life_events_providers.dart';
@@ -85,7 +84,8 @@ class const _LifeEventsBody({
         ),
         const SizedBox(height: ELayout.spaceSm),
         if (lifeEvents.isEmpty)
-          AppCard(
+          ECard(
+            kind: ESurfaceKind.row,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
@@ -200,7 +200,8 @@ class const _LifeEventListTile({
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: onActivated,
-      child: AppCard(
+      child: ECard(
+        kind: ESurfaceKind.row,
         padding: const EdgeInsets.all(ELayout.spaceMd),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,

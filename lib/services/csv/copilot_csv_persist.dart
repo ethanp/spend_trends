@@ -88,7 +88,7 @@ class CopilotCsvPersist({
       id: uuid.v4(),
       accountId: accountId,
       externalId: parsed.externalId,
-      postedAt: parsed.postedAt,
+      postedAtMillis: parsed.postedAt.millisecondsSinceEpoch,
       amountCents: parsed.amountCents,
       rawDescription: parsed.name,
       normalizedMerchant: normalizedMerchant,
@@ -97,7 +97,7 @@ class CopilotCsvPersist({
       transactionType: parsed.transactionType,
       excluded: parsed.excluded,
       recurringSeries: parsed.recurringSeries,
-      importedAt: session.importedAt,
+      importedAtMillis: session.importedAt.millisecondsSinceEpoch,
     );
   }
 

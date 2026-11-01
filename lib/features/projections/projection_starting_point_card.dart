@@ -8,7 +8,6 @@ import 'package:spend_trends/domain/life_event.dart';
 import 'package:spend_trends/domain/projection/retirement_projection.dart';
 import 'package:spend_trends/features/banks/banks_providers.dart';
 import 'package:spend_trends/theme/finance_colors.dart';
-import 'package:spend_trends/widgets/app_card.dart';
 
 /// What the projection reads from live data, with each tax bucket's
 /// accounts listed under it.
@@ -20,7 +19,8 @@ class const ProjectionStartingPointCard({
     final Map<String, Account> accounts =
         ref.watch(accountsMapProvider).asData?.value ?? const {};
     final start = projection.start;
-    return AppCard(
+    return ECard(
+      kind: ESurfaceKind.row,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [

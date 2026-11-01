@@ -1,3 +1,4 @@
+import 'package:ethan_utils/ethan_utils.dart';
 import 'package:spend_trends/domain/account.dart';
 import 'package:spend_trends/domain/account_balance_snapshot.dart';
 import 'package:spend_trends/domain/account_kind.dart';
@@ -46,7 +47,7 @@ void main() {
         id: 'deposit',
         accountId: 'a1',
         externalId: 'd1',
-        postedAt: day1,
+        postedAtMillis: day1.millisecondsSinceEpoch,
         amountCents: 2000,
         rawDescription: 'Pay',
         normalizedMerchant: 'PAY',
@@ -56,7 +57,7 @@ void main() {
         id: 'spend',
         accountId: 'a1',
         externalId: 's1',
-        postedAt: day2,
+        postedAtMillis: day2.millisecondsSinceEpoch,
         amountCents: -500,
         rawDescription: 'Shop',
         normalizedMerchant: 'SHOP',
@@ -339,7 +340,9 @@ void main() {
           id: 't$dayOffset',
           accountId: 'a1',
           externalId: 'e$dayOffset',
-          postedAt: start.add(Duration(days: dayOffset)),
+          postedAtMillis: start
+              .add(Duration(days: dayOffset))
+              .millisecondsSinceEpoch,
           amountCents: -100,
           rawDescription: 'Coffee',
           normalizedMerchant: 'COFFEE',
@@ -399,7 +402,7 @@ void main() {
         id: 'copilot-spend',
         accountId: 'copilot',
         externalId: 'c1',
-        postedAt: day1,
+        postedAtMillis: day1.millisecondsSinceEpoch,
         amountCents: -2000,
         rawDescription: 'Shop',
         normalizedMerchant: 'SHOP',
@@ -409,7 +412,7 @@ void main() {
         id: 'simplefin-spend',
         accountId: 'simplefin',
         externalId: 's1',
-        postedAt: day2,
+        postedAtMillis: day2.millisecondsSinceEpoch,
         amountCents: -500,
         rawDescription: 'Cafe',
         normalizedMerchant: 'CAFE',
@@ -489,7 +492,7 @@ void main() {
         id: 'valon-payment',
         accountId: 'valon',
         externalId: 'v1',
-        postedAt: day1,
+        postedAtMillis: day1.millisecondsSinceEpoch,
         amountCents: 50000,
         rawDescription: 'Mortgage',
         normalizedMerchant: 'VALON',
@@ -568,13 +571,13 @@ void main() {
             id: 'v1',
             ownedAssetId: 'home',
             valueCents: 20000000,
-            valuedOn: DateTime(2024, 1, 1),
+            valuedOn: DateTime(2024, 1, 1).calendarDay,
           ),
           OwnedAssetValuation(
             id: 'v2',
             ownedAssetId: 'home',
             valueCents: 25000000,
-            valuedOn: DateTime(2024, 1, 5),
+            valuedOn: DateTime(2024, 1, 5).calendarDay,
           ),
         ],
       ),
@@ -639,7 +642,7 @@ void main() {
         id: 'contribution',
         accountId: 'hsa',
         externalId: 'c1',
-        postedAt: DateTime(2024, 1, 4),
+        postedAtMillis: DateTime(2024, 1, 4).millisecondsSinceEpoch,
         amountCents: 99999,
         rawDescription: 'Contribution',
         normalizedMerchant: 'CONTRIBUTION',
@@ -651,13 +654,13 @@ void main() {
         id: 'later',
         accountId: 'hsa',
         balanceCents: 150000,
-        recordedOn: DateTime(2024, 1, 6),
+        recordedDay: DateTime(2024, 1, 6).calendarDay,
       ),
       AccountBalanceSnapshot(
         id: 'earlier',
         accountId: 'hsa',
         balanceCents: 100000,
-        recordedOn: DateTime(2024, 1, 3),
+        recordedDay: DateTime(2024, 1, 3).calendarDay,
       ),
     ];
 
@@ -690,7 +693,7 @@ void main() {
             id: 'v1',
             ownedAssetId: 'car',
             valueCents: 1800000,
-            valuedOn: start,
+            valuedOn: start.calendarDay,
           ),
         ],
       ),
@@ -840,7 +843,9 @@ void main() {
             id: 't$dayOffset',
             accountId: 'checking',
             externalId: 'e$dayOffset',
-            postedAt: start.add(Duration(days: dayOffset)),
+            postedAtMillis: start
+                .add(Duration(days: dayOffset))
+                .millisecondsSinceEpoch,
             amountCents: 1000,
             rawDescription: 'Pay',
             normalizedMerchant: 'PAY',
@@ -914,7 +919,7 @@ void main() {
               id: 'v1',
               ownedAssetId: 'home',
               valueCents: 20000000,
-              valuedOn: DateTime(2024, 1, 15),
+              valuedOn: DateTime(2024, 1, 15).calendarDay,
             ),
           ],
         ),
@@ -1013,7 +1018,7 @@ void main() {
           id: 't1',
           accountId: checking.id,
           externalId: 'e1',
-          postedAt: firstPostedOn,
+          postedAtMillis: firstPostedOn.millisecondsSinceEpoch,
           amountCents: 5000,
           rawDescription: 'Pay',
           normalizedMerchant: 'PAY',
@@ -1081,7 +1086,7 @@ void main() {
           id: 'deposit',
           accountId: 'brokerage',
           externalId: 'deposit',
-          postedAt: chartDates[3],
+          postedAtMillis: chartDates[3].millisecondsSinceEpoch,
           amountCents: 10000,
           rawDescription: 'Deposit',
           normalizedMerchant: 'DEPOSIT',
@@ -1093,7 +1098,7 @@ void main() {
           id: 'brokerage@2026-10-21',
           accountId: 'brokerage',
           balanceCents: 90000,
-          recordedOn: chartDates[1],
+          recordedDay: chartDates[1].calendarDay,
         ),
       ];
 
@@ -1129,13 +1134,13 @@ void main() {
         id: 'google-401k@2023-11-27',
         accountId: 'google-401k',
         balanceCents: 500000,
-        recordedOn: chartDates[0],
+        recordedDay: chartDates[0].calendarDay,
       ),
       AccountBalanceSnapshot(
         id: 'google-401k@2023-11-29',
         accountId: 'google-401k',
         balanceCents: 0,
-        recordedOn: chartDates[2],
+        recordedDay: chartDates[2].calendarDay,
       ),
     ];
 
@@ -1167,7 +1172,7 @@ void main() {
     final importedNetWorthDays = [
       for (var dayIndex = 0; dayIndex < 20; dayIndex++)
         ImportedNetWorthDay(
-          recordedOn: chartDates[dayIndex],
+          day: chartDates[dayIndex].calendarDay,
           netWorthCents: 777700,
         ),
     ];

@@ -1,7 +1,4 @@
 import 'package:spend_trends/app_identity.dart';
-import 'package:spend_trends/migrations/migrate_life_event_occurred_on_keys.dart';
-import 'package:spend_trends/migrations/migrate_special_categories.dart';
-import 'package:spend_trends/migrations/seed_default_categories.dart';
 import 'package:spend_trends/services/sync/powersync_schema.dart';
 import 'package:ethan_sync/ethan_sync.dart';
 import 'package:ethan_utils/ethan_utils.dart';
@@ -42,11 +39,6 @@ SyncConfig buildSpendTrendsSyncConfig(SharedPreferences preferences) {
       strategy: TieredBatchUploadStrategy(dependencies: _fkDependencies),
       conflictColumns: _conflictColumns,
     ),
-    startupHooks: [
-      seedDefaultCategoriesIfNeeded,
-      migrateLifeEventOccurredOnKeys,
-      ensureSpecialCategoriesMigrated,
-    ],
     onSyncError: _log.warn,
   );
 }

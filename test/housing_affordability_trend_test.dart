@@ -14,7 +14,9 @@ void main() {
           id: 'income$dayOffset',
           accountId: 'a1',
           externalId: 'i$dayOffset',
-          postedAt: start.add(Duration(days: dayOffset)),
+          postedAtMillis: start
+              .add(Duration(days: dayOffset))
+              .millisecondsSinceEpoch,
           amountCents: 10000,
           rawDescription: 'Pay',
           normalizedMerchant: 'PAY',
@@ -25,7 +27,9 @@ void main() {
           id: 'housing$dayOffset',
           accountId: 'a1',
           externalId: 'h$dayOffset',
-          postedAt: start.add(Duration(days: dayOffset)),
+          postedAtMillis: start
+              .add(Duration(days: dayOffset))
+              .millisecondsSinceEpoch,
           amountCents: -2000,
           rawDescription: 'Rent',
           normalizedMerchant: 'RENT',

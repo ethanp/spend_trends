@@ -10,7 +10,6 @@ import 'package:spend_trends/domain/conscious_spending_area.dart';
 import 'package:spend_trends/features/categories/categories_providers.dart';
 import 'package:spend_trends/providers/spend_data_changed.dart';
 import 'package:spend_trends/services/sqlite/categories_repository.dart';
-import 'package:spend_trends/services/sqlite/transactions_repository.dart';
 
 /// Categorization writes, each through the same repository / [Categorizer]
 /// call the UI makes, then one spend-data refresh for open screens. Categories
@@ -31,10 +30,10 @@ class const AgentApiWriteRoutes({required final ProviderContainer container}) {
 
   Future<Response> _setNote(Request request, String transactionId) async {
     final body = await request.readJsonObject();
-    final TransactionsRepository transactionsRepository = await container.read(
-      transactionsRepositoryProvider.future,
+    final Categorizer categorizer = await container.read(
+      categorizerProvider.future,
     );
-    await transactionsRepository.setNote(
+    await categorizer.setNote(
       transactionId: transactionId,
       note: body['note'] as String?,
     );
@@ -73,6 +72,8 @@ class const AgentApiWriteRoutes({required final ProviderContainer container}) {
           rule,
           categoryId: categoryId,
           note: body['note'] as String?,
+          excludesFromLifestyleCosts:
+              body['excludesFromLifestyleCosts'] as bool?,
         ),
       ],
     );

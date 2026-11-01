@@ -14,6 +14,7 @@ import 'package:spend_trends/theme/finance_colors.dart';
 import 'package:spend_trends/widgets/app_primary_button.dart';
 import 'package:spend_trends/widgets/app_sheet_panel.dart';
 import 'package:spend_trends/widgets/category_picker.dart';
+import 'package:spend_trends/widgets/exclude_from_lifestyle_costs_switch.dart';
 
 export 'package:spend_trends/features/activity/overlapping_merchant_contains_rules.dart';
 
@@ -23,18 +24,31 @@ class const RuleImpactGroup({
   required final String categoryId,
   required final String categoryName,
   required final List<BankTransaction> transactions,
+
+  /// Null until set here: the rule keeps the existing rule's value, or is
+  /// off when the rule is new.
+  final bool? excludesFromLifestyleCosts,
 }) {
+  RuleDraft get ruleDraft => RuleDraft(
+    pattern: pattern,
+    categoryId: categoryId,
+    excludesFromLifestyleCosts: excludesFromLifestyleCosts,
+  );
+
   RuleImpactGroup copyWith({
     String? pattern,
     String? categoryId,
     String? categoryName,
     List<BankTransaction>? transactions,
+    bool? excludesFromLifestyleCosts,
   }) {
     return RuleImpactGroup(
       pattern: pattern ?? this.pattern,
       categoryId: categoryId ?? this.categoryId,
       categoryName: categoryName ?? this.categoryName,
       transactions: transactions ?? this.transactions,
+      excludesFromLifestyleCosts:
+          excludesFromLifestyleCosts ?? this.excludesFromLifestyleCosts,
     );
   }
 }
@@ -218,7 +232,6 @@ class _RuleImpactConfirmSheetState()
     required List<SpendCategory> categories,
     required List<CategoryGroup> categoryGroups,
   }) {
-    final group = _groups[groupIndex];
     final rematch = _rematches[groupIndex];
     final related = overlappingMerchantContainsRules(
       candidatePattern: _patternControllers[groupIndex].text,
@@ -228,7 +241,7 @@ class _RuleImpactConfirmSheetState()
 
     return [
       _TargetCategoryButton(
-        categoryName: group.categoryName,
+        categoryName: _groups[groupIndex].categoryName,
         onActivated: () => _pickTargetCategory(
           groupIndex: groupIndex,
           categories: categories,
@@ -247,6 +260,42 @@ class _RuleImpactConfirmSheetState()
         },
       ),
       ExistingRuleOverlaps(overlaps: related),
+      const SizedBox(height: ELayout.spaceSm),
+      _lifestyleCostsExclusionSwitch(groupIndex, existingRules),
+      ..._matchPreview(groupIndex, categoryNameById),
+      const SizedBox(height: ELayout.spaceLg),
+    ];
+  }
+
+  Widget _lifestyleCostsExclusionSwitch(
+    int groupIndex,
+    List<CategorizationRule> existingRules,
+  ) {
+    final group = _groups[groupIndex];
+    final CategorizationRule? updatedRule = group
+        .copyWith(pattern: _patternControllers[groupIndex].text)
+        .ruleDraft
+        .updatedRuleIn(existingRules);
+    return ExcludeFromLifestyleCostsSwitch(
+      excludes:
+          group.excludesFromLifestyleCosts ??
+          updatedRule?.excludesFromLifestyleCosts ??
+          false,
+      onChanged: (excludes) => setState(() {
+        _groups[groupIndex] = group.copyWith(
+          excludesFromLifestyleCosts: excludes,
+        );
+      }),
+    );
+  }
+
+  List<Widget> _matchPreview(
+    int groupIndex,
+    Map<String, String> categoryNameById,
+  ) {
+    final group = _groups[groupIndex];
+    final rematch = _rematches[groupIndex];
+    return [
       if (rematch.rematching) ...[
         const SizedBox(height: ELayout.spaceSm),
         const Align(
@@ -275,7 +324,6 @@ class _RuleImpactConfirmSheetState()
             categoryNameById,
           ),
         ),
-      const SizedBox(height: ELayout.spaceLg),
     ];
   }
 

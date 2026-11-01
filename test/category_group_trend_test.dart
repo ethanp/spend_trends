@@ -142,7 +142,9 @@ void main() {
           id: 'u$dayOffset',
           accountId: 'a1',
           externalId: 'u$dayOffset',
-          postedAt: start.add(Duration(days: dayOffset)),
+          postedAtMillis: start
+              .add(Duration(days: dayOffset))
+              .millisecondsSinceEpoch,
           amountCents: -2500,
           rawDescription: 'Unknown',
           normalizedMerchant: 'UNKNOWN',
@@ -175,7 +177,7 @@ BankTransaction _txn({
     id: id,
     accountId: 'a1',
     externalId: id,
-    postedAt: day,
+    postedAtMillis: day.millisecondsSinceEpoch,
     amountCents: amountCents,
     rawDescription: categoryId,
     normalizedMerchant: categoryId,

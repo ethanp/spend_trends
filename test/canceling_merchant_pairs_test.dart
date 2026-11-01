@@ -211,7 +211,7 @@ BankTransaction _txn({
     id: id,
     accountId: accountId,
     externalId: id,
-    postedAt: day ?? DateTime(2026, 6, 30),
+    postedAtMillis: (day ?? DateTime(2026, 6, 30)).millisecondsSinceEpoch,
     amountCents: amountCents,
     rawDescription: merchant,
     normalizedMerchant: merchant,

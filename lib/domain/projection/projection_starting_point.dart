@@ -13,8 +13,8 @@ import 'package:spend_trends/domain/transaction.dart';
 ///
 /// Home value and mortgage balance are today's; the home life event supplies
 /// the loan's terms and carrying costs (last year's Housing spend can include
-/// a home since sold). Non-housing spending, take-home, and payroll
-/// contributions are the last 365 days.
+/// a home since sold). Non-housing lifestyle spending (excluded spending out),
+/// take-home, and payroll contributions (401(k), HSA) are the last 365 days.
 class const ProjectionStartingPoint({
   required final DateTime today,
   required final Map<AccountTaxTreatment, double> balanceByTreatment,
@@ -58,7 +58,7 @@ class const ProjectionStartingPoint({
             -account.balanceCents / 100 >= _minimumMortgageDollars)
           account,
     ];
-    final yearAgo = today.startOfDay.shiftedByDays(-364);
+    final CalendarDay yearAgo = today.calendarDay.plusDays(-364);
     final cashFlowBreakdown = CashFlowBreakdown(
       categories: categories,
       accounts: accounts,
@@ -67,16 +67,12 @@ class const ProjectionStartingPoint({
     var nonHousingSpendingCents = 0;
     var payrollContributionCents = 0;
     for (final transaction in transactions) {
-      if (transaction.postedAt.startOfDay.isBefore(yearAgo)) continue;
+      if (transaction.postedDay.isBefore(yearAgo)) continue;
       final contribution = cashFlowBreakdown.contributionOf(transaction);
       takeHomeCents += contribution.takeHomeCents;
+      payrollContributionCents += contribution.payrollContributionCents;
       if (!SpecialCategory.isHousingId(transaction.categoryId)) {
-        nonHousingSpendingCents += contribution.spendingCents;
-      }
-      if (SpecialCategory.isInvestmentsId(transaction.categoryId) &&
-          treatmentByAccountId[transaction.accountId] ==
-              AccountTaxTreatment.traditional) {
-        payrollContributionCents += transaction.amountCents;
+        nonHousingSpendingCents += contribution.lifestyleSpendingCents;
       }
     }
 
@@ -87,7 +83,7 @@ class const ProjectionStartingPoint({
       homeValue: [
         for (final ownedAsset in ownedAssets)
           if (ownedAsset.asset.kind == OwnedAssetKind.home &&
-              !ownedAsset.asset.isSoldAsOf(today))
+              !ownedAsset.asset.isSoldAsOf(today.calendarDay))
             ownedAsset.currentValueCents / 100,
       ].fold(0.0, (total, value) => total + value),
       mortgageBalance: mortgages.fold(

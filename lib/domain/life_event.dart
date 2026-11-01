@@ -124,6 +124,19 @@ class const Mortgage({
         principal * monthlyRate / (1 - math.pow(1 + monthlyRate, -months));
     return monthly * 12;
   }
+
+  /// The principal part of each monthly payment on a loan of [principal],
+  /// first payment first, until it is paid off.
+  Iterable<double> principalPaidEachMonth(double principal) sync* {
+    final monthlyRate = ratePercent / 100 / 12;
+    final monthlyPayment = principalAndInterestAnnual(principal) / 12;
+    var owed = principal;
+    for (var payment = 0; payment < years * 12 && owed > 0; payment++) {
+      final paidDown = math.min(owed, monthlyPayment - owed * monthlyRate);
+      owed -= paidDown;
+      yield paidDown;
+    }
+  }
 }
 
 /// Owning a home: what it cost, how it is financed, and what it costs to

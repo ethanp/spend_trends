@@ -10,7 +10,7 @@ void main() {
       id: '1',
       accountId: 'a1',
       externalId: 'e1',
-      postedAt: DateTime(2024, 1, 1),
+      postedAtMillis: DateTime(2024, 1, 1).millisecondsSinceEpoch,
       amountCents: -4523,
       rawDescription: 'KROGER FUEL 123',
       normalizedMerchant: 'KROGER FUEL',

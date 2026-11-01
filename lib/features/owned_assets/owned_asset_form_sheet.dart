@@ -56,8 +56,9 @@ class _OwnedAssetFormSheetState() extends ConsumerState<OwnedAssetFormSheet> {
     _nameController = TextEditingController(text: existing?.asset.name ?? '');
     _noteController = TextEditingController(text: existing?.asset.note ?? '');
     _kind = existing?.asset.kind ?? OwnedAssetKind.home;
-    _soldOn = existing?.asset.soldOn?.startOfDay;
-    _valuedOn = (existing?.latestValuedOn ?? DateTime.now()).startOfDay;
+    _soldOn = existing?.asset.soldOn?.localMidnight;
+    _valuedOn =
+        existing?.latestValuedOn?.localMidnight ?? DateTime.now().startOfDay;
     _valueController = TextEditingController(
       text: existing == null
           ? ''
@@ -278,9 +279,9 @@ class _OwnedAssetFormSheetState() extends ConsumerState<OwnedAssetFormSheet> {
           name: name,
           kind: _kind,
           valueCents: valueCents,
-          valuedOn: _valuedOn,
+          valuedOn: _valuedOn.calendarDay,
           note: _noteController.text,
-          soldOn: _soldOn,
+          soldOn: _soldOn?.calendarDay,
         );
       } else {
         await _saveExisting(
@@ -311,19 +312,18 @@ class _OwnedAssetFormSheetState() extends ConsumerState<OwnedAssetFormSheet> {
           kind: _kind,
           note: _noteController.text,
           clearNote: _noteController.text.trim().isEmpty,
-          soldOn: _soldOn,
+          soldOn: _soldOn?.calendarDay,
           clearSoldOn: _soldOn == null,
         ),
       );
     }
     final valueChanged = valueCents != existing.latestValueCents;
-    final dateChanged =
-        _valuedOn.startOfDay != existing.latestValuedOn?.startOfDay;
+    final dateChanged = _valuedOn.calendarDay != existing.latestValuedOn;
     if (valueChanged || dateChanged) {
       await repository.appendValuation(
         ownedAssetId: existing.asset.id,
         valueCents: valueCents,
-        valuedOn: _valuedOn,
+        valuedOn: _valuedOn.calendarDay,
       );
     }
   }

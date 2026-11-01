@@ -32,28 +32,29 @@ final projectionAssumptionsProvider = FutureProvider<ProjectionAssumptions>((
 /// Live balances, homes, and last year's flows, as of today. Scans every
 /// transaction, so it is kept apart from the assumptions: saving one does
 /// not rebuild it.
-final projectionStartingPointProvider =
-    FutureProvider<ProjectionStartingPoint>((ref) async {
-      final Map<String, Account> accounts = await ref.watch(
-    accountsMapProvider.future,
-  );
-  final List<OwnedAssetWithValuations> ownedAssets = await ref.watch(
-    ownedAssetsListProvider.future,
-  );
-  final List<BankTransaction> transactions = await ref.watch(
-    transactionsListProvider.future,
-  );
-  final List<SpendCategory> categories = await ref.watch(
-    categoriesListProvider.future,
-  );
-      return ProjectionStartingPoint.from(
-        today: DateTime.now(),
-        accounts: accounts.values.toList(),
-        ownedAssets: ownedAssets,
-        transactions: transactions,
-        categories: categories,
-      );
-    });
+final projectionStartingPointProvider = FutureProvider<ProjectionStartingPoint>(
+  (ref) async {
+    final Map<String, Account> accounts = await ref.watch(
+      accountsMapProvider.future,
+    );
+    final List<OwnedAssetWithValuations> ownedAssets = await ref.watch(
+      ownedAssetsListProvider.future,
+    );
+    final List<BankTransaction> transactions = await ref.watch(
+      transactionsListProvider.future,
+    );
+    final List<SpendCategory> categories = await ref.watch(
+      categoriesListProvider.future,
+    );
+    return ProjectionStartingPoint.from(
+      today: DateTime.now(),
+      accounts: accounts.values.toList(),
+      ownedAssets: ownedAssets,
+      transactions: transactions,
+      categories: categories,
+    );
+  },
+);
 
 /// The projection from the live starting point, life events, and the saved
 /// assumptions.

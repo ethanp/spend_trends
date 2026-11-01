@@ -43,9 +43,9 @@ class OwnedAssetsRepository(final PowerSyncDatabase _powerSync) {
     required String name,
     required OwnedAssetKind kind,
     required int valueCents,
-    required DateTime valuedOn,
+    required CalendarDay valuedOn,
     String? note,
-    DateTime? soldOn,
+    CalendarDay? soldOn,
   }) async {
     final trimmedName = name.trim();
     if (trimmedName.isEmpty) {
@@ -56,7 +56,7 @@ class OwnedAssetsRepository(final PowerSyncDatabase _powerSync) {
       name: trimmedName,
       kind: kind,
       note: _normalizedNote(note),
-      soldOn: soldOn?.startOfDay,
+      soldOn: soldOn,
     );
     await _upsertAssetRow(asset);
     await appendValuation(
@@ -82,7 +82,7 @@ class OwnedAssetsRepository(final PowerSyncDatabase _powerSync) {
         name: trimmedName,
         note: note,
         clearNote: note == null,
-        soldOn: asset.soldOn?.startOfDay,
+        soldOn: asset.soldOn,
       ),
     );
   }
@@ -100,13 +100,13 @@ class OwnedAssetsRepository(final PowerSyncDatabase _powerSync) {
   Future<void> appendValuation({
     required String ownedAssetId,
     required int valueCents,
-    required DateTime valuedOn,
+    required CalendarDay valuedOn,
   }) async {
     await _powerSync.upsert('owned_asset_valuations', {
       'id': _uuid.v4(),
       'owned_asset_id': ownedAssetId,
       'value_cents': valueCents,
-      'valued_on': valuedOn.startOfDay.millisecondsSinceEpoch,
+      'valued_on': valuedOn.localMidnightMillis,
     });
   }
 
@@ -115,7 +115,7 @@ class OwnedAssetsRepository(final PowerSyncDatabase _powerSync) {
       'id': valuation.id,
       'owned_asset_id': valuation.ownedAssetId,
       'value_cents': valuation.valueCents,
-      'valued_on': valuation.valuedOn.startOfDay.millisecondsSinceEpoch,
+      'valued_on': valuation.valuedOn.localMidnightMillis,
     });
   }
 
@@ -148,7 +148,7 @@ class OwnedAssetsRepository(final PowerSyncDatabase _powerSync) {
       'name': asset.name,
       'asset_kind': asset.kind.storageValue,
       'note': asset.note,
-      'sold_on': asset.soldOn?.millisecondsSinceEpoch,
+      'sold_on': asset.soldOn?.localMidnightMillis,
     });
   }
 
@@ -158,12 +158,15 @@ class OwnedAssetsRepository(final PowerSyncDatabase _powerSync) {
 
   static OwnedAsset _assetFromRow(dynamic row) {
     final columns = (row as Map).cast<String, Object?>();
+    final int? soldOnMillis = columns['sold_on'].asIntOrNull();
     return OwnedAsset(
       id: columns['id'] as String,
       name: columns['name'] as String,
       kind: OwnedAssetKind.fromStorage(columns['asset_kind'] as String),
       note: columns['note'] as String?,
-      soldOn: columns['sold_on'].asIntOrNull()?.dateTimeFromMillis.startOfDay,
+      soldOn: soldOnMillis == null
+          ? null
+          : CalendarDay.fromLocalMillis(soldOnMillis),
     );
   }
 
@@ -173,7 +176,7 @@ class OwnedAssetsRepository(final PowerSyncDatabase _powerSync) {
       id: columns['id'] as String,
       ownedAssetId: columns['owned_asset_id'] as String,
       valueCents: columns['value_cents'].asInt(),
-      valuedOn: columns['valued_on'].asInt().dateTimeFromMillis.startOfDay,
+      valuedOn: CalendarDay.fromLocalMillis(columns['valued_on'].asInt()),
     );
   }
 

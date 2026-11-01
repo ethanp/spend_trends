@@ -72,13 +72,13 @@ class const ActivityDayListSliver({
 /// Groups transactions under Today / Yesterday / weekday headers.
 class ActivityDayGrouping._() {
   static List<ActivityDayListItem> items(List<BankTransaction> transactions) {
-    final today = DateTime.now().startOfDay;
-    final yesterday = today.subtract(const Duration(days: 1));
+    final today = CalendarDay.today();
+    final yesterday = today.plusDays(-1);
     final listItems = <ActivityDayListItem>[];
-    DateTime? currentDay;
+    CalendarDay? currentDay;
 
     for (final transaction in transactions) {
-      final day = transaction.postedAt.toLocal().startOfDay;
+      final CalendarDay day = transaction.postedDay;
       if (currentDay != day) {
         currentDay = day;
         listItems.add(
@@ -91,16 +91,17 @@ class ActivityDayGrouping._() {
   }
 
   static String _dayHeaderLabel(
-    DateTime day,
-    DateTime today,
-    DateTime yesterday,
+    CalendarDay day,
+    CalendarDay today,
+    CalendarDay yesterday,
   ) {
     if (day == today) return 'Today';
     if (day == yesterday) return 'Yesterday';
+    final DateTime midnight = day.localMidnight;
     if (day.year == today.year) {
-      return DateFormat('EEEE, MMM d').format(day);
+      return DateFormat('EEEE, MMM d').format(midnight);
     }
-    return DateFormat('EEEE, MMM d, y').format(day);
+    return DateFormat('EEEE, MMM d, y').format(midnight);
   }
 }
 

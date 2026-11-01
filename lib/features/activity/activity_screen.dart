@@ -22,7 +22,6 @@ import 'package:spend_trends/features/banks/banks_providers.dart';
 import 'package:spend_trends/features/banks/connection_status.dart';
 import 'package:spend_trends/providers/spend_data_changed.dart';
 import 'package:spend_trends/widgets/app_browse_split_shell.dart';
-import 'package:spend_trends/widgets/app_card.dart';
 
 class const ActivityScreen() extends ConsumerStatefulWidget {
   @override
@@ -291,7 +290,10 @@ class _ActivityScreenState() extends ConsumerState<ActivityScreen> {
         contentPadding: const EdgeInsets.symmetric(horizontal: ELayout.spaceLg),
       ),
       sliver: SliverToBoxAdapter(
-        child: AppCard(child: Text(message, style: EText.body.medium)),
+        child: ECard(
+          kind: ESurfaceKind.row,
+          child: Text(message, style: EText.body.medium),
+        ),
       ),
     );
   }
@@ -302,7 +304,8 @@ class _ActivityScreenState() extends ConsumerState<ActivityScreen> {
     return ListView(
       padding: ETabBarOverlay.paddingOf(context),
       children: [
-        AppCard(
+        ECard(
+          kind: ESurfaceKind.row,
           child: Text(
             connected
                 ? 'No transactions yet.'

@@ -1,3 +1,4 @@
+import 'package:ethan_utils/ethan_utils.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shelf/shelf.dart';
 import 'package:shelf_router/shelf_router.dart';
@@ -7,11 +8,9 @@ import 'package:spend_trends/agent_api/rule_change_request.dart';
 import 'package:spend_trends/domain/account.dart';
 import 'package:spend_trends/domain/account_kind.dart';
 import 'package:spend_trends/domain/account_tax_treatment.dart';
-import 'package:spend_trends/domain/categorizer.dart';
 import 'package:spend_trends/domain/manual_accounts.dart';
 import 'package:spend_trends/domain/pull_simplefin_transactions.dart';
 import 'package:spend_trends/features/banks/banks_providers.dart';
-import 'package:spend_trends/features/categories/categories_providers.dart';
 import 'package:spend_trends/providers/spend_data_changed.dart';
 import 'package:spend_trends/services/sqlite/accounts_repository.dart';
 
@@ -39,10 +38,6 @@ class const AgentApiBankRoutes({required final ProviderContainer container}) {
         account.id,
     };
     final result = await puller.pull(fullHistory: body['fullHistory'] == true);
-    final Categorizer categorizer = await container.read(
-      categorizerProvider.future,
-    );
-    final recategorized = await categorizer.recategorizeAll();
     container.read(spendDataChangedProvider.notifier).notify();
     final snapshot = await CategorizationSnapshot.load(container);
     return jsonOk({
@@ -57,10 +52,12 @@ class const AgentApiBankRoutes({required final ProviderContainer container}) {
           if (!accountIdsBefore.contains(account.id))
             snapshot.accountJson(account),
       ],
-      'recategorized': RuleChangeReport(
-        plan: recategorized,
-        snapshot: snapshot,
-      ).toJson(),
+      'recategorized': result.rulesRerun == null
+          ? null
+          : RuleChangeReport(
+              plan: result.rulesRerun!,
+              snapshot: snapshot,
+            ).toJson(),
     });
   }
 
@@ -118,7 +115,7 @@ class const AgentApiBankRoutes({required final ProviderContainer container}) {
       await manualAccounts.recordBalance(
         account: account,
         balanceCents: balanceCents,
-        recordedOn: _recordedOn(body),
+        recordedDay: _recordedDay(body),
       );
     }
     return _accountResponse(account.id);
@@ -147,7 +144,7 @@ class const AgentApiBankRoutes({required final ProviderContainer container}) {
     await manualAccounts.recordBalance(
       account: account,
       balanceCents: balanceCents,
-      recordedOn: _recordedOn(body),
+      recordedDay: _recordedDay(body),
     );
     return _accountResponse(accountId);
   }
@@ -170,9 +167,9 @@ class const AgentApiBankRoutes({required final ProviderContainer container}) {
     );
   }
 
-  static DateTime _recordedOn(Map<String, dynamic> body) =>
+  static CalendarDay _recordedDay(Map<String, dynamic> body) =>
       switch (body['recordedOn']) {
-        final String day => DateTime.parse(day),
-        _ => DateTime.now(),
+        final String day => DateTime.parse(day).calendarDay,
+        _ => CalendarDay.today(),
       };
 }

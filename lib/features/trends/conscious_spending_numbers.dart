@@ -1,9 +1,11 @@
 import 'package:ethan_utils/ethan_utils.dart';
-import 'package:intl/intl.dart';
 import 'package:spend_trends/domain/account.dart';
+import 'package:spend_trends/domain/account_balance_snapshot.dart';
 import 'package:spend_trends/domain/cash_flow_breakdown.dart';
 import 'package:spend_trends/domain/category.dart';
 import 'package:spend_trends/domain/conscious_spending_area.dart';
+import 'package:spend_trends/domain/life_event.dart';
+import 'package:spend_trends/domain/mortgage_principal.dart';
 import 'package:spend_trends/domain/transaction.dart';
 
 /// Look-back windows the three numbers are shown over, longest first.
@@ -16,25 +18,64 @@ enum ConsciousSpendingWindow({
   sixMonths(days: 183, label: '6mo'),
 }
 
-/// Plain totals (no smoothing) of take-home pay and each conscious spending
-/// area over [window] ending [lastDay].
+/// Plain totals (no smoothing) of take-home pay, payroll contributions, and
+/// each conscious spending area over [window] ending [lastDay]. Mortgage
+/// principal counts as Investments: it builds home equity.
 class const ConsciousSpendingWindowTotals({
   required final ConsciousSpendingWindow window,
   required final DateTime firstDay,
   required final DateTime lastDay,
   required final int takeHomeCents,
+  required final int payrollContributionCents,
   required final Map<ConsciousSpendingArea, int> centsByArea,
+
+  /// Spending its rule excludes from lifestyle costs; it fills no area.
+  required final int excludedFromLifestyleCents,
+
+  /// The part of Investments that is mortgage principal, moved there from
+  /// Fixed costs (or from excluded spending during a home overlap).
+  required final int mortgagePrincipalCents,
 }) {
-  int? percentOfTakeHome(ConsciousSpendingArea area) => area.percentOfIncome(
-    areaCents: centsByArea[area]!,
-    incomeCents: takeHomeCents,
-  );
+  /// Take-home plus payroll contributions: the paycheck before 401(k) and
+  /// HSA came out of it. Every area is a share of this, so Investments is
+  /// not pre-tax money over post-tax pay.
+  int get payCents => takeHomeCents + payrollContributionCents;
+
+  /// Pay left after the three areas and excluded spending: cash that piled
+  /// up (positive) or was drawn down (negative) over the window.
+  int get savingsCents =>
+      payCents -
+      excludedFromLifestyleCents -
+      centsByArea.values.fold(0, (sum, cents) => sum + cents);
+
+  int? percentOfPay(ConsciousSpendingArea area) =>
+      _percentOfPay(centsByArea[area]!);
+
+  int? get savingsPercentOfPay => _percentOfPay(savingsCents);
+
+  int? get excludedFromLifestylePercentOfPay =>
+      _percentOfPay(excludedFromLifestyleCents);
+
+  /// Rounded share of pay, or null when there is no pay.
+  int? _percentOfPay(int cents) {
+    if (payCents <= 0) return null;
+    return (cents / payCents * 100).round();
+  }
 
   /// Per year, so windows of different lengths compare directly.
   int annualCents(ConsciousSpendingArea area) =>
-      (centsByArea[area]! * 365 / window.days).round();
+      _annualized(centsByArea[area]!);
 
-  int get annualTakeHomeCents => (takeHomeCents * 365 / window.days).round();
+  int get annualSavingsCents => _annualized(savingsCents);
+
+  int get annualExcludedFromLifestyleCents =>
+      _annualized(excludedFromLifestyleCents);
+
+  int get annualPayCents => _annualized(payCents);
+
+  int get annualMortgagePrincipalCents => _annualized(mortgagePrincipalCents);
+
+  int _annualized(int cents) => (cents * 365 / window.days).round();
 }
 
 /// The three numbers over each [ConsciousSpendingWindow], all ending [lastDay].
@@ -43,65 +84,119 @@ class const ConsciousSpendingNumbers({
   required final Map<ConsciousSpendingWindow, ConsciousSpendingWindowTotals>
   totalsByWindow,
 }) {
+  /// One pass over [transactions]: each contribution is classified once and
+  /// added to every window that covers its day. Mortgage principal paid in a
+  /// window then moves to Investments.
   factory endingOn({
     required DateTime today,
     required List<BankTransaction> transactions,
     required List<SpendCategory> categories,
     required List<Account> accounts,
+    required List<AccountBalanceSnapshot> balanceSnapshots,
+    required List<LifeEvent> lifeEvents,
   }) {
-    final lastDay = today.startOfDay;
+    final CalendarDay lastDay = today.calendarDay;
     final cashFlowBreakdown = CashFlowBreakdown(
       categories: categories,
       accounts: accounts,
     );
-    return ConsciousSpendingNumbers(
-      lastDay: lastDay,
-      totalsByWindow: {
-        for (final window in ConsciousSpendingWindow.values)
-          window: _totalsOver(
-            window,
-            lastDay: lastDay,
-            transactions: transactions,
-            cashFlowBreakdown: cashFlowBreakdown,
-          ),
-      },
-    );
-  }
+    final List<_ConsciousSpendingWindowTally> windowTallies = [
+      for (final window in ConsciousSpendingWindow.values)
+        _ConsciousSpendingWindowTally(
+          window: window,
+          firstDay: lastDay.plusDays(-(window.days - 1)),
+        ),
+    ];
 
-  static ConsciousSpendingWindowTotals _totalsOver(
-    ConsciousSpendingWindow window, {
-    required DateTime lastDay,
-    required List<BankTransaction> transactions,
-    required CashFlowBreakdown cashFlowBreakdown,
-  }) {
-    final firstDay = lastDay.shiftedByDays(-(window.days - 1));
-    var takeHomeCents = 0;
-    final centsByArea = {
-      for (final area in ConsciousSpendingArea.values) area: 0,
-    };
     for (final transaction in transactions) {
-      final day = transaction.postedAt.startOfDay;
-      if (day.isBefore(firstDay) || day.isAfter(lastDay)) continue;
+      final CalendarDay day = transaction.postedDay;
+      if (day.isAfter(lastDay) ||
+          !windowTallies.any((windowTally) => windowTally.covers(day))) {
+        continue;
+      }
       final contribution = cashFlowBreakdown.contributionOf(transaction);
-      takeHomeCents += contribution.takeHomeCents;
-      final area = contribution.area;
-      if (area == null) continue;
-      centsByArea[area] = centsByArea[area]! + contribution.areaCents;
+      for (final windowTally in windowTallies) {
+        if (windowTally.covers(day)) windowTally.add(contribution);
+      }
     }
-    return ConsciousSpendingWindowTotals(
-      window: window,
-      firstDay: firstDay,
-      lastDay: lastDay,
-      takeHomeCents: takeHomeCents,
-      centsByArea: centsByArea,
+    final mortgagePrincipal = MortgagePrincipal.from(
+      through: lastDay,
+      accounts: accounts,
+      balanceSnapshots: balanceSnapshots,
+      transactions: transactions,
+      lifeEvents: lifeEvents,
+    );
+    for (final payment in mortgagePrincipal.payments) {
+      for (final windowTally in windowTallies) {
+        if (windowTally.covers(payment.day)) {
+          windowTally.addMortgagePrincipal(payment);
+        }
+      }
+    }
+
+    return ConsciousSpendingNumbers(
+      lastDay: lastDay.localMidnight,
+      totalsByWindow: {
+        for (final windowTally in windowTallies)
+          windowTally.window: windowTally.totalsThrough(lastDay),
+      },
     );
   }
 
   ConsciousSpendingWindowTotals totalsFor(ConsciousSpendingWindow window) =>
       totalsByWindow[window]!;
+}
 
-  /// e.g. `2y · 1y · 6mo ending Oct 24, 2026`
-  String get periodLabel =>
-      '${ConsciousSpendingWindow.values.map((window) => window.label).join(' · ')}'
-      ' ending ${DateFormat.yMMMd().format(lastDay)}';
+/// Running totals for one window while transactions and mortgage principal
+/// are read.
+class _ConsciousSpendingWindowTally({
+  required final ConsciousSpendingWindow window,
+  required final CalendarDay firstDay,
+}) {
+  int takeHomeCents = 0;
+  int payrollContributionCents = 0;
+  int excludedFromLifestyleCents = 0;
+  int mortgagePrincipalCents = 0;
+  final Map<ConsciousSpendingArea, int> centsByArea = {
+    for (final area in ConsciousSpendingArea.values) area: 0,
+  };
+
+  /// Callers have already dropped days after the window's last day.
+  bool covers(CalendarDay day) => !day.isBefore(firstDay);
+
+  void add(CashFlowContribution contribution) {
+    takeHomeCents += contribution.takeHomeCents;
+    payrollContributionCents += contribution.payrollContributionCents;
+    excludedFromLifestyleCents += contribution.excludedFromLifestyleCents;
+    final ConsciousSpendingArea? area = contribution.area;
+    if (area == null) return;
+    centsByArea[area] = centsByArea[area]! + contribution.areaCents;
+  }
+
+  /// Principal leaves what its payment filled (Housing in Fixed costs, or
+  /// excluded spending during a home overlap) for Investments, so Savings
+  /// does not change.
+  void addMortgagePrincipal(MortgagePrincipalPayment payment) {
+    mortgagePrincipalCents += payment.cents;
+    centsByArea[ConsciousSpendingArea.investments] =
+        centsByArea[ConsciousSpendingArea.investments]! + payment.cents;
+    if (payment.isHomeOverlap) {
+      excludedFromLifestyleCents -= payment.cents;
+      return;
+    }
+    centsByArea[ConsciousSpendingArea.fixedCosts] =
+        centsByArea[ConsciousSpendingArea.fixedCosts]! - payment.cents;
+  }
+
+  ConsciousSpendingWindowTotals totalsThrough(CalendarDay lastDay) =>
+      ConsciousSpendingWindowTotals(
+        window: window,
+        firstDay: firstDay.localMidnight,
+        lastDay: lastDay.localMidnight,
+        takeHomeCents: takeHomeCents,
+        payrollContributionCents: payrollContributionCents,
+        centsByArea: centsByArea,
+        excludedFromLifestyleCents: excludedFromLifestyleCents,
+        mortgagePrincipalCents: mortgagePrincipalCents,
+      );
 }

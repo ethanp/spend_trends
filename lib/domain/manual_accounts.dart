@@ -55,23 +55,22 @@ class ManualAccounts({
     return (await _accountsRepository.findByExternalId(externalId))!;
   }
 
-  /// Records [balanceCents] on [recordedOn]; it becomes the account's
+  /// Records [balanceCents] on [recordedDay]; it becomes the account's
   /// balance unless a later snapshot already exists.
   Future<void> recordBalance({
     required Account account,
     required int balanceCents,
-    required DateTime recordedOn,
+    required CalendarDay recordedDay,
   }) async {
     if (!account.isManual) {
       throw ArgumentError('${account.displayName} is not a manual account.');
     }
-    final day = recordedOn.startOfDay;
     await _snapshotsRepository.insert(
       AccountBalanceSnapshot(
         id: _uuid.v4(),
         accountId: account.id,
         balanceCents: balanceCents,
-        recordedOn: day,
+        recordedDay: recordedDay,
       ),
     );
     await _adoptNewestSnapshot(account.id);
@@ -91,7 +90,7 @@ class ManualAccounts({
     await _accountsRepository.setBalance(
       accountId: accountId,
       balanceCents: newest?.balanceCents ?? 0,
-      asOf: newest?.recordedOn,
+      asOf: newest?.recordedDay.localMidnight,
     );
   }
 }

@@ -52,9 +52,9 @@ class TrendPointContributors._() {
     final chartDates = [
       for (final point in series.points) point.date.startOfDay,
     ];
-    final dayIndexByDate = <DateTime, int>{
+    final dayIndexByDay = <CalendarDay, int>{
       for (var dayIndex = 0; dayIndex < chartDates.length; dayIndex++)
-        chartDates[dayIndex]: dayIndex,
+        chartDates[dayIndex].calendarDay: dayIndex,
     };
 
     var historyStartIndex = 0;
@@ -62,14 +62,15 @@ class TrendPointContributors._() {
         chartDates[historyStartIndex].isBefore(historyFloor)) {
       historyStartIndex++;
     }
-    const smoother = AnnualPaceSmoother.standard;
+    final smoother = AnnualPaceSmoother.standard;
     final support = smoother.supportSpan(
       centerIndex: tapIndex,
       historyStartIndex: historyStartIndex,
       lastDayIndex: chartDates.length - 1,
     );
-    final windowStartDay = chartDates[support.startIndex];
-    final windowEndDay = chartDates[support.endIndex];
+    final CalendarDay windowStartDay =
+        chartDates[support.startIndex].calendarDay;
+    final CalendarDay windowEndDay = chartDates[support.endIndex].calendarDay;
 
     final membership = _membershipForSeries(
       seriesId: series.id,
@@ -84,7 +85,7 @@ class TrendPointContributors._() {
 
     final candidates = <BankTransaction>[];
     for (final transaction in transactions) {
-      final day = transaction.postedAt.startOfDay;
+      final CalendarDay day = transaction.postedDay;
       if (day.isBefore(windowStartDay) || day.isAfter(windowEndDay)) continue;
       if (membership.signedAmountCents(transaction, cashFlowBreakdown) == 0) {
         continue;
@@ -99,7 +100,7 @@ class TrendPointContributors._() {
         transaction,
         cashFlowBreakdown,
       );
-      final txnIndex = dayIndexByDate[transaction.postedAt.startOfDay];
+      final txnIndex = dayIndexByDay[transaction.postedDay];
       if (txnIndex == null) continue;
       final smoothedContribution = smoother.impulseContributionCents(
         amountCents: signedAmount.toDouble(),
@@ -123,7 +124,9 @@ class TrendPointContributors._() {
         left.smoothedContributionCents.abs(),
       );
       if (byContribution != 0) return byContribution;
-      return right.transaction.postedAt.compareTo(left.transaction.postedAt);
+      return right.transaction.postedAtMillis.compareTo(
+        left.transaction.postedAtMillis,
+      );
     });
     if (contributors.length <= limit) return contributors;
     return contributors.sublist(0, limit);
@@ -228,7 +231,7 @@ class const _SeriesMembership._({
   ) {
     switch (kind) {
       case _MembershipKind.categorySpend:
-        if (transaction.excluded || transaction.isZeroAmount) return 0;
+        if (transaction.isZeroAmount) return 0;
         final categoryId = transaction.categoryId;
         if (SpecialCategory.isFlowId(categoryId)) return 0;
         if (categoryIds != null &&
@@ -237,7 +240,7 @@ class const _SeriesMembership._({
         }
         return -transaction.amountCents;
       case _MembershipKind.uncategorized:
-        if (transaction.excluded || !transaction.isUncategorized) return 0;
+        if (!transaction.isUncategorized) return 0;
         return -transaction.amountCents;
       case _MembershipKind.cashFlow:
         return cashFlowLine!.centsOf(

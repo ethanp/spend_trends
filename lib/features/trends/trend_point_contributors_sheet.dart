@@ -259,7 +259,7 @@ class const _ContributorColumnWidths({
       rankWidth = _maxWidth(rankWidth, '${index + 1}', rankStyle);
       dateWidth = _maxWidth(
         dateWidth,
-        DateFormat.yMMMd().format(transaction.postedAt),
+        DateFormat.yMMMd().format(transaction.postedDay.localMidnight),
         dateStyle,
       );
       merchantWidth = _maxWidth(merchantWidth, merchantName, merchantStyle);
@@ -505,8 +505,9 @@ class const _ContributorRow({
     );
   }
 
-  String get _postedDate =>
-      DateFormat.yMMMd().format(contributor.transaction.postedAt);
+  String get _postedDate => DateFormat.yMMMd().format(
+    contributor.transaction.postedDay.localMidnight,
+  );
 
   String get _pace =>
       spendRate.paceLabel(contributor.smoothedContributionCents.round());

@@ -2,7 +2,6 @@ import 'package:ethan_ui/ethan_ui.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:spend_trends/features/categories/categories_providers.dart';
 import 'package:spend_trends/providers/spend_data_changed.dart';
 import 'package:spend_trends/services/simplefin/simplefin_access_store.dart';
 import 'package:spend_trends/services/simplefin/simplefin_client.dart';
@@ -62,7 +61,6 @@ class BanksController() extends Notifier<BanksActionState> {
         setupToken,
         onProgress: onProgress,
       );
-      await _applyCategoryRules();
       ref.read(spendDataChangedProvider.notifier).notify();
       accessUrl = result.accessUrl;
     });
@@ -75,7 +73,6 @@ class BanksController() extends Notifier<BanksActionState> {
     await _runBusyAction(() async {
       final puller = await ref.read(pullSimpleFinTransactionsProvider.future);
       await puller.pull(onProgress: onProgress);
-      await _applyCategoryRules();
       ref.read(spendDataChangedProvider.notifier).notify();
     });
   }
@@ -89,7 +86,6 @@ class BanksController() extends Notifier<BanksActionState> {
         fullHistory: true,
         onProgress: onProgress,
       );
-      await _applyCategoryRules();
       ref.read(spendDataChangedProvider.notifier).notify();
       if (result.errors.isNotEmpty) {
         state = state.copyWith(
@@ -120,11 +116,6 @@ class BanksController() extends Notifier<BanksActionState> {
       ref.read(spendDataChangedProvider.notifier).notify();
     });
     return true;
-  }
-
-  Future<void> _applyCategoryRules() async {
-    final categorizer = await ref.read(categorizerProvider.future);
-    await categorizer.recategorizeAll();
   }
 
   Future<void> _runBusyAction(Future<void> Function() action) async {

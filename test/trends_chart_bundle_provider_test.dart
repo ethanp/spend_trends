@@ -1,3 +1,4 @@
+import 'package:ethan_utils/ethan_utils.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:spend_trends/domain/account.dart';
@@ -8,6 +9,7 @@ import 'package:spend_trends/features/trends/net_worth_trend.dart';
 import 'package:spend_trends/features/activity/transactions_list_provider.dart';
 import 'package:spend_trends/features/banks/banks_providers.dart';
 import 'package:spend_trends/features/categories/categories_providers.dart';
+import 'package:spend_trends/features/life_events/life_events_providers.dart';
 import 'package:spend_trends/features/owned_assets/owned_assets_providers.dart';
 import 'package:spend_trends/features/trends/trends_providers.dart';
 
@@ -48,7 +50,7 @@ void main() {
             id: 'home-value',
             ownedAssetId: 'home',
             valueCents: 30000000,
-            valuedOn: knownSince,
+            valuedOn: knownSince.calendarDay,
           ),
         ],
       ),
@@ -61,6 +63,7 @@ void main() {
         accountsMapProvider.overrideWith((ref) async => accounts),
         accountBalanceSnapshotsProvider.overrideWith((ref) async => const []),
         importedNetWorthDaysProvider.overrideWith((ref) async => const []),
+        lifeEventsProvider.overrideWith((ref) async => const []),
         ownedAssetsListProvider.overrideWith((ref) async => ownedAssets),
       ],
     );

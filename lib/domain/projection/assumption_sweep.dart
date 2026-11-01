@@ -2,7 +2,7 @@ import 'package:spend_trends/domain/projection/retirement_projection.dart';
 
 /// The result a sweep reads off each re-run projection.
 enum SweepOutcomeKind() {
-  /// Share of take-home to invest to retire at the planned age.
+  /// Share of pay to invest to retire at the planned age.
   investingPercentNeeded,
 
   /// Earliest age savings last to the end of the plan.

@@ -15,7 +15,9 @@ void main() {
         id: 't$dayOffset',
         accountId: 'a1',
         externalId: 'e$dayOffset',
-        postedAt: start.add(Duration(days: dayOffset)),
+        postedAtMillis: start
+            .add(Duration(days: dayOffset))
+            .millisecondsSinceEpoch,
         amountCents: -100,
         rawDescription: 'Coffee',
         normalizedMerchant: 'COFFEE',
@@ -47,7 +49,7 @@ void main() {
   });
 
   test('kernel support is ±halfWidth and fades toward the edge', () {
-    const kernel = HannAnnualPaceKernel();
+    final kernel = HannAnnualPaceKernel();
     const lastDayIndex = 2000;
     const centerIndex = 1000;
 
@@ -91,7 +93,7 @@ void main() {
           id: 'd${day.year}_${day.month}_${day.day}',
           accountId: 'a1',
           externalId: 'e${day.year}_${day.month}_${day.day}',
-          postedAt: day,
+          postedAtMillis: day.millisecondsSinceEpoch,
           amountCents: -100,
           rawDescription: 'Coffee',
           normalizedMerchant: 'COFFEE',
@@ -123,7 +125,7 @@ void main() {
   });
 
   test('same-day impulse contributes more than a far-edge impulse', () {
-    const smoother = AnnualPaceSmoother.standard;
+    final smoother = AnnualPaceSmoother.standard;
     const tapIndex = 1000;
     const lastDayIndex = 2000;
     const historyStartIndex = 0;

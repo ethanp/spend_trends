@@ -1,3 +1,4 @@
+import 'package:ethan_utils/ethan_utils.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:spend_trends/domain/account.dart';
 import 'package:spend_trends/domain/account_balance_snapshot.dart';
@@ -23,7 +24,7 @@ void main() {
         id: '$accountId@$day',
         accountId: accountId,
         balanceCents: cents,
-        recordedOn: day,
+        recordedDay: day.calendarDay,
       );
 
   final history = SavingsHistory.reconstruct(
@@ -49,7 +50,7 @@ void main() {
             id: 'home-value',
             ownedAssetId: 'home',
             valueCents: 50000000,
-            valuedOn: DateTime(2021, 3, 1),
+            valuedOn: DateTime(2021, 3, 1).calendarDay,
           ),
         ],
       ),

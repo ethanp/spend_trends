@@ -2,10 +2,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:spend_trends/domain/account.dart';
 import 'package:spend_trends/domain/category.dart';
 import 'package:spend_trends/domain/transaction.dart';
-import 'package:spend_trends/providers/spend_data_changed.dart';
+import 'package:spend_trends/features/activity/transactions_list_provider.dart';
 import 'package:spend_trends/services/sqlite/accounts_repository.dart';
 import 'package:spend_trends/services/sqlite/categories_repository.dart';
-import 'package:spend_trends/services/sqlite/transactions_repository.dart';
 
 /// Activity list + filters in one reload so rows do not flicker across waves.
 class const ActivityBrowseData({
@@ -18,26 +17,17 @@ class const ActivityBrowseData({
 final activityBrowseDataProvider = FutureProvider<ActivityBrowseData>((
   ref,
 ) async {
-  ref.watch(spendDataChangedProvider);
-  final transactionsRepository = await ref.watch(
-    transactionsRepositoryProvider.future,
+  final List<BankTransaction> transactions = await ref.watch(
+    transactionsListProvider.future,
   );
   final categoriesRepository = await ref.watch(
     categoriesRepositoryProvider.future,
   );
   final accountsRepository = await ref.watch(accountsRepositoryProvider.future);
-
-  final reload = await Future.wait([
-    transactionsRepository.listAll(),
-    accountsRepository.listAccounts(),
-    categoriesRepository.listActive(),
-    categoriesRepository.listRules(),
-  ]);
-
-  final transactions = reload[0] as List<BankTransaction>;
-  final accountsList = reload[1] as List<Account>;
-  final categories = reload[2] as List<SpendCategory>;
-  final rules = reload[3] as List<CategorizationRule>;
+  final List<Account> accountsList = await accountsRepository.listAccounts();
+  final List<SpendCategory> categories = await categoriesRepository
+      .listActive();
+  final List<CategorizationRule> rules = await categoriesRepository.listRules();
 
   return ActivityBrowseData(
     transactions: transactions,

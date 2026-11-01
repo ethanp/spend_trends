@@ -5,9 +5,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:spend_trends/app_identity.dart';
 import 'package:spend_trends/features/banks/banks_advanced_section.dart';
 import 'package:spend_trends/features/settings/copilot_import_tile.dart';
-import 'package:spend_trends/features/settings/csv_import_sheet.dart';
 import 'package:spend_trends/features/settings/remove_duplicate_transactions_tile.dart';
-import 'package:spend_trends/features/settings/settings_section.dart';
+import 'package:spend_trends/features/settings/settings_action_row.dart';
 import 'package:spend_trends/features/settings/sync_status_tile.dart';
 
 class const SettingsScreen() extends ConsumerWidget {
@@ -36,35 +35,32 @@ class const SettingsScreen() extends ConsumerWidget {
           children: [
             const BanksAdvancedSection(),
             const SizedBox(height: ELayout.spaceXl),
-            const SettingsHairline(style: SettingsSectionStyle.banks),
-            const SizedBox(height: ELayout.spaceXl),
             const SyncStatusTile(),
             const SizedBox(height: ELayout.spaceXl),
-            const SettingsHairline(style: SettingsSectionStyle.sync),
-            const SizedBox(height: ELayout.spaceXl),
-            const SettingsSectionHeader(
-              icon: Icons.build,
-              title: 'Maintenance',
-              style: SettingsSectionStyle.maintenance,
-            ),
-            const SizedBox(height: ELayout.spaceLg),
-            const CopilotImportTile(),
-            const SizedBox(height: ELayout.spaceLg),
-            const RemoveDuplicateTransactionsTile(),
-            const SizedBox(height: ELayout.spaceLg),
-            SettingsToolRow(
-              icon: Icons.description,
-              title: 'Import CSV',
-              caption: 'Escape hatch when a bank connection is broken.',
-              onActivated: () => CsvImportSheet.show(context),
-              style: SettingsSectionStyle.maintenance,
+            const ESettingsSection(
+              title: 'Copilot migration',
+              children: [
+                ESettingsRowGroup(
+                  children: [
+                    CopilotImportTile(),
+                    RemoveDuplicateTransactionsTile(),
+                  ],
+                ),
+              ],
             ),
             const SizedBox(height: ELayout.spaceXl),
-            const SettingsHairline(style: SettingsSectionStyle.maintenance),
-            const SizedBox(height: ELayout.spaceLg),
-            const Text(
-              'Budgets — personal spending by category with SimpleFIN.',
-              style: SettingsType.sectionMeta,
+            ESettingsSection(
+              title: 'Diagnostics',
+              children: [
+                ESettingsRowGroup(
+                  children: [
+                    EAppLogRow(
+                      eyebrow: AppIdentity.displayName,
+                      accent: SettingsSectionStyle.sync.accent,
+                    ),
+                  ],
+                ),
+              ],
             ),
           ],
         ),

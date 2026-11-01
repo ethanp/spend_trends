@@ -80,7 +80,7 @@ class const OwnedAssetRow({
     final kindLabel = ownedAsset.asset.kind.legendLabel;
     final soldOn = ownedAsset.asset.soldOn;
     if (soldOn == null) return kindLabel;
-    final soldLabel = DateFormat.yMMMd().format(soldOn);
+    final soldLabel = DateFormat.yMMMd().format(soldOn.localMidnight);
     return ownedAsset.asset.isSold
         ? '$kindLabel · sold $soldLabel'
         : '$kindLabel · sells $soldLabel';

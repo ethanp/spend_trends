@@ -75,8 +75,8 @@ class const OwnedAssetDetailPane({required final String ownedAssetId})
           const SizedBox(height: ELayout.spaceXs),
           Text(
             ownedAsset.asset.isSold
-                ? 'Last valued ${DateFormat.yMMMd().format(ownedAsset.latestValuedOn!)}'
-                : 'Valued ${DateFormat.yMMMd().format(ownedAsset.latestValuedOn!)}',
+                ? 'Last valued ${DateFormat.yMMMd().format(ownedAsset.latestValuedOn!.localMidnight)}'
+                : 'Valued ${DateFormat.yMMMd().format(ownedAsset.latestValuedOn!.localMidnight)}',
             style: EText.caption,
           ),
         ],
@@ -100,7 +100,7 @@ class const OwnedAssetDetailPane({required final String ownedAssetId})
 
   String _soldCaption(OwnedAssetWithValuations ownedAsset) {
     final soldOn = ownedAsset.asset.soldOn!;
-    final soldLabel = DateFormat.yMMMd().format(soldOn);
+    final soldLabel = DateFormat.yMMMd().format(soldOn.localMidnight);
     return ownedAsset.asset.isSold ? 'Sold $soldLabel' : 'Sells $soldLabel';
   }
 
@@ -163,7 +163,7 @@ class const OwnedAssetDetailPane({required final String ownedAssetId})
         children: [
           Expanded(
             child: Text(
-              DateFormat.yMMMd().format(valuation.valuedOn),
+              DateFormat.yMMMd().format(valuation.valuedOn.localMidnight),
               style: EText.body.medium,
             ),
           ),

@@ -59,3 +59,10 @@ app.*.map.json
 
 # Golden comparison leftovers
 test/failures/
+
+# Raw aggregator exports (Empower, Copilot) hold personal financial data.
+# The app keeps its copies in Application Support; never commit one.
+empower_*.json
+*_transactions_*.json
+transactions_*.json
+*.copilot.csv

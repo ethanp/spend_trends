@@ -5,19 +5,31 @@ import 'package:spend_trends/domain/conscious_spending_area.dart';
 import 'package:spend_trends/domain/special_category.dart';
 import 'package:spend_trends/domain/transaction.dart';
 
-/// What one transaction adds to take-home pay, spending, money moved between
-/// accounts, and one conscious spending area. Signed: a refund is negative
-/// spending, a withdrawal is a negative investment.
+/// What one transaction adds to take-home pay, payroll contributions,
+/// spending, money moved between accounts, and one conscious spending area.
+/// Signed: a refund is negative spending, a withdrawal is a negative
+/// investment.
 class const CashFlowContribution({
   final int takeHomeCents = 0,
+
+  /// Pay that went into an investment account before the paycheck reached
+  /// checking (401(k), HSA), so it is never in [takeHomeCents].
+  final int payrollContributionCents = 0,
   final int spendingCents = 0,
   final int transferCents = 0,
   final ConsciousSpendingArea? area,
   final int areaCents = 0,
+
+  /// The part of [spendingCents] its rule excludes from lifestyle costs (a
+  /// home overlap, a closing). It fills no area.
+  final int excludedFromLifestyleCents = 0,
 }) {
   static const none = CashFlowContribution();
 
   int get savingsCents => takeHomeCents - spendingCents;
+
+  /// Spending that counts as lifestyle costs: excluded spending left out.
+  int get lifestyleSpendingCents => spendingCents - excludedFromLifestyleCents;
 }
 
 /// Ramit Sethi's conscious spending plan read from bank activity.
@@ -26,11 +38,14 @@ class const CashFlowContribution({
 ///   proceeds once they reach checking (stock compensation). Dividends and
 ///   stock sales still inside investment accounts are returns, not pay.
 /// - Spending is spend-category and uncategorized activity; refunds net
-///   against their category.
+///   against their category. Spending its rule excludes from lifestyle
+///   costs keeps its category but fills no conscious spending area.
 /// - Investments are net money put in, from the Investments category:
 ///   deposits leaving cash accounts (brokerages, crypto) add and money coming
-///   back from them subtracts; on investment accounts, payroll contributions
-///   add. RSU sale proceeds are Income, not a withdrawal, so they never
+///   back from them subtracts, so a margin draw subtracts and its paydown
+///   adds; on investment accounts, payroll contributions
+///   add, and also count as pay, since the paycheck never showed them.
+///   RSU sale proceeds are Income, not a withdrawal, so they never
 ///   subtract here. Transfer activity on investment accounts
 ///   (buys, sells, the brokerage side of a deposit) counts nowhere, so
 ///   nothing doubles.
@@ -61,11 +76,16 @@ class CashFlowBreakdown({
       return CashFlowContribution.none;
     }
     if (SpecialCategory.isInvestmentsId(categoryId)) {
+      if (accountKind == AccountKind.investment) {
+        return CashFlowContribution(
+          payrollContributionCents: amountCents,
+          area: ConsciousSpendingArea.investments,
+          areaCents: amountCents,
+        );
+      }
       return CashFlowContribution(
         area: ConsciousSpendingArea.investments,
-        areaCents: accountKind == AccountKind.investment
-            ? amountCents
-            : -amountCents,
+        areaCents: -amountCents,
       );
     }
     if (SpecialCategory.isTransferId(categoryId)) {
@@ -77,8 +97,13 @@ class CashFlowBreakdown({
       }
       return CashFlowContribution(takeHomeCents: amountCents);
     }
-    if (transaction.excluded) return CashFlowContribution.none;
     if (accountKind == AccountKind.loans) return CashFlowContribution.none;
+    if (transaction.excludedFromLifestyleCosts) {
+      return CashFlowContribution(
+        spendingCents: -amountCents,
+        excludedFromLifestyleCents: -amountCents,
+      );
+    }
     return CashFlowContribution(
       spendingCents: -amountCents,
       area: categoryId == null ? null : _areaByCategoryId[categoryId],

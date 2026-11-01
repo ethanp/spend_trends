@@ -1,4 +1,5 @@
 import 'package:spend_trends/services/simplefin/simplefin_models.dart';
+import 'package:spend_trends/domain/rule_change_plan.dart';
 
 /// One newly inserted transaction for pull progress UI.
 class const SimpleFinPulledTransaction({
@@ -48,6 +49,9 @@ class const SimpleFinPullResult({
   required final int transactionCount,
   required final List<SimpleFinError> errors,
   final Uri? accessUrl,
+
+  /// The rule pass over what the pull wrote.
+  final RuleChangePlan? rulesRerun,
 });
 
 /// Download state for one bank during a pull.

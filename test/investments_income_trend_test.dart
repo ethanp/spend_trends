@@ -16,7 +16,9 @@ void main() {
           id: 'income$dayOffset',
           accountId: 'a1',
           externalId: 'i$dayOffset',
-          postedAt: start.add(Duration(days: dayOffset)),
+          postedAtMillis: start
+              .add(Duration(days: dayOffset))
+              .millisecondsSinceEpoch,
           amountCents: 5000,
           rawDescription: 'Pay',
           normalizedMerchant: 'PAY',
@@ -27,7 +29,9 @@ void main() {
           id: 'invest$dayOffset',
           accountId: 'a1',
           externalId: 'v$dayOffset',
-          postedAt: start.add(Duration(days: dayOffset)),
+          postedAtMillis: start
+              .add(Duration(days: dayOffset))
+              .millisecondsSinceEpoch,
           amountCents: -2000,
           rawDescription: 'Brokerage deposit',
           normalizedMerchant: 'BROKERAGE DEPOSIT',
@@ -38,7 +42,9 @@ void main() {
           id: 'spend$dayOffset',
           accountId: 'a1',
           externalId: 's$dayOffset',
-          postedAt: start.add(Duration(days: dayOffset)),
+          postedAtMillis: start
+              .add(Duration(days: dayOffset))
+              .millisecondsSinceEpoch,
           amountCents: -1000,
           rawDescription: 'Shop',
           normalizedMerchant: 'SHOP',
@@ -97,7 +103,9 @@ void main() {
           id: 'income$dayOffset',
           accountId: 'a1',
           externalId: 'i$dayOffset',
-          postedAt: start.add(Duration(days: dayOffset)),
+          postedAtMillis: start
+              .add(Duration(days: dayOffset))
+              .millisecondsSinceEpoch,
           amountCents: 10000,
           rawDescription: 'Pay',
           normalizedMerchant: 'PAY',
@@ -108,7 +116,9 @@ void main() {
           id: 'rent$dayOffset',
           accountId: 'a1',
           externalId: 'r$dayOffset',
-          postedAt: start.add(Duration(days: dayOffset)),
+          postedAtMillis: start
+              .add(Duration(days: dayOffset))
+              .millisecondsSinceEpoch,
           amountCents: -5000,
           rawDescription: 'Rent',
           normalizedMerchant: 'RENT',
@@ -119,7 +129,9 @@ void main() {
           id: 'dining$dayOffset',
           accountId: 'a1',
           externalId: 'd$dayOffset',
-          postedAt: start.add(Duration(days: dayOffset)),
+          postedAtMillis: start
+              .add(Duration(days: dayOffset))
+              .millisecondsSinceEpoch,
           amountCents: -2000,
           rawDescription: 'Tacos',
           normalizedMerchant: 'TACOS',
@@ -173,35 +185,17 @@ void main() {
     expect(fixedCosts.legendCaption, isNull);
     expect(guiltFree.legendCaption, isNull);
     expect(
-      ConsciousSpendingArea.fixedCosts.ramitGuideline.impliedTakeHomeLabel(
-        3650000,
-      ),
-      r'$18.3k–$21.9k',
+      ConsciousSpendingArea.fixedCosts.ramitGuideline.impliedCents(3650000),
+      2007500,
     );
     expect(
-      ConsciousSpendingArea.investments.ramitGuideline.impliedTakeHomeLabel(
-        3650000,
-      ),
-      r'$3.7k',
+      ConsciousSpendingArea.investments.ramitGuideline.impliedCents(3650000),
+      365000,
     );
+    expect(ConsciousSpendingArea.fixedCosts.ramitGuideline.isMetBy(50), isTrue);
     expect(
-      ConsciousSpendingArea.fixedCosts.percentOfIncome(
-        areaCents: 1825000,
-        incomeCents: 3650000,
-      ),
-      50,
-    );
-    expect(
-      ConsciousSpendingArea.fixedCosts.ramitGuideline.contains(50),
-      isTrue,
-    );
-    expect(
-      ConsciousSpendingArea.fixedCosts.ramitGuideline.contains(49),
+      ConsciousSpendingArea.fixedCosts.ramitGuideline.isMetBy(56),
       isFalse,
-    );
-    expect(
-      ConsciousSpendingArea.investments.ramitGuideline.impliedTakeHomeLabel(0),
-      '—',
     );
   });
 }

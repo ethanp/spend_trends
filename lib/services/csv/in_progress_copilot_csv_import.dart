@@ -118,10 +118,10 @@ class InProgressCopilotCsvImport({
 /// account|day|amount|merchantFingerprint — survives external-id casing changes.
 String copilotContentPresenceKey({
   required String accountId,
-  required DateTime postedAt,
+  required CalendarDay postedDay,
   required int amountCents,
   required String normalizedMerchant,
 }) {
-  return '$accountId|${postedAt.dayKey}|$amountCents|'
+  return '$accountId|${postedDay.isoDate}|$amountCents|'
       '${merchantFingerprint(normalizedMerchant)}';
 }

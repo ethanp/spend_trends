@@ -79,10 +79,7 @@ class const AssumptionSliderRow({
       children: [
         label,
         if (_setValue == null)
-          Text(
-            'last 365 days',
-            style: EText.caption.copyWith(fontSize: 10),
-          )
+          Text('last 365 days', style: EText.caption.copyWith(fontSize: 10))
         else
           GestureDetector(
             onTap: () => ref
@@ -109,9 +106,7 @@ class const AssumptionSliderRow({
       data: SliderThemeData(
         trackHeight: 2,
         thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 6),
-        overlayShape: const RoundSliderOverlayShape(
-          overlayRadius: _trackInset,
-        ),
+        overlayShape: const RoundSliderOverlayShape(overlayRadius: _trackInset),
         tickMarkShape: SliderTickMarkShape.noTickMark,
       ),
       child: SizedBox(
@@ -226,9 +221,7 @@ class _SweepLinePainter({
         continue;
       }
       final x = xOf(points[index].value);
-      final left = index == 0
-          ? x
-          : (xOf(points[index - 1].value) + x) / 2;
+      final left = index == 0 ? x : (xOf(points[index - 1].value) + x) / 2;
       final right = index == points.length - 1
           ? x
           : (x + xOf(points[index + 1].value)) / 2;

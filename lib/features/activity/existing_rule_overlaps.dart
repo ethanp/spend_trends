@@ -9,6 +9,7 @@ import 'package:spend_trends/features/categories/categories_providers.dart';
 import 'package:spend_trends/providers/spend_data_changed.dart';
 import 'package:spend_trends/theme/finance_colors.dart';
 import 'package:spend_trends/widgets/category_picker.dart';
+import 'package:spend_trends/widgets/excluded_from_lifestyle_costs_word.dart';
 
 /// Existing contains-rules that overlap a candidate pattern.
 ///
@@ -112,6 +113,8 @@ class _OverlappingRuleChipState() extends ConsumerState<_OverlappingRuleChip> {
             enabled: !_busy,
             onCategorySelected: _retargetTo,
           ),
+          if (widget.entry.rule.excludesFromLifestyleCosts)
+            const ExcludedFromLifestyleCostsWord(),
           _deleteRuleButton(),
         ],
       ),

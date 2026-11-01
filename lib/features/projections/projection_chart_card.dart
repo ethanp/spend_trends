@@ -1,3 +1,4 @@
+import 'dart:isolate';
 import 'dart:math' as math;
 
 import 'package:ethan_ui/ethan_ui.dart';
@@ -18,7 +19,6 @@ import 'package:spend_trends/features/owned_assets/owned_assets_providers.dart';
 import 'package:spend_trends/features/projections/savings_history.dart';
 import 'package:spend_trends/features/trends/trend_chart_catalog.dart';
 import 'package:spend_trends/theme/finance_colors.dart';
-import 'package:spend_trends/widgets/app_card.dart';
 
 final _savingsHistoryProvider = FutureProvider<SavingsHistory>((ref) async {
   final Map<String, Account> accounts = await ref.watch(
@@ -33,12 +33,16 @@ final _savingsHistoryProvider = FutureProvider<SavingsHistory>((ref) async {
   final List<OwnedAssetWithValuations> ownedAssets = await ref.watch(
     ownedAssetsListProvider.future,
   );
-  return SavingsHistory.reconstruct(
-    today: DateTime.now(),
-    accounts: accounts.values.toList(),
-    transactions: transactions,
-    balanceSnapshots: balanceSnapshots,
-    ownedAssets: ownedAssets,
+  final List<Account> accountList = accounts.values.toList();
+  final DateTime today = DateTime.now();
+  return Isolate.run(
+    () => SavingsHistory.reconstruct(
+      today: today,
+      accounts: accountList,
+      transactions: transactions,
+      balanceSnapshots: balanceSnapshots,
+      ownedAssets: ownedAssets,
+    ),
   );
 });
 
@@ -71,7 +75,8 @@ class const ProjectionChartCard({
         _DatedSavings(date: _dateOfYear(year.year), savings: year),
     ];
     final lines = _lines();
-    return AppCard(
+    return ECard(
+      kind: ESurfaceKind.row,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [

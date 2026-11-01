@@ -11,17 +11,19 @@ void main() {
     String accountId = 'checking',
     String? categoryId,
     String? categoryRuleId,
+    String? note,
   }) => BankTransaction(
     id: id,
     accountId: accountId,
     externalId: id,
-    postedAt: DateTime(2026, 1, 1),
+    postedAtMillis: DateTime(2026, 1, 1).millisecondsSinceEpoch,
     amountCents: -1000,
     rawDescription: description,
     normalizedMerchant: description.toUpperCase(),
     pending: false,
     categoryId: categoryId,
     categoryRuleId: categoryRuleId,
+    note: note,
   );
 
   CategorizationRule rule({
@@ -88,6 +90,47 @@ void main() {
           transaction(id: 'c', description: 'Buy Buy Baby'),
         ),
         buyAnywhere,
+      );
+    });
+
+    test('a contains rule on the note splits identical bank text', () {
+      final wire = rule(
+        id: 'wire',
+        pattern: 'outgoing wire',
+        categoryId: 'transfer',
+      );
+      final wireToStrike = rule(
+        id: 'wire-strike',
+        pattern: 'btc strike',
+        categoryId: 'investments',
+        accountId: 'checking',
+      );
+      final index = RuleMatchIndex([wire, wireToStrike]);
+      expect(
+        index.bestMatchingRule(
+          transaction(id: 'closing', description: 'Outgoing Wire'),
+        ),
+        wire,
+      );
+      expect(
+        index.bestMatchingRule(
+          transaction(
+            id: 'bitcoin',
+            description: 'Outgoing Wire',
+            note: 'Btc strike',
+          ),
+        ),
+        wireToStrike,
+      );
+      expect(
+        index.bestMatchingRule(
+          transaction(
+            id: 'exact-ignores-note',
+            description: 'Amazon',
+            note: 'kroger',
+          ),
+        ),
+        isNull,
       );
     });
 
@@ -167,6 +210,42 @@ void main() {
         'plain',
         'fuel',
       ]);
+    });
+
+    test('excluding a rule from lifestyle costs rewrites what it took', () {
+      final plan = RuleChangePlan(
+        rulesBefore: [kroger],
+        transactions: [plainKroger, krogerFuel, unrelated],
+        upserts: [
+          RuleDraft.retargeting(
+            kroger,
+            categoryId: 'shopping',
+            excludesFromLifestyleCosts: true,
+          ).asRule(id: 'kroger', existing: kroger),
+        ],
+      );
+      expect(plan.categoryChanges, isEmpty);
+      expect(
+        plan.recategorized.map(
+          (move) => (move.transaction.id, move.excludedFromLifestyleCosts),
+        ),
+        [('plain', true), ('fuel', true)],
+      );
+    });
+
+    test('a retargeted rule keeps its lifestyle-costs exclusion', () {
+      final marked = const RuleDraft(
+        pattern: 'kroger',
+        categoryId: 'shopping',
+        excludesFromLifestyleCosts: true,
+      ).asRule(id: 'kroger', existing: kroger);
+      expect(
+        RuleDraft.retargeting(
+          marked,
+          categoryId: 'groceries',
+        ).asRule(id: 'kroger', existing: marked).excludesFromLifestyleCosts,
+        isTrue,
+      );
     });
 
     test('deleting a rule uncategorizes what no other rule matches', () {

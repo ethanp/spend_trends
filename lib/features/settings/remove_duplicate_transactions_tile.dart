@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:spend_trends/domain/remove_copilot_duplicates.dart';
-import 'package:spend_trends/features/settings/settings_section.dart';
+import 'package:spend_trends/features/settings/settings_action_row.dart';
 import 'package:spend_trends/providers/spend_data_changed.dart';
 
 import 'remove_copilot_duplicates_provider.dart';
@@ -20,14 +20,12 @@ class _RemoveDuplicateTransactionsTileState()
 
   @override
   Widget build(BuildContext context) {
-    return SettingsToolRow(
+    return SettingsActionRow(
       icon: Icons.layers,
       title: 'Remove duplicate transactions',
-      caption:
-          'Drop Copilot↔SimpleFIN matches and same-account day/amount/merchant '
-          'duplicates.',
+      caption: 'Delete repeats across Copilot and banks',
       onActivated: _run,
-      style: SettingsSectionStyle.maintenance,
+      style: SettingsSectionStyle.copilotMigration,
       busy: _busy,
       message: _message,
     );

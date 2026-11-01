@@ -143,12 +143,12 @@ class CsvImporter({
             description: description,
             rowIndex: rowIndex,
           ),
-          postedAt: _parseDate(dateText),
+          postedAtMillis: _parseDate(dateText).millisecondsSinceEpoch,
           amountCents: _parseAmountCents(amountText),
           rawDescription: description,
           normalizedMerchant: normalizeMerchant(description),
           pending: false,
-          importedAt: DateTime.now(),
+          importedAtMillis: DateTime.now().millisecondsSinceEpoch,
         ),
       );
       imported += 1;

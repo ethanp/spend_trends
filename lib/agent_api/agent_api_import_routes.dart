@@ -1,4 +1,3 @@
-import 'package:ethan_utils/ethan_utils.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shelf/shelf.dart';
 import 'package:shelf_router/shelf_router.dart';
@@ -102,7 +101,7 @@ class const AgentApiImportRoutes({required final ProviderContainer container}) {
           )) {
         skippedAsDuplicates.add({
           'externalId': incoming.externalId,
-          'postedOn': incoming.postedAt.dayKey,
+          'postedOn': incoming.postedDay.isoDate,
           'amountCents': incoming.amountCents,
         });
         continue;
@@ -148,13 +147,14 @@ class const AgentApiImportRoutes({required final ProviderContainer container}) {
       id: const Uuid().v4(),
       accountId: accountId,
       externalId: row.requiredString('externalId'),
-      postedAt: DateTime.parse(row.requiredString('postedOn')),
+      postedAtMillis: DateTime.parse(row.requiredString('postedOn'))
+          .millisecondsSinceEpoch,
       amountCents: amountCents,
       rawDescription: description,
       normalizedMerchant: normalizeMerchant(description),
       pending: false,
       note: row['note'] as String?,
-      importedAt: DateTime.now(),
+      importedAtMillis: DateTime.now().millisecondsSinceEpoch,
     );
   }
 
@@ -165,10 +165,7 @@ class const AgentApiImportRoutes({required final ProviderContainer container}) {
     return sameAccount.any(
       (existing) =>
           existing.amountCents == incoming.amountCents &&
-          existing.postedAt.startOfDay
-                  .difference(incoming.postedAt.startOfDay)
-                  .inDays
-                  .abs() <=
+          existing.postedDay.daysSince(incoming.postedDay).abs() <=
               _sameTransactionWithinDays,
     );
   }

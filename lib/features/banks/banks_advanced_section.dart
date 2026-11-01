@@ -4,12 +4,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:spend_trends/features/banks/bank_pull_history_sheet.dart';
 import 'package:spend_trends/features/banks/banks_controller.dart';
 import 'package:spend_trends/features/banks/banks_pull_live_session.dart';
-import 'package:spend_trends/features/settings/settings_section.dart';
+import 'package:spend_trends/features/settings/csv_import_sheet.dart';
+import 'package:spend_trends/features/settings/settings_action_row.dart';
 import 'package:spend_trends/services/simplefin/simplefin_access_store.dart';
 
 import 'connection_status.dart';
 
-/// Settings-only bank maintenance: full history re-fetch and disconnect.
+/// Settings for bank connections: add, history, re-download, disconnect, and
+/// manual CSV import.
 class const BanksAdvancedSection() extends ConsumerWidget {
   static const _style = SettingsSectionStyle.banks;
 
@@ -18,15 +20,9 @@ class const BanksAdvancedSection() extends ConsumerWidget {
     final connectionAsync = ref.watch(connectionStatusProvider);
     final actionState = ref.watch(banksControllerProvider);
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+    return ESettingsSection(
+      title: 'Banks',
       children: [
-        const SettingsSectionHeader(
-          icon: Icons.apartment,
-          title: 'Banks',
-          style: _style,
-        ),
-        const SizedBox(height: ELayout.spaceMd),
         connectionAsync.when(
           skipLoadingOnReload: true,
           loading: () => const CircularProgressIndicator(),
@@ -46,17 +42,16 @@ class const BanksAdvancedSection() extends ConsumerWidget {
     ConnectionStatus status,
     BanksActionState actionState,
   ) {
-    if (!status.isConnected) {
-      return const Text(
-        'Connect a bank on the Banks tab to sync accounts and transactions.',
-        style: SettingsType.sectionMeta,
-      );
-    }
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(_connectedCaption(status), style: SettingsType.sectionMeta),
+        Text(
+          status.isConnected
+              ? _connectedCaption(status)
+              : 'Connect a bank on the Banks tab to sync accounts and '
+                    'transactions.',
+          style: SettingsType.sectionMeta,
+        ),
         if (status.fromEnv) ...[
           const SizedBox(height: ELayout.spaceSm),
           const Text(
@@ -73,57 +68,69 @@ class const BanksAdvancedSection() extends ConsumerWidget {
             style: EText.caption.copyWith(color: EColors.danger),
           ),
         ],
-        const SizedBox(height: ELayout.spaceLg),
-        SettingsToolRow(
-          icon: Icons.add_circle,
-          title: 'Add account',
-          caption: 'Opens SimpleFIN Bridge to link another institution.',
-          onActivated: () =>
-              ref.read(banksControllerProvider.notifier).openSimpleFinBridge(),
-          style: _style,
-          busy: actionState.busy,
-        ),
-        const SizedBox(height: ELayout.spaceLg),
-        SettingsToolRow(
-          icon: Icons.history,
-          title: 'Pull history',
-          caption:
-              'Recent SimpleFIN pulls, including per-account outages and '
-              'bridge warnings.',
-          onActivated: () => BankPullHistorySheet.show(context),
-          style: _style,
-          busy: actionState.busy,
-        ),
-        const SizedBox(height: ELayout.spaceLg),
-        SettingsToolRow(
-          icon: Icons.cloud_download,
-          title: 'Re-download all history',
-          caption:
-              'Fetches ~2 years from SimpleFIN again. Everyday "Pull bank '
-              'transactions" only covers since the last SimpleFIN update '
-              '(window starts 2 days earlier).',
-          onActivated: () => ref
-              .read(banksPullLiveSessionProvider.notifier)
-              .runPull(
-                (onProgress) => ref
-                    .read(banksControllerProvider.notifier)
-                    .refreshFullHistory(onProgress: onProgress),
-              ),
-          style: _style,
-          busy: actionState.busy,
-        ),
-        const SizedBox(height: ELayout.spaceLg),
-        SettingsToolRow(
-          icon: Icons.delete,
-          title: 'Disconnect & erase',
-          caption: 'Removes the connection and local accounts/transactions.',
-          onActivated: () => _disconnect(context, ref),
-          style: _style,
-          busy: actionState.busy,
+        const SizedBox(height: ELayout.spaceMd),
+        ESettingsRowGroup(
+          children: [
+            if (status.isConnected)
+              ..._connectedBankRows(context, ref, actionState),
+            SettingsActionRow(
+              icon: Icons.description,
+              title: 'Import CSV',
+              caption: "Manual import when a bank won't sync",
+              onActivated: () => CsvImportSheet.show(context),
+              style: _style,
+            ),
+          ],
         ),
       ],
     );
   }
+
+  List<Widget> _connectedBankRows(
+    BuildContext context,
+    WidgetRef ref,
+    BanksActionState actionState,
+  ) => [
+    SettingsActionRow(
+      icon: Icons.add_circle,
+      title: 'Add account',
+      caption: 'Link another bank through SimpleFIN',
+      onActivated: () =>
+          ref.read(banksControllerProvider.notifier).openSimpleFinBridge(),
+      style: _style,
+      busy: actionState.busy,
+    ),
+    SettingsActionRow(
+      icon: Icons.history,
+      title: 'Pull history',
+      caption: 'Past pulls, outages, and warnings',
+      onActivated: () => BankPullHistorySheet.show(context),
+      style: _style,
+      busy: actionState.busy,
+    ),
+    SettingsActionRow(
+      icon: Icons.cloud_download,
+      title: 'Re-download all history',
+      caption: 'Fetch the last ~2 years again',
+      onActivated: () => ref
+          .read(banksPullLiveSessionProvider.notifier)
+          .runPull(
+            (onProgress) => ref
+                .read(banksControllerProvider.notifier)
+                .refreshFullHistory(onProgress: onProgress),
+          ),
+      style: _style,
+      busy: actionState.busy,
+    ),
+    SettingsActionRow(
+      icon: Icons.delete,
+      title: 'Disconnect & erase',
+      caption: 'Unlink and delete local bank data',
+      onActivated: () => _disconnect(context, ref),
+      style: _style,
+      busy: actionState.busy,
+    ),
+  ];
 
   String _connectedCaption(ConnectionStatus status) {
     final source = status.fromEnv ? 'SimpleFIN (.env)' : 'SimpleFIN';

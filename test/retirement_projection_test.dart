@@ -153,6 +153,10 @@ void main() {
       closeTo(principalAndInterest + carryingCosts, 1),
     );
     expect(years.first.mortgagePayment, closeTo(principalAndInterest, 1));
+    expect(
+      years.first.mortgagePrincipal,
+      closeTo(principalAndInterest - 100000 * 0.06, 1),
+    );
     expect(years.last.housing, closeTo(carryingCosts, 1));
     expect(years.last.homeEquity, 600000);
   });
@@ -361,6 +365,33 @@ void main() {
     },
   );
 
+  test('required investing is a share of pay, not take-home alone', () {
+    const target = RetirementSavingsTarget(
+      retirementAge: 50,
+      maxNonHousingSpendingAnnual: 50000,
+      takeHomeAnnual: 100000,
+      housingAnnual: 20000,
+      mortgagePrincipalAnnual: 0,
+      payrollContributionsAnnual: 20000,
+    );
+    expect(target.requiredInvestingAnnual, 50000);
+    expect(target.requiredInvestingPercent, 42);
+  });
+
+  test('required investing counts mortgage principal as investing, not '
+      'housing', () {
+    const target = RetirementSavingsTarget(
+      retirementAge: 50,
+      maxNonHousingSpendingAnnual: 50000,
+      takeHomeAnnual: 100000,
+      housingAnnual: 20000,
+      mortgagePrincipalAnnual: 6000,
+      payrollContributionsAnnual: 20000,
+    );
+    expect(target.requiredInvestingAnnual, 56000);
+    expect(target.requiredInvestingPercent, 47);
+  });
+
   test('investments guideline comes from the target once there is one', () {
     final target = RetirementProjection(
       lifePlan: LifePlan(const []),
@@ -374,9 +405,9 @@ void main() {
       ConsciousSpendingArea.investments,
       retirementTarget: target,
     );
-    expect(guideline.rangeLabel, '≥${target.requiredInvestingPercent}%');
+    expect(guideline.targetLabel, '${target.requiredInvestingPercent}%');
     expect(guideline.reason, 'retire at 50');
-    expect(guideline.contains(target.requiredInvestingPercent + 30), isTrue);
+    expect(guideline.isMetBy(target.requiredInvestingPercent + 30), isTrue);
     expect(
       ConsciousSpendingGuideline.forArea(
         ConsciousSpendingArea.fixedCosts,

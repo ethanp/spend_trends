@@ -12,6 +12,8 @@ import 'package:spend_trends/domain/conscious_spending_area.dart';
 import 'package:spend_trends/features/trends/conscious_spending_numbers.dart';
 import 'package:spend_trends/domain/transaction.dart';
 import 'package:spend_trends/features/categories/categories_providers.dart';
+import 'package:spend_trends/services/sqlite/account_balance_snapshots_repository.dart';
+import 'package:spend_trends/services/sqlite/life_events_repository.dart';
 
 /// Read-only audit routes: overview, categories, accounts, rules,
 /// transactions, per-merchant rollups, and rule dry runs.
@@ -22,17 +24,19 @@ Ramit Sethi's Conscious Spending Plan toward a FIRE timeline.
 
 Category roles:
 - spend: real consumption. Each spend category belongs to one conscious
-  spending area (fixedCosts, guiltFree) measured as a share of take-home
-  pay. The user has no savings-goals bucket: planned expenses come straight
-  from paychecks, so the plan is three numbers (fixedCosts, investments,
-  guiltFree).
+  spending area (fixedCosts, guiltFree) measured as a share of pay: take-home
+  plus payroll contributions. The user has no savings-goals bucket: planned
+  expenses come straight from paychecks, so the plan is three numbers
+  (fixedCosts, investments, guiltFree).
 - income (Income): take-home pay. Paychecks, plus RSU sale proceeds once
   they reach a cash account ("Funds Transfer From Brokerage"); RSUs are
   compensation. Income on investment accounts (dividends, sales still in the
   brokerage) is a return, not take-home pay.
 - investments (Investments): net money put into investments. On cash
   accounts, deposits to a brokerage/crypto add and money back from it
-  subtracts; on investment accounts, 401(k)/HSA payroll contributions add.
+  subtracts (a margin draw is money back, its paydown a deposit); on
+  investment accounts, 401(k)/HSA payroll contributions add, and also count
+  as pay, since the paycheck never showed them.
   Use it for the cash side of a deposit; the brokerage side stays Transfer.
   RSU sale proceeds are Income, not an Investments withdrawal.
 - transfer: money moving between the user's own accounts (card payments,
@@ -53,9 +57,9 @@ When several rules match, the most specific wins: one account over all
 accounts, then exact over contains, then the longer pattern.
 
 Rules:
-- matchType "contains" matches the pattern anywhere in description or
-  merchant (case-insensitive); "exact" matches the whole merchant or
-  description. Use exact for short merchant names ("cvs", "amazon") that
+- matchType "contains" matches the pattern anywhere in description,
+  merchant, or the transaction's note (case-insensitive); "exact" matches
+  the whole merchant or description. Use exact for short merchant names ("cvs", "amazon") that
   would otherwise match unrelated text.
 - Scope a rule to one account (accountId) when the text is generic on that
   account (loan-account "recording fee", brokerage "buy").
@@ -71,7 +75,29 @@ Transaction notes hold the user's context (what a check paid for). Read them
 before judging a transaction. When a judgment depends on context about one
 transaction, append a short note to it (PATCH /transactions/<id> {note});
 keep any existing note. Reasonable assumptions belong in notes too; mark them
-("assumed ...") so later readers can tell them from known facts.''';
+("assumed ...") so later readers can tell them from known facts.
+
+Notes are also how one transaction gets a category its bank text cannot:
+contains rules match notes, and setting a note re-runs the rules on that
+transaction. Identical bank text that means different things (an "Outgoing
+Wire" to a crypto exchange vs. one to a title company) gets a distinguishing
+phrase in the note and a contains rule on that phrase; scope the rule to the
+account when an exact rule on the bank text would otherwise outrank it.
+
+Lifestyle costs are Fixed costs plus Guilt-free: the spending the FIRE
+number rests on. A rule with "excludesFromLifestyleCosts": true leaves what
+it categorizes out of them (a closing, the old home's mortgage and utilities
+while two homes overlap). Furnishing a home or medical costs are lifestyle
+costs, not excluded. The transaction keeps the rule's category, so category
+trends still show it, but it fills no conscious spending area and stays out
+of the projection's spending baseline. To exclude a few transactions whose
+bank text also matches ordinary ones, note them with a phrase and add an
+excluding rule on that phrase in the same category. PATCH /rules/<id>
+{excludesFromLifestyleCosts} changes an existing rule.
+
+Margin loans against a brokerage stay in Investments on the cash side: the
+draw into checking subtracts (equity pulled out), the paydown adds (equity
+restored), and the pair nets to the interest.''';
 
   void mount(Router router) {
     router
@@ -97,7 +123,7 @@ keep any existing note. Reasonable assumptions belong in notes too; mark them
           {
             'id': area.name,
             'name': area.displayName,
-            'ramitShareOfTakeHome': area.ramitGuideline.rangeLabel,
+            'ramitShareOfTakeHome': area.ramitGuideline.targetLabel,
           },
       ],
       'counts': {
@@ -141,24 +167,54 @@ keep any existing note. Reasonable assumptions belong in notes too; mark them
         'realReturnPercent?, ... } (null clears birthDate or an override)',
     'GET /categories',
     'GET /accounts',
-    'GET /rules',
+    'GET /rules?search=<pattern or note text>&category=<id>'
+        '&excludesFromLifestyleCosts=<true|false>',
     'GET /rules/<ruleId>/transactions',
-    'GET /transactions?category=<id|none>&source=<rule|unruled|none>'
-        '&account=<id>&search=<text>&since=<yyyy-mm-dd>&until=<yyyy-mm-dd>'
-        '&minAmountCents=<n>&direction=<inflow|outflow>'
-        '&includeExcluded=<true|false>&limit=<n>',
+    'GET /transactions?ids=&category=<ids|none>&area=<fixedCosts,investments,'
+        'guiltFree,none>&source=<rule|unruled|none>&account=<ids>'
+        '&accountKind=<checking,savings,creditCard,investment,loans,...>'
+        '&rule=<id>&search=<text>&note=<text>&hasNote=<bool>'
+        '&excludedFromLifestyleCosts=<bool>&since=<yyyy-mm-dd>'
+        '&until=<yyyy-mm-dd>&importedSince=<iso datetime>'
+        '&minAmountCents=<n>&maxAmountCents=<n>'
+        '&direction=<inflow|outflow>&includeExcluded=<bool>&limit=<n> '
+        '(list parameters are comma-separated)',
+    'GET /transactions/totals?groupBy=<category|area|merchant|account|'
+        'accountKind|month|rule> plus any /transactions filter (count, sum, '
+        'outflow, inflow per group)',
+    'POST /transactions/notes {ids? | query?: {<any /transactions filter>}, '
+        'note, mode?: append|replace, dryRun?} (notes many rows, then re-runs '
+        'the rules on them once; pair with a contains rule on the note phrase)',
+    'POST /transactions/remove {ids, apply?} (previews unless apply is true; '
+        'ids only)',
+    'GET /cash-flow?since=&until= (pay, areas, excluded from lifestyle '
+        'costs, spending with no area, transfers in and out of cash by '
+        'merchant, cash balance change)',
+    'GET /accounts/<accountId>/balances?since=&until=&every=<month|day>',
+    'GET /duplicates (Copilot rows the live feed recorded again, and '
+        'same-account repeats; nothing deleted)',
+    'POST /duplicates/remove {linked?, sameAccount?} (deletes what GET '
+        '/duplicates lists; set a kind false to keep it)',
     'GET /transactions/<transactionId>',
     'GET /merchants (same filters as /transactions)',
-    'POST /rules/plan {pattern, categoryId, matchType?, accountId?, note?} '
+    'POST /rules/plan {pattern, categoryId, matchType?, accountId?, note?, '
+        'excludesFromLifestyleCosts?} '
         'or {rules: [...], deleteRuleIds: [...]} (dry run; ?details=true '
         'lists every moved transaction)',
     'POST /rules (same body as /rules/plan; applies it)',
-    'PATCH /rules/<ruleId> {categoryId?, note?}',
+    'PATCH /rules/<ruleId> {categoryId?, note?, excludesFromLifestyleCosts?}',
     'DELETE /rules/<ruleId>',
     'POST /rules/recategorize-all (re-run every rule over every transaction)',
     'PATCH /transactions/<transactionId> {note}',
     'POST /accounts {historyKey, name, kind, institution?} (history-only '
         'account for imported history; no live balance, outside net worth)',
+    'GET /imports/empower (saved Empower exports and the account mapping, '
+        'kept in the app’s Application Support folder)',
+    'POST /imports/empower {file?, accounts?: {<empowerUserAccountId>: '
+        '{accountId, label}}, transactionTypes?, dryRun?} (copies the export '
+        'into the app’s folder, re-keys earlier Empower imports, skips rows '
+        'the live feed has, inserts the rest; see '
+        'docs/empower_transactions_pull.md)',
     'POST /transactions/import {transactions: [{accountId, postedOn, '
         'amountCents, description, externalId, note?}]} (idempotent; skips '
         'rows another source already has; re-runs rules)',
@@ -173,11 +229,18 @@ keep any existing note. Reasonable assumptions belong in notes too; mark them
     // Fresh from the repositories: the Trends providers pause while their
     // tab is hidden.
     final snapshot = await CategorizationSnapshot.load(container);
+    final AccountBalanceSnapshotsRepository balanceSnapshotsRepository =
+        await container.read(accountBalanceSnapshotsRepositoryProvider.future);
+    final LifeEventsRepository lifeEventsRepository = await container.read(
+      lifeEventsRepositoryProvider.future,
+    );
     final consciousSpendingNumbers = ConsciousSpendingNumbers.endingOn(
       today: DateTime.now(),
       transactions: snapshot.transactions,
       categories: snapshot.categories,
       accounts: snapshot.accounts,
+      balanceSnapshots: await balanceSnapshotsRepository.listAll(),
+      lifeEvents: await lifeEventsRepository.listNewestFirst(),
     );
     final retirementTarget = (await LiveRetirementProjection(
       container: container,
@@ -193,14 +256,31 @@ keep any existing note. Reasonable assumptions belong in notes too; mark them
       'lastDay': consciousSpendingNumbers.lastDay.dayKey,
       'basis':
           'Plain totals over each window, no smoothing; annualCents scales '
-          'a window to one year. Take-home pay is Income on cash accounts '
-          '(paychecks and RSU proceeds); investments are net money put into '
-          'investments. The Investments guideline is what retiring at the '
-          'planned age needs (GET /projections) once a birth year is set.',
+          'a window to one year. Each area is a share of pay: take-home '
+          '(Income on cash accounts: paychecks and RSU proceeds) plus '
+          'payroll contributions (Investments on investment accounts: '
+          '401(k), HSA). Investments are net money put into investments '
+          'plus mortgage principal (home equity); mortgagePrincipal is that '
+          'part. Principal is measured from drops in loan-account balance '
+          'snapshots (an asset-sale payoff is not principal from pay) and '
+          'amortized from the home life event before its loan has snapshots. '
+          'It moves out of fixedCosts (Housing); interest, escrow, and '
+          'mortgage insurance stay there. Principal on a home already moved '
+          'out of (a home overlap) moves out of excludedFromLifestyleCosts '
+          'instead, so savings is unchanged. '
+          'The Investments guideline is what retiring at the planned age '
+          'needs (GET /projections) once a birth year is set; it counts the '
+          'projected mortgage principal as investing too. '
+          'excludedFromLifestyleCosts is spending whose rule leaves it out '
+          'of lifestyle costs (Fixed costs plus Guilt-free): it keeps its '
+          'category but fills no area and is left out of the projection '
+          'baseline. savings is pay left after the areas and '
+          'excludedFromLifestyleCosts, negative when cash was drawn down; '
+          'its target is 0% in either direction.',
       'guidelines': {
         for (final entry in guidelineByArea.entries)
           entry.key.name: {
-            'range': entry.value.rangeLabel,
+            'target': entry.value.targetLabel,
             'reason': entry.value.reason ?? 'Ramit Sethi',
           },
       },
@@ -221,23 +301,43 @@ keep any existing note. Reasonable assumptions belong in notes too; mark them
     return {
       'window': totals.window.label,
       'firstDay': totals.firstDay.dayKey,
+      'payCents': totals.payCents,
       'takeHomeCents': totals.takeHomeCents,
-      'annualTakeHomeCents': totals.annualTakeHomeCents,
+      'payrollContributionCents': totals.payrollContributionCents,
+      'annualPayCents': totals.annualPayCents,
       'rows': [
         for (final area in ConsciousSpendingArea.values)
           {
             'area': area.name,
             'name': area.displayName,
-            'guideline': guidelineByArea[area]!.rangeLabel,
-            'percentOfTakeHome': totals.percentOfTakeHome(area),
-            'offGuideline': switch (totals.percentOfTakeHome(area)) {
+            'guideline': guidelineByArea[area]!.targetLabel,
+            'percentOfPay': totals.percentOfPay(area),
+            'offGuideline': switch (totals.percentOfPay(area)) {
               null => false,
-              final percent => !guidelineByArea[area]!.contains(percent),
+              final percent => !guidelineByArea[area]!.isMetBy(percent),
             },
             'cents': totals.centsByArea[area],
             'annualCents': totals.annualCents(area),
+            'targetAnnualCents': guidelineByArea[area]!.impliedCents(
+              totals.annualPayCents,
+            ),
           },
       ],
+      'mortgagePrincipal': {
+        'cents': totals.mortgagePrincipalCents,
+        'annualCents': totals.annualMortgagePrincipalCents,
+      },
+      'excludedFromLifestyleCosts': {
+        'percentOfPay': totals.excludedFromLifestylePercentOfPay,
+        'cents': totals.excludedFromLifestyleCents,
+        'annualCents': totals.annualExcludedFromLifestyleCents,
+      },
+      'savings': {
+        'guideline': ConsciousSpendingGuideline.savings.targetLabel,
+        'percentOfPay': totals.savingsPercentOfPay,
+        'cents': totals.savingsCents,
+        'annualCents': totals.annualSavingsCents,
+      },
     };
   }
 
@@ -255,9 +355,26 @@ keep any existing note. Reasonable assumptions belong in notes too; mark them
     });
   }
 
+  /// `?search=` (pattern or note substring), `?category=<id>`,
+  /// `?excludesFromLifestyleCosts=true|false`.
   Future<Response> _rules(Request request) async {
     final snapshot = await CategorizationSnapshot.load(container);
-    return jsonOk({'rules': snapshot.rules.map(snapshot.ruleJson).toList()});
+    final parameters = request.url.queryParameters;
+    final String? search = parameters['search']?.trim().toLowerCase();
+    final String? categoryId = parameters['category'];
+    final String? excludes = parameters['excludesFromLifestyleCosts'];
+    return jsonOk({
+      'rules': [
+        for (final rule in snapshot.rules)
+          if ((search == null ||
+                  rule.pattern.contains(search) ||
+                  (rule.note?.toLowerCase().contains(search) ?? false)) &&
+              (categoryId == null || rule.categoryId == categoryId) &&
+              (excludes == null ||
+                  rule.excludesFromLifestyleCosts == (excludes == 'true')))
+            snapshot.ruleJson(rule),
+      ],
+    });
   }
 
   Future<Response> _ruleTransactions(Request request, String ruleId) async {
@@ -345,8 +462,8 @@ keep any existing note. Reasonable assumptions belong in notes too; mark them
       'merchant': merchant,
       'count': newestFirst.length,
       'netCents': netCents,
-      'firstPostedOn': newestFirst.last.postedAt.dayKey,
-      'lastPostedOn': newestFirst.first.postedAt.dayKey,
+      'firstPostedOn': newestFirst.last.postedDay.isoDate,
+      'lastPostedOn': newestFirst.first.postedDay.isoDate,
       'categories': [
         for (final entry in countByCategoryId.entries)
           {

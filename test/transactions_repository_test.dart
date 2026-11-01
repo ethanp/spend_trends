@@ -12,7 +12,8 @@ void main() {
       id: 'local-1',
       accountId: accountId,
       externalId: externalId,
-      postedAt: DateTime.fromMillisecondsSinceEpoch(0),
+      postedAtMillis: DateTime.fromMillisecondsSinceEpoch(0)
+          .millisecondsSinceEpoch,
       amountCents: -500,
       rawDescription: 'Coffee',
       normalizedMerchant: 'COFFEE',
@@ -22,7 +23,8 @@ void main() {
       id: 'local-2',
       accountId: accountId,
       externalId: externalId,
-      postedAt: DateTime.fromMillisecondsSinceEpoch(1000),
+      postedAtMillis: DateTime.fromMillisecondsSinceEpoch(1000)
+          .millisecondsSinceEpoch,
       amountCents: -500,
       rawDescription: 'Coffee',
       normalizedMerchant: 'COFFEE',

@@ -3,10 +3,12 @@ import 'package:spend_trends/domain/account_balance_snapshot.dart';
 import 'package:spend_trends/domain/category.dart';
 import 'package:spend_trends/domain/category_group.dart';
 import 'package:spend_trends/domain/imported_net_worth_day.dart';
+import 'package:spend_trends/domain/life_event.dart';
 import 'package:spend_trends/domain/owned_asset.dart';
 import 'package:spend_trends/domain/special_category.dart';
 import 'package:spend_trends/domain/transaction.dart';
 import 'package:spend_trends/features/trends/cash_flow_trend_builder.dart';
+import 'package:spend_trends/features/trends/category_trend_series.dart';
 import 'package:spend_trends/features/trends/category_spend_trend_builder.dart';
 import 'package:spend_trends/features/trends/conscious_spending_numbers.dart';
 import 'package:spend_trends/features/trends/net_worth_trend.dart';
@@ -24,13 +26,22 @@ class const BuildTrendsCharts() {
     List<OwnedAssetWithValuations> ownedAssets = const [],
     List<AccountBalanceSnapshot> balanceSnapshots = const [],
     List<ImportedNetWorthDay> importedNetWorthDays = const [],
+    List<LifeEvent> lifeEvents = const [],
     DateTime? endDate,
   }) {
+    final phaseStopwatch = Stopwatch()..start();
+    final phaseMillis = <String, int>{};
+    void endPhase(String name) {
+      phaseMillis[name] = phaseStopwatch.elapsedMilliseconds;
+      phaseStopwatch.reset();
+    }
+
     final chartEnd = (endDate ?? DateTime.now()).startOfDay;
     final historyStart = TrendChartCatalog.chartHistoryStart.startOfDay;
+    final CalendarDay historyStartDay = historyStart.calendarDay;
     final inRangeTransactions = [
       for (final transaction in transactions)
-        if (!transaction.postedAt.isBefore(historyStart)) transaction,
+        if (!transaction.postedDay.isBefore(historyStartDay)) transaction,
     ];
 
     final spendExcludedIds = {
@@ -48,13 +59,17 @@ class const BuildTrendsCharts() {
       accounts: accounts,
     );
 
+    endPhase('daily maps');
     final consciousSpendingNumbers = ConsciousSpendingNumbers.endingOn(
       transactions: transactions,
       categories: categories,
       accounts: accounts,
+      balanceSnapshots: balanceSnapshots,
+      lifeEvents: lifeEvents,
       today: chartEnd,
     );
 
+    endPhase('three numbers');
     final chartRange = _resolveChartRange(
       spendMaps: spendMaps,
       cashFlowMaps: cashFlowMaps,
@@ -73,34 +88,42 @@ class const BuildTrendsCharts() {
     }
 
     final hasSpendHistory = chartRange.hasSpendHistory;
+    endPhase('chart range');
+    final categorySpend = hasSpendHistory
+        ? CategorySpendTrendBuilder(
+            spendMaps: spendMaps,
+            incomeByDay: cashFlowMaps.incomeByDay,
+            categories: categories,
+            groups: groups,
+            flowCategoryIds: spendExcludedIds,
+            chartDates: chartRange.dates,
+            historyFloor: chartRange.start,
+          ).build()
+        : const <CategoryTrendSeries>[];
+    endPhase('category spend');
+    final cashFlows = hasSpendHistory
+        ? CashFlowTrendBuilder(
+            cashFlowMaps: cashFlowMaps,
+            chartDates: chartRange.dates,
+            historyFloor: chartRange.start,
+          ).build()
+        : const <CategoryTrendSeries>[];
+    endPhase('cash flows');
+    final netWorth = NetWorthTrend.series(
+      accounts: accounts,
+      transactions: inRangeTransactions,
+      chartDates: chartRange.dates,
+      ownedAssets: ownedAssets,
+      balanceSnapshots: balanceSnapshots,
+      importedNetWorthDays: importedNetWorthDays,
+    );
+    endPhase('net worth');
     return TrendsChartBundle(
       consciousSpendingNumbers: consciousSpendingNumbers,
-      categorySpend: hasSpendHistory
-          ? CategorySpendTrendBuilder(
-              spendMaps: spendMaps,
-              incomeByDay: cashFlowMaps.incomeByDay,
-              categories: categories,
-              groups: groups,
-              flowCategoryIds: spendExcludedIds,
-              chartDates: chartRange.dates,
-              historyFloor: chartRange.start,
-            ).build()
-          : const [],
-      cashFlows: hasSpendHistory
-          ? CashFlowTrendBuilder(
-              cashFlowMaps: cashFlowMaps,
-              chartDates: chartRange.dates,
-              historyFloor: chartRange.start,
-            ).build()
-          : const [],
-      netWorth: NetWorthTrend.series(
-        accounts: accounts,
-        transactions: inRangeTransactions,
-        chartDates: chartRange.dates,
-        ownedAssets: ownedAssets,
-        balanceSnapshots: balanceSnapshots,
-        importedNetWorthDays: importedNetWorthDays,
-      ),
+      categorySpend: categorySpend,
+      cashFlows: cashFlows,
+      netWorth: netWorth,
+      phaseMillis: phaseMillis,
     );
   }
 
@@ -113,17 +136,12 @@ class const BuildTrendsCharts() {
     required DateTime historyStart,
     required DateTime chartEnd,
   }) {
-    final earliestSpend = _earliestDate([
+    final DateTime? earliestSpend = _earliestDay([
       ...spendMaps.totalByDay.keys,
       ...cashFlowMaps.incomeByDay.keys,
       ...cashFlowMaps.spendingByDay.keys,
       ...cashFlowMaps.transferByDay.keys,
-    ]);
-    final earliestTxn = _earliestDate([
-      for (final transaction in inRangeTransactions)
-        transaction.postedAt.startOfDay,
-    ]);
-
+    ])?.localMidnight;
     late final DateTime chartStart;
     final hasSpendHistory = earliestSpend != null;
     if (hasSpendHistory) {
@@ -131,6 +149,9 @@ class const BuildTrendsCharts() {
           ? historyStart
           : earliestSpend;
     } else if (accounts.isNotEmpty || ownedAssets.isNotEmpty) {
+      final DateTime? earliestTxn = _earliestDay([
+        for (final transaction in inRangeTransactions) transaction.postedDay,
+      ])?.localMidnight;
       chartStart = earliestTxn != null && earliestTxn.isAfter(historyStart)
           ? earliestTxn
           : historyStart;
@@ -147,9 +168,9 @@ class const BuildTrendsCharts() {
     );
   }
 
-  static DateTime? _earliestDate(Iterable<DateTime> dates) {
-    DateTime? earliest;
-    for (final day in dates) {
+  static CalendarDay? _earliestDay(Iterable<CalendarDay> days) {
+    CalendarDay? earliest;
+    for (final day in days) {
       if (earliest == null || day.isBefore(earliest)) {
         earliest = day;
       }
@@ -157,12 +178,14 @@ class const BuildTrendsCharts() {
     return earliest;
   }
 
+  /// Every local midnight from [firstDate] through [endDate].
   static List<DateTime> _calendarDates(DateTime firstDate, DateTime endDate) {
-    if (firstDate.isAfter(endDate)) return [];
-    final dayCount = endDate.difference(firstDate).inDays + 1;
+    final CalendarDay firstDay = firstDate.calendarDay;
+    final int dayCount = endDate.calendarDay.daysSince(firstDay) + 1;
+    if (dayCount <= 0) return [];
     return List.generate(
       dayCount,
-      (dayOffset) => firstDate.shiftedByDays(dayOffset),
+      (dayOffset) => firstDay.plusDays(dayOffset).localMidnight,
     );
   }
 }

@@ -16,6 +16,12 @@ abstract final class FinanceColors() {
 
   /// Job life-chain band on Trends.
   static const job = EColors.success;
+
+  /// Savings on the three numbers: pay left after the three areas.
+  static const savings = Color(0xFF8ECAE6);
+
+  /// Spending excluded from lifestyle costs on the three numbers.
+  static const excludedFromLifestyleCosts = Color(0xFFADB5BD);
 }
 
 extension ConsciousSpendingAreaColor on ConsciousSpendingArea {

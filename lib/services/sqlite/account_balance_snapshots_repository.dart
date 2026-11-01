@@ -4,15 +4,24 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:powersync/powersync.dart';
 import 'package:spend_trends/domain/account_balance_snapshot.dart';
 
+const _log = ELogger('SnapshotsRepository');
+
 /// Recorded balances: manual updates, one per SimpleFIN pull day, and
 /// history imported from Empower.
 class AccountBalanceSnapshotsRepository(final PowerSyncDatabase _powerSync) {
   /// Oldest first.
   Future<List<AccountBalanceSnapshot>> listAll() async {
+    final stopwatch = Stopwatch()..start();
     final rows = await _powerSync.getAll(
       'SELECT * FROM account_balance_snapshots ORDER BY recorded_on, id',
     );
-    return rows.map(_fromRow).toList();
+    final int queryMs = stopwatch.elapsedMilliseconds;
+    final snapshots = rows.map(_fromRow).toList();
+    _log.log(
+      'listAll: query ${queryMs}ms, mapped ${rows.length} rows in '
+      '${stopwatch.elapsedMilliseconds - queryMs}ms',
+    );
+    return snapshots;
   }
 
   Future<void> insert(AccountBalanceSnapshot snapshot) async {
@@ -26,7 +35,7 @@ class AccountBalanceSnapshotsRepository(final PowerSyncDatabase _powerSync) {
         snapshot.id,
         snapshot.accountId,
         snapshot.balanceCents,
-        snapshot.recordedOn.startOfDay.millisecondsSinceEpoch,
+        snapshot.recordedDay.localMidnightMillis,
       ],
     );
   }
@@ -37,11 +46,12 @@ class AccountBalanceSnapshotsRepository(final PowerSyncDatabase _powerSync) {
     required int balanceCents,
     required DateTime day,
   }) async {
+    final CalendarDay recordedDay = day.calendarDay;
     await _powerSync.upsert('account_balance_snapshots', {
-      'id': '$accountId@${day.dayKey}',
+      'id': '$accountId@${recordedDay.isoDate}',
       'account_id': accountId,
       'balance_cents': balanceCents,
-      'recorded_on': day.startOfDay.millisecondsSinceEpoch,
+      'recorded_on': recordedDay.localMidnightMillis,
     });
   }
 
@@ -58,7 +68,7 @@ class AccountBalanceSnapshotsRepository(final PowerSyncDatabase _powerSync) {
       id: columns['id'] as String,
       accountId: columns['account_id'] as String,
       balanceCents: columns['balance_cents'].asInt(),
-      recordedOn: columns['recorded_on'].asInt().dateTimeFromMillis,
+      recordedDay: CalendarDay.fromLocalMillis(columns['recorded_on'].asInt()),
     );
   }
 }

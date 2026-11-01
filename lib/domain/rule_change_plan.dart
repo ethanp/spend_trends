@@ -12,18 +12,24 @@ class const RuleDraft({
 
   /// Kept from the existing rule when null.
   final String? note,
+
+  /// Kept from the existing rule when null; false for a new rule.
+  final bool? excludesFromLifestyleCosts,
 }) {
-  /// The same rule pointed at [categoryId], optionally with a new [note].
+  /// The same rule pointed at [categoryId], optionally with a new [note] or
+  /// lifestyle-costs exclusion.
   factory retargeting(
     CategorizationRule rule, {
     required String categoryId,
     String? note,
+    bool? excludesFromLifestyleCosts,
   }) => RuleDraft(
     pattern: rule.pattern,
     categoryId: categoryId,
     matchType: rule.matchType,
     accountId: rule.accountId,
     note: note,
+    excludesFromLifestyleCosts: excludesFromLifestyleCosts,
   );
 
   String get normalizedPattern => pattern.trim().toLowerCase();
@@ -33,15 +39,28 @@ class const RuleDraft({
       rule.accountId == accountId &&
       rule.pattern.trim().toLowerCase() == normalizedPattern;
 
-  CategorizationRule asRule({required String id, String? fallbackNote}) =>
-      CategorizationRule(
-        id: id,
-        matchType: matchType,
-        pattern: normalizedPattern,
-        categoryId: categoryId,
-        accountId: accountId,
-        note: note ?? fallbackNote,
-      );
+  /// The rule in [rules] this draft updates (same match), or null when it
+  /// adds a new one.
+  CategorizationRule? updatedRuleIn(Iterable<CategorizationRule> rules) =>
+      rules.where(sameMatchAs).firstOrNull;
+
+  /// [existing] is the rule this draft updates, whose note and
+  /// lifestyle-costs exclusion it keeps unless it sets its own.
+  CategorizationRule asRule({
+    required String id,
+    CategorizationRule? existing,
+  }) => CategorizationRule(
+    id: id,
+    matchType: matchType,
+    pattern: normalizedPattern,
+    categoryId: categoryId,
+    accountId: accountId,
+    note: note ?? existing?.note,
+    excludesFromLifestyleCosts:
+        excludesFromLifestyleCosts ??
+        existing?.excludesFromLifestyleCosts ??
+        false,
+  );
 
   bool matches(BankTransaction transaction) =>
       RuleMatchIndex.ruleMatches(transaction, asRule(id: 'draft'));
@@ -53,6 +72,9 @@ class const RecategorizedTransaction({
   required final CategorizationRule? rule,
 }) {
   String? get categoryId => rule?.categoryId;
+
+  bool get excludedFromLifestyleCosts =>
+      rule?.excludesFromLifestyleCosts ?? false;
 
   bool get changesCategory => categoryId != transaction.categoryId;
 }
@@ -109,5 +131,8 @@ class RuleChangePlan({
   }
 
   static bool _isMove(RecategorizedTransaction move) =>
-      move.rule?.id != move.transaction.categoryRuleId || move.changesCategory;
+      move.rule?.id != move.transaction.categoryRuleId ||
+      move.changesCategory ||
+      move.excludedFromLifestyleCosts !=
+          move.transaction.excludedFromLifestyleCosts;
 }

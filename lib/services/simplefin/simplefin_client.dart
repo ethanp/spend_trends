@@ -250,14 +250,28 @@ class SimpleFinClient({http.Client? httpClient}) {
     }
 
     final decoded = _tryDecodeJsonMap(response.body);
-    if (decoded == null) {
-      throw SimpleFinFetchException(
-        'SimpleFIN fetch failed (HTTP ${response.statusCode}): '
-        '${_truncate(response.body)}',
-        statusCode: response.statusCode,
-      );
-    }
-    return decoded;
+    if (decoded != null) return decoded;
+    final String retryAdvice = switch (response.statusCode) {
+      429 => ' SimpleFIN limits how often it can be pulled; try again later.',
+      >= 500 => ' Wait a minute or two and retry.',
+      _ => '',
+    };
+    throw SimpleFinFetchException(
+      'SimpleFIN fetch failed (HTTP ${response.statusCode}: '
+      '${_htmlTitleOrTruncated(response.body)}).$retryAdvice',
+      statusCode: response.statusCode,
+    );
+  }
+
+  /// Bridge outages return a full HTML error page; its title is the message.
+  static String _htmlTitleOrTruncated(String body) {
+    final RegExpMatch? titleMatch = RegExp(
+      r'<title>([^<]*)</title>',
+      caseSensitive: false,
+    ).firstMatch(body);
+    final String? title = titleMatch?.group(1)?.trim();
+    if (title == null || title.isEmpty) return _truncate(body);
+    return title;
   }
 
   void _warnIfNonSuccessAccountSet(http.Response response) {

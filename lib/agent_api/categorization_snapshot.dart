@@ -60,13 +60,14 @@ class CategorizationSnapshot({
         rulesById[transaction.categoryRuleId];
     return {
       'id': transaction.id,
-      'postedOn': transaction.postedAt.dayKey,
+      'postedOn': transaction.postedDay.isoDate,
       'amountCents': transaction.amountCents,
       'amount': formatCents(transaction.amountCents),
       'description': transaction.rawDescription,
       'merchant': transaction.normalizedMerchant,
       'pending': transaction.pending,
       'excluded': transaction.excluded,
+      'excludedFromLifestyleCosts': transaction.excludedFromLifestyleCosts,
       'note': transaction.note,
       'recurringSeries': transaction.recurringSeries,
       'account': {
@@ -145,6 +146,7 @@ class CategorizationSnapshot({
     'matchType': rule.matchType.storageValue,
     'categoryId': rule.categoryId,
     'accountId': rule.accountId,
+    'excludesFromLifestyleCosts': rule.excludesFromLifestyleCosts,
     'note': rule.note,
   };
 
@@ -179,13 +181,13 @@ class CategorizationSnapshot({
   }();
 
   late final Map<String, int> _trailingYearOutflowByCategoryId = () {
-    final yearAgo = DateTime.now().shiftedByDays(-365);
+    final CalendarDay yearAgo = CalendarDay.today().plusDays(-365);
     final outflowByCategoryId = <String, int>{};
     for (final transaction in transactions) {
       final categoryId = transaction.categoryId;
       if (categoryId == null) continue;
-      if (transaction.excluded || !transaction.isOutflow) continue;
-      if (transaction.postedAt.isBefore(yearAgo)) continue;
+      if (!transaction.isOutflow) continue;
+      if (transaction.postedDay.isBefore(yearAgo)) continue;
       outflowByCategoryId.update(
         categoryId,
         (priorCents) => priorCents - transaction.amountCents,

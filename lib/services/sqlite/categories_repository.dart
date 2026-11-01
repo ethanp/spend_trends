@@ -258,6 +258,7 @@ class CategoriesRepository(final PowerSyncDatabase _powerSync) {
           rule.categoryId,
           rule.accountId,
           rule.note,
+          rule.excludesFromLifestyleCosts ? 1 : 0,
         ];
         final existingRow = await tx.getOptional(
           'SELECT id FROM categorization_rules WHERE id = ?',
@@ -269,7 +270,7 @@ class CategoriesRepository(final PowerSyncDatabase _powerSync) {
             '''
             UPDATE categorization_rules
             SET match_type = ?, pattern = ?, category_id = ?, account_id = ?,
-                note = ?
+                note = ?, excludes_from_lifestyle_costs = ?
             WHERE id = ?
             ''',
             [...ruleColumns, rule.id],
@@ -279,8 +280,9 @@ class CategoriesRepository(final PowerSyncDatabase _powerSync) {
         await tx.execute(
           '''
           INSERT INTO categorization_rules
-            (id, match_type, pattern, category_id, account_id, note)
-          VALUES (?, ?, ?, ?, ?, ?)
+            (id, match_type, pattern, category_id, account_id, note,
+             excludes_from_lifestyle_costs)
+          VALUES (?, ?, ?, ?, ?, ?, ?)
           ''',
           [rule.id, ...ruleColumns],
         );
@@ -348,6 +350,8 @@ class CategoriesRepository(final PowerSyncDatabase _powerSync) {
       categoryId: columns['category_id'] as String,
       accountId: columns['account_id'] as String?,
       note: columns['note'] as String?,
+      excludesFromLifestyleCosts:
+          columns['excludes_from_lifestyle_costs'].asIntOrNull() == 1,
     );
   }
 }

@@ -21,7 +21,6 @@ class const CategoryTrendDistributionLegend({
   final DateTime? inspectDate,
 }) extends StatefulWidget {
   static const whiskerHeight = 240.0;
-  static const labelBlockHeight = 66.0;
   static const columnWidth = 96.0;
   static const axisWidth = 44.0;
   static const columnGap = ELayout.spaceSm;
@@ -94,6 +93,9 @@ class _CategoryTrendDistributionLegendState()
     required Map<String, CategoryTrendDistributionPair> pairsBySeriesId,
     required TrendValueScale scale,
   }) {
+    final double labelBlockHeight = _LabelBlockLines.heightFor(
+      MediaQuery.textScalerOf(context),
+    );
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -102,9 +104,7 @@ class _CategoryTrendDistributionLegendState()
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
-              const SizedBox(
-                height: CategoryTrendDistributionLegend.labelBlockHeight,
-              ),
+              SizedBox(height: labelBlockHeight),
               _DistributionAxisLabels(
                 scale: scale,
                 whiskerHeight: CategoryTrendDistributionLegend.whiskerHeight,
@@ -120,7 +120,7 @@ class _CategoryTrendDistributionLegendState()
             child: Stack(
               children: [
                 Positioned(
-                  top: CategoryTrendDistributionLegend.labelBlockHeight,
+                  top: labelBlockHeight,
                   left: 0,
                   right: 0,
                   height: CategoryTrendDistributionLegend.whiskerHeight,
@@ -144,6 +144,7 @@ class _CategoryTrendDistributionLegendState()
                         clusters[clusterIndex],
                         pairsBySeriesId: pairsBySeriesId,
                         scale: scale,
+                        labelBlockHeight: labelBlockHeight,
                       ),
                     ],
                   ],
@@ -160,6 +161,7 @@ class _CategoryTrendDistributionLegendState()
     DistributionLegendCluster cluster, {
     required Map<String, CategoryTrendDistributionPair> pairsBySeriesId,
     required TrendValueScale scale,
+    required double labelBlockHeight,
   }) {
     final isExpanded = _expandedGroupSeriesId == cluster.rollup.id;
     return Row(
@@ -169,6 +171,7 @@ class _CategoryTrendDistributionLegendState()
           cluster.rollup,
           pairsBySeriesId: pairsBySeriesId,
           scale: scale,
+          labelBlockHeight: labelBlockHeight,
           canExpand: cluster.canExpand,
           isExpanded: isExpanded,
         ),
@@ -176,6 +179,7 @@ class _CategoryTrendDistributionLegendState()
           cluster,
           pairsBySeriesId: pairsBySeriesId,
           scale: scale,
+          labelBlockHeight: labelBlockHeight,
           isExpanded: isExpanded,
         ),
       ],
@@ -186,6 +190,7 @@ class _CategoryTrendDistributionLegendState()
     DistributionLegendCluster cluster, {
     required Map<String, CategoryTrendDistributionPair> pairsBySeriesId,
     required TrendValueScale scale,
+    required double labelBlockHeight,
     required bool isExpanded,
   }) {
     if (!cluster.canExpand) return const SizedBox.shrink();
@@ -210,6 +215,7 @@ class _CategoryTrendDistributionLegendState()
                 member,
                 pairsBySeriesId: pairsBySeriesId,
                 scale: scale,
+                labelBlockHeight: labelBlockHeight,
                 canExpand: false,
                 isExpanded: false,
               ),
@@ -224,6 +230,7 @@ class _CategoryTrendDistributionLegendState()
     CategoryTrendSeries series, {
     required Map<String, CategoryTrendDistributionPair> pairsBySeriesId,
     required TrendValueScale scale,
+    required double labelBlockHeight,
     required bool canExpand,
     required bool isExpanded,
   }) {
@@ -233,6 +240,7 @@ class _CategoryTrendDistributionLegendState()
         series: series,
         pair: pairsBySeriesId[series.id],
         scale: scale,
+        labelBlockHeight: labelBlockHeight,
         isHidden: widget.hiddenSeriesIds.contains(series.id),
         isExpanded: isExpanded,
         formatAnnualized: _formatAnnualized,
@@ -301,6 +309,7 @@ class const _DistributionColumn({
   required final CategoryTrendSeries series,
   required final CategoryTrendDistributionPair? pair,
   required final TrendValueScale scale,
+  required final double labelBlockHeight,
   required final bool isHidden,
   required final bool isExpanded,
   required final String Function(int cents) formatAnnualized,
@@ -320,12 +329,6 @@ class const _DistributionColumn({
     final nowLabel = nowCents == null
         ? '—'
         : formatAnnualized(nowCents.round());
-    final periodLabelStyle = EText.caption.copyWith(
-      color: isHidden ? EColors.textMuted : EColors.textMuted,
-      fontSize: 9,
-      height: 1,
-    );
-
     return GestureDetector(
       onTap: onActivated,
       onDoubleTap: onSoloActivated,
@@ -333,7 +336,7 @@ class const _DistributionColumn({
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           SizedBox(
-            height: CategoryTrendDistributionLegend.labelBlockHeight,
+            height: labelBlockHeight,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
@@ -345,11 +348,10 @@ class const _DistributionColumn({
                       child: Text(
                         series.name,
                         style: isHidden
-                            ? EText.caption.copyWith(
+                            ? _LabelBlockLines.seriesName.copyWith(
                                 color: EColors.textMuted,
-                                fontSize: 11,
                               )
-                            : EText.caption.copyWith(fontSize: 11),
+                            : _LabelBlockLines.seriesName,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
@@ -359,9 +361,9 @@ class const _DistributionColumn({
                 ),
                 Text(
                   nowLabel,
-                  style: isHidden
-                      ? EText.caption.copyWith(color: EColors.textMuted)
-                      : EText.caption.copyWith(color: EColors.textSecondary),
+                  style: _LabelBlockLines.nowAnnualized.copyWith(
+                    color: isHidden ? EColors.textMuted : EColors.textSecondary,
+                  ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   textAlign: TextAlign.center,
@@ -371,14 +373,14 @@ class const _DistributionColumn({
                     Expanded(
                       child: Text(
                         'all',
-                        style: periodLabelStyle,
+                        style: _LabelBlockLines.period,
                         textAlign: TextAlign.center,
                       ),
                     ),
                     Expanded(
                       child: Text(
                         '1y',
-                        style: periodLabelStyle,
+                        style: _LabelBlockLines.period,
                         textAlign: TextAlign.center,
                       ),
                     ),
@@ -391,17 +393,11 @@ class const _DistributionColumn({
                       child: Text(
                         pastYearTotalLabel,
                         style: isHidden
-                            ? EText.caption.copyWith(
+                            ? _LabelBlockLines.pastYearTotal.copyWith(
                                 color: EColors.textMuted,
-                                fontSize: 10,
-                                height: 1.1,
+                                fontWeight: FontWeight.w400,
                               )
-                            : EText.caption.copyWith(
-                                color: EColors.textSecondary,
-                                fontSize: 10,
-                                height: 1.1,
-                                fontWeight: FontWeight.w600,
-                              ),
+                            : _LabelBlockLines.pastYearTotal,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         textAlign: TextAlign.center,
@@ -457,11 +453,49 @@ class const _DistributionColumn({
         padding: const EdgeInsets.only(left: 2),
         child: Icon(
           isExpanded ? Icons.expand_more : Icons.chevron_right,
-          size: 16,
+          size: _LabelBlockLines.chevronSize,
           color: isHidden ? EColors.textMuted : EColors.textSecondary,
         ),
       ),
     );
+  }
+}
+
+/// Text lines above each whisker pair. The block is measured from these
+/// styles so macOS type scale never overflows it.
+abstract final class _LabelBlockLines() {
+  static const chevronSize = 16.0;
+
+  static TextStyle get seriesName => EText.caption.copyWith(fontSize: 11);
+
+  static TextStyle get nowAnnualized => EText.caption;
+
+  static TextStyle get period =>
+      EText.caption.copyWith(color: EColors.textMuted, fontSize: 9, height: 1);
+
+  static TextStyle get pastYearTotal => EText.caption.copyWith(
+    color: EColors.textSecondary,
+    fontSize: 10,
+    height: 1.1,
+    fontWeight: FontWeight.w600,
+  );
+
+  static double heightFor(TextScaler textScaler) =>
+      math.max(_lineHeight(seriesName, textScaler), chevronSize) +
+      _lineHeight(nowAnnualized, textScaler) +
+      _lineHeight(period, textScaler) +
+      _lineHeight(pastYearTotal, textScaler);
+
+  static double _lineHeight(TextStyle style, TextScaler textScaler) {
+    final painter = TextPainter(
+      text: TextSpan(text: '\$0', style: style),
+      textDirection: TextDirection.ltr,
+      textScaler: textScaler,
+      maxLines: 1,
+    )..layout();
+    final double lineHeight = painter.height;
+    painter.dispose();
+    return lineHeight;
   }
 }
 
