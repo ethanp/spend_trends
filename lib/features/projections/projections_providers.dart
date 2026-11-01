@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:isolate';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -16,17 +17,17 @@ import 'package:spend_trends/features/banks/banks_providers.dart';
 import 'package:spend_trends/features/categories/categories_providers.dart';
 import 'package:spend_trends/features/life_events/life_events_providers.dart';
 import 'package:spend_trends/features/owned_assets/owned_assets_providers.dart';
-import 'package:spend_trends/providers/spend_data_changed.dart';
 import 'package:spend_trends/services/sqlite/projection_settings_repository.dart';
 
-final projectionAssumptionsProvider = FutureProvider<ProjectionAssumptions>((
+/// The saved assumptions, following their synced row: a save here or on
+/// another device re-runs the projection once, and nothing else reloads.
+final projectionAssumptionsProvider = StreamProvider<ProjectionAssumptions>((
   ref,
-) async {
-  ref.watch(spendDataChangedProvider);
+) async* {
   final ProjectionSettingsRepository repository = await ref.watch(
     projectionSettingsRepositoryProvider.future,
   );
-  return repository.loadAssumptions();
+  yield* repository.watchAssumptions();
 });
 
 /// Live balances, homes, and last year's flows, as of today. Scans every
@@ -91,11 +92,25 @@ class ProjectionAssumptionDrafts() extends Notifier<Map<String, Object?>> {
   /// Saves the released value, then drops the draft once the saved
   /// projection carries it, so the slider never snaps back.
   Future<void> release(String assumptionKey, Object? value) async {
-    await ref.read(projectionAssumptionsEditorProvider).apply({
-      assumptionKey: value,
-    });
-    await ref.read(retirementProjectionProvider.future);
+    final ProjectionAssumptions saved = await ref
+        .read(projectionAssumptionsEditorProvider)
+        .apply({assumptionKey: value});
+    await _untilSavedProjectionUses(saved);
     state = {...state}..remove(assumptionKey);
+  }
+
+  /// The saved projection follows the settings row a moment after a save.
+  Future<void> _untilSavedProjectionUses(ProjectionAssumptions saved) {
+    final completer = Completer<void>();
+    final subscription = ref.listen(retirementProjectionProvider, (
+      previous,
+      next,
+    ) {
+      if (next.value?.assumptions == saved && !completer.isCompleted) {
+        completer.complete();
+      }
+    }, fireImmediately: true);
+    return completer.future.whenComplete(subscription.close);
   }
 }
 
@@ -169,7 +184,8 @@ class const AssumptionSweepRange({
 }
 
 /// Saves assumption changes (JSON-shaped keys, see
-/// [ProjectionAssumptions.merged]) to the synced row and refreshes screens.
+/// [ProjectionAssumptions.merged]) to the synced row, which
+/// [projectionAssumptionsProvider] follows.
 class ProjectionAssumptionsEditor(final Ref _ref) {
   Future<ProjectionAssumptions> apply(Map<String, dynamic> changes) async {
     final ProjectionSettingsRepository repository = await _ref.read(
@@ -177,9 +193,6 @@ class ProjectionAssumptionsEditor(final Ref _ref) {
     );
     final updated = (await repository.loadAssumptions()).merged(changes);
     await repository.saveAssumptions(updated);
-    // Only the projection reads assumptions; reloading every transaction
-    // and account for a slider release would be wasted work.
-    _ref.invalidate(projectionAssumptionsProvider);
     return updated;
   }
 }

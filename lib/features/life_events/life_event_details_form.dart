@@ -112,6 +112,23 @@ class _HomeDetailsForm(HomeOwnership? home) implements LifeEventDetailsForm {
     'Property tax % of value/yr',
     home?.propertyTaxPercent,
   );
+  final _closingCost = _NumberInput(
+    'Buyer closing costs % of price',
+    home?.closingCostPercent ?? HomeOwnership.typicalClosingCostPercent,
+  );
+  final _sellingCost = _NumberInput(
+    'Selling costs % of value (when sold)',
+    home?.sellingCostPercent ?? HomeOwnership.lastSaleSellingCostPercent,
+  );
+  final _monthsCarryingPreviousHome = _NumberInput(
+    'Months carrying the previous home',
+    home?.monthsCarryingPreviousHome ??
+        HomeOwnership.lastMoveMonthsCarryingPreviousHome,
+  );
+  final _movingCost = _NumberInput(
+    'Moving cost \$',
+    home?.movingCost ?? HomeOwnership.lastMoveMovingCost,
+  );
 
   @override
   List<Widget> fields(VoidCallback rebuild) => [
@@ -135,6 +152,10 @@ class _HomeDetailsForm(HomeOwnership? home) implements LifeEventDetailsForm {
     _hoa.row(),
     _maintenance.row(),
     _propertyTax.row(),
+    _closingCost.row(),
+    _sellingCost.row(),
+    _monthsCarryingPreviousHome.row(),
+    _movingCost.row(),
   ];
 
   @override
@@ -157,6 +178,10 @@ class _HomeDetailsForm(HomeOwnership? home) implements LifeEventDetailsForm {
     hoaAnnual: _hoa.wholeNumber,
     maintenancePercent: _maintenance.decimal,
     propertyTaxPercent: _propertyTax.decimal,
+    closingCostPercent: _closingCost.decimal,
+    sellingCostPercent: _sellingCost.decimal,
+    monthsCarryingPreviousHome: _monthsCarryingPreviousHome.wholeNumber,
+    movingCost: _movingCost.wholeNumber,
   );
 
   Widget _toggle(String label, bool isOn, ValueChanged<bool> onChanged) {
@@ -179,6 +204,10 @@ class _HomeDetailsForm(HomeOwnership? home) implements LifeEventDetailsForm {
       _hoa,
       _maintenance,
       _propertyTax,
+      _closingCost,
+      _sellingCost,
+      _monthsCarryingPreviousHome,
+      _movingCost,
     ]) {
       input.dispose();
     }

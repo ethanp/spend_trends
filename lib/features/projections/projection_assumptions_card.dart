@@ -30,7 +30,7 @@ class const ProjectionAssumptionsCard({
             'across its range: % of pay to invest to retire at '
             '${projection.assumptions.retirementAge}, or for spending, the '
             'earliest retirement age. Jobs, homes, and children are life '
-            'events.',
+            'events; an assumed move tries one without adding it there.',
             style: EText.caption,
           ),
           const SizedBox(height: ELayout.spaceSm),
@@ -44,6 +44,14 @@ class const ProjectionAssumptionsCard({
                   slider: slider,
                   projection: projection,
                 ),
+              _AssumedMoveSwitchRow(projection: projection),
+              if (projection.assumptions.assumedMoveYear != null)
+                for (final slider in _assumedMoveSliders())
+                  AssumptionSliderRow(
+                    key: ValueKey(slider.range.assumptionKey),
+                    slider: slider,
+                    projection: projection,
+                  ),
             ],
           ),
         ],
@@ -133,6 +141,90 @@ class const ProjectionAssumptionsCard({
       caption: (value) => '${value.round()}',
     ),
   ];
+
+  /// The assumed move's year, price, down payment, and rate. Every sweep
+  /// reads the % of pay needed, so the cost of each choice shows.
+  List<AssumptionSlider> _assumedMoveSliders() {
+    final int thisYear = DateTime.now().year;
+    return [
+      AssumptionSlider(
+        label: 'Move in',
+        range: AssumptionSweepRange(
+          assumptionKey: 'assumedMoveYear',
+          min: thisYear.toDouble(),
+          max: (thisYear + 25).toDouble(),
+          step: 1,
+          outcomeKind: SweepOutcomeKind.investingPercentNeeded,
+        ),
+        caption: (value) => '${value.round()}',
+      ),
+      AssumptionSlider(
+        label: 'New home price',
+        range: const AssumptionSweepRange(
+          assumptionKey: 'assumedMovePrice',
+          min: 250000,
+          max: 2000000,
+          step: 10000,
+          outcomeKind: SweepOutcomeKind.investingPercentNeeded,
+        ),
+        caption: (value) => formatCentsWholeDollars((value * 100).round()),
+      ),
+      AssumptionSlider(
+        label: 'Down payment',
+        range: const AssumptionSweepRange(
+          assumptionKey: 'assumedMoveDownPayment',
+          min: 0,
+          max: 1000000,
+          step: 5000,
+          outcomeKind: SweepOutcomeKind.investingPercentNeeded,
+        ),
+        caption: (value) => formatCentsWholeDollars((value * 100).round()),
+      ),
+      AssumptionSlider(
+        label: 'Mortgage rate',
+        range: const AssumptionSweepRange(
+          assumptionKey: 'assumedMoveMortgageRatePercent',
+          min: 3,
+          max: 9,
+          step: 0.05,
+          outcomeKind: SweepOutcomeKind.investingPercentNeeded,
+        ),
+        caption: (value) => '${value.toStringAsFixed(2)}%',
+      ),
+    ];
+  }
+}
+
+/// Switches the assumed move on (a few years out, keeping its last price,
+/// down payment, and rate) or off.
+class const _AssumedMoveSwitchRow({
+  required final RetirementProjection projection,
+}) extends ConsumerWidget {
+  static const _defaultYearsAhead = 3;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final bool isOn = projection.assumptions.assumedMoveYear != null;
+    return Row(
+      children: [
+        Expanded(
+          child: Text(
+            'Assume a move (sells the current home; 30-yr fixed)',
+            style: EText.caption,
+          ),
+        ),
+        Switch(
+          value: isOn,
+          onChanged: (assumesMove) =>
+              ref.read(projectionAssumptionsEditorProvider).apply({
+                'assumedMoveYear': assumesMove
+                    ? DateTime.now().year + _defaultYearsAhead
+                    : null,
+              }),
+        ),
+      ],
+    );
+  }
 }
 
 /// Opens a calendar (starting on the year grid); saves the pick.

@@ -45,7 +45,7 @@ class LifeEventsRepository(final PowerSyncDatabase _powerSync) {
       'ended_on': endedOn?.millisecondsSinceEpoch,
       'note': _normalizedNote(event.note),
       'kind': event.kind.name,
-      'details_json': switch (_detailsOf(event)) {
+      'details_json': switch (event.details) {
         null => null,
         final details => jsonEncode(details),
       },
@@ -60,31 +60,6 @@ class LifeEventsRepository(final PowerSyncDatabase _powerSync) {
     final trimmed = note?.trim() ?? '';
     return trimmed.isEmpty ? null : trimmed;
   }
-
-  /// The kind's own fields, stored as `details_json`; null for kinds with none.
-  static Map<String, Object?>? _detailsOf(LifeEvent event) => switch (event) {
-    Milestone() || ChildBirth() => null,
-    Job() => {
-      'takeHomeSalaryAnnual': event.takeHomeSalaryAnnual,
-      'takeHomeBonusAnnual': event.takeHomeBonusAnnual,
-    },
-    HomeOwnership() => {
-      'price': event.price,
-      'downPayment': event.downPayment,
-      'mortgage': switch (event.mortgage) {
-        null => null,
-        final mortgage => {
-          'ratePercent': mortgage.ratePercent,
-          'years': mortgage.years,
-          'hasEscrow': mortgage.hasEscrow,
-        },
-      },
-      'insuranceAnnual': event.insuranceAnnual,
-      'hoaAnnual': event.hoaAnnual,
-      'maintenancePercent': event.maintenancePercent,
-      'propertyTaxPercent': event.propertyTaxPercent,
-    },
-  };
 
   static LifeEvent _fromRow(dynamic row) {
     final columns = (row as Map).cast<String, Object?>();
@@ -107,55 +82,17 @@ class LifeEventsRepository(final PowerSyncDatabase _powerSync) {
       final String json => jsonDecode(json) as Map<String, dynamic>,
       _ => const <String, dynamic>{},
     };
-    final kind = LifeEventKind.values.asNameMap()[columns['kind']];
-    return switch (kind ?? LifeEventKind.milestone) {
-      LifeEventKind.milestone => Milestone(
-        id: id,
-        title: title,
-        startedOn: startedOn,
-        endedOn: endedOn,
-        note: note,
-      ),
-      LifeEventKind.job => Job(
-        id: id,
-        title: title,
-        startedOn: startedOn,
-        endedOn: endedOn,
-        note: note,
-        takeHomeSalaryAnnual: details['takeHomeSalaryAnnual'] as int? ?? 0,
-        takeHomeBonusAnnual: details['takeHomeBonusAnnual'] as int? ?? 0,
-      ),
-      LifeEventKind.home => HomeOwnership(
-        id: id,
-        title: title,
-        startedOn: startedOn,
-        endedOn: endedOn,
-        note: note,
-        price: details['price'] as int? ?? 0,
-        downPayment: details['downPayment'] as int? ?? 0,
-        mortgage: switch (details['mortgage']) {
-          final Map<String, dynamic> mortgage => Mortgage(
-            ratePercent: (mortgage['ratePercent'] as num).toDouble(),
-            years: mortgage['years'] as int,
-            hasEscrow: mortgage['hasEscrow'] as bool,
-          ),
-          _ => null,
-        },
-        insuranceAnnual: details['insuranceAnnual'] as int? ?? 0,
-        hoaAnnual: details['hoaAnnual'] as int? ?? 0,
-        maintenancePercent:
-            (details['maintenancePercent'] as num?)?.toDouble() ?? 0,
-        propertyTaxPercent:
-            (details['propertyTaxPercent'] as num?)?.toDouble() ?? 0,
-      ),
-      LifeEventKind.childBirth => ChildBirth(
-        id: id,
-        title: title,
-        startedOn: startedOn,
-        endedOn: endedOn,
-        note: note,
-      ),
-    };
+    return LifeEvent.fromStorage(
+      id: id,
+      kind:
+          LifeEventKind.values.asNameMap()[columns['kind']] ??
+          LifeEventKind.milestone,
+      title: title,
+      startedOn: startedOn,
+      endedOn: endedOn,
+      note: note,
+      details: details,
+    );
   }
 }
 

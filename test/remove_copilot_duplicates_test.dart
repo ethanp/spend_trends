@@ -1,3 +1,4 @@
+import 'package:ethan_utils/ethan_utils.dart';
 import 'package:spend_trends/domain/account.dart';
 import 'package:spend_trends/domain/remove_copilot_duplicates.dart';
 import 'package:spend_trends/domain/transaction.dart';
@@ -90,6 +91,79 @@ void main() {
           ),
         ),
         '1298',
+      );
+    });
+  });
+
+  group('linked Copilot duplicates', () {
+    const card = Account(
+      id: 'chase',
+      externalId: 'ACT-chase',
+      name: 'Amazon Visa (8590)',
+      currency: 'USD',
+      balanceCents: 0,
+      status: AccountStatus.ok,
+    );
+    const copilotCard = Account(
+      id: 'copilot-card',
+      externalId: 'copilot:Amazon Prime Visa:8590',
+      name: 'Amazon Prime Visa ·8590',
+      currency: 'USD',
+      balanceCents: 0,
+      status: AccountStatus.ok,
+      belongsToAccountId: 'chase',
+    );
+    BankTransaction charge(String accountId, int day, String merchant) =>
+        BankTransaction(
+          id: '$accountId-$day',
+          accountId: accountId,
+          externalId: '$accountId-$day',
+          postedAtMillis: DateTime(2026, 5, day).millisecondsSinceEpoch,
+          amountCents: -2716,
+          rawDescription: merchant,
+          normalizedMerchant: merchant,
+          pending: false,
+        );
+
+    MatchingSimplefinCharges feedCharges(List<BankTransaction> feedRows) =>
+        MatchingSimplefinCharges.from(
+          accounts: const [card, copilotCard],
+          transactions: feedRows,
+        );
+
+    test('the live feed posting the same order 4 days later matches', () {
+      expect(
+        feedCharges([charge('chase', 14, 'AMAZON.COM*BV2RT5K80')]).findMatch(
+          copilotAccountId: 'copilot-card',
+          postedDay: CalendarDay.of(2026, 5, 10),
+          amountCents: -2716,
+          normalizedMerchant: 'AMAZON.COM*BV2RT5K80',
+        ),
+        isNotNull,
+      );
+    });
+
+    test('a lagged charge from a different merchant does not match', () {
+      expect(
+        feedCharges([charge('chase', 14, 'WHOLE FOODS')]).findMatch(
+          copilotAccountId: 'copilot-card',
+          postedDay: CalendarDay.of(2026, 5, 10),
+          amountCents: -2716,
+          normalizedMerchant: 'AMAZON.COM*BV2RT5K80',
+        ),
+        isNull,
+      );
+    });
+
+    test('six days apart is a different charge', () {
+      expect(
+        feedCharges([charge('chase', 16, 'AMAZON.COM*BV2RT5K80')]).findMatch(
+          copilotAccountId: 'copilot-card',
+          postedDay: CalendarDay.of(2026, 5, 10),
+          amountCents: -2716,
+          normalizedMerchant: 'AMAZON.COM*BV2RT5K80',
+        ),
+        isNull,
       );
     });
   });

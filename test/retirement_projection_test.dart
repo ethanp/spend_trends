@@ -47,6 +47,10 @@ void main() {
       years: 30,
       hasEscrow: false,
     ),
+    double sellingCostPercent = 6,
+    double closingCostPercent = 0,
+    int monthsCarryingPreviousHome = 0,
+    int movingCost = 0,
   }) => HomeOwnership(
     id: id,
     title: id,
@@ -58,6 +62,10 @@ void main() {
     hoaAnnual: 1200,
     maintenancePercent: 2,
     propertyTaxPercent: 2,
+    sellingCostPercent: sellingCostPercent,
+    closingCostPercent: closingCostPercent,
+    monthsCarryingPreviousHome: monthsCarryingPreviousHome,
+    movingCost: movingCost,
   );
 
   RetirementProjection projectionWith({
@@ -198,6 +206,114 @@ void main() {
       lessThan(saleProceeds - 120000),
     );
     expect(moveYear.housing, greaterThan(beforeMove.housing));
+  });
+
+  group('a move costs', () {
+    List<ProjectionYear> movingYears({
+      int monthsCarryingPreviousHome = 0,
+      double closingCostPercent = 0,
+      int movingCost = 0,
+    }) => projectionWith(
+      start: startingPoint(homeValue: 500000, mortgageBalance: 300000),
+      lifeEvents: [
+        home(id: 'now', startedOn: DateTime(2020), price: 500000),
+        home(
+          id: 'next',
+          startedOn: DateTime(2028, 5, 1),
+          price: 900000,
+          closingCostPercent: closingCostPercent,
+          monthsCarryingPreviousHome: monthsCarryingPreviousHome,
+          movingCost: movingCost,
+        ),
+      ],
+    ).years;
+
+    test('the old home’s selling costs', () {
+      final years = movingYears();
+      expect(years[0].moveCosts, 0);
+      expect(years[1].moveCosts, closeTo(500000 * 0.06, 1));
+    });
+
+    test('buyer closing costs and movers on top', () {
+      final withoutBuyingCosts = movingYears()[1].moveCosts;
+      expect(
+        movingYears(closingCostPercent: 2, movingCost: 900)[1].moveCosts -
+            withoutBuyingCosts,
+        closeTo(900000 * 0.02 + 900, 1),
+      );
+    });
+
+    test('months carrying the old home cost that share of its housing', () {
+      final years = movingYears(monthsCarryingPreviousHome: 6);
+      expect(
+        years[1].moveCosts - movingYears()[1].moveCosts,
+        closeTo(years[0].housing / 2, years[0].housing * 0.05),
+      );
+    });
+  });
+
+  group('an assumed move', () {
+    final now = home(id: 'now', startedOn: DateTime(2020), price: 500000);
+    final start = startingPoint(homeValue: 500000, mortgageBalance: 300000);
+    ProjectionAssumptions assuming({int? moveYear, int downPayment = 180000}) =>
+        ProjectionAssumptions(
+          birthDate: DateTime(1990),
+          assumedMoveYear: moveYear,
+          assumedMovePrice: 900000,
+          assumedMoveDownPayment: downPayment,
+          assumedMoveMortgageRatePercent: 6.5,
+        );
+
+    test('projects like the same home entered as a life event', () {
+      final assumed = projectionWith(
+        start: start,
+        assumptions: assuming(moveYear: 2028),
+        lifeEvents: [now],
+      ).years;
+      final HomeOwnership asEvent = assuming(moveYear: 2028)
+          .assumedMove(currentHome: now)!;
+      final entered = projectionWith(
+        start: start,
+        assumptions: assuming(),
+        lifeEvents: [now, asEvent],
+      ).years;
+      expect(assumed[1].moveCosts, greaterThan(0));
+      expect(assumed[1].moveCosts, entered[1].moveCosts);
+      expect(assumed.last.netWorth, closeTo(entered.last.netWorth, 1));
+    });
+
+    test('is carried like the current home and costs a move', () {
+      final HomeOwnership assumedHome = assuming(moveYear: 2028)
+          .assumedMove(currentHome: now)!;
+      expect(assumedHome.loanAmount, 720000);
+      expect(assumedHome.mortgage!.years, 30);
+      expect(assumedHome.propertyTaxPercent, now.propertyTaxPercent);
+      expect(assumedHome.insuranceAnnual, (3000 * 900000 / 500000).round());
+    });
+
+    test('a down payment at the price buys with cash', () {
+      expect(
+        assuming(
+          moveYear: 2028,
+          downPayment: 2000000,
+        ).assumedMove(currentHome: now)!.mortgage,
+        isNull,
+      );
+    });
+
+    test('switching it off leaves the saved plan alone', () {
+      final assumptions = assuming(moveYear: 2028)
+          .merged({'assumedMoveYear': null});
+      expect(assumptions.assumedMove(currentHome: now), isNull);
+      expect(
+        projectionWith(
+          start: start,
+          assumptions: assumptions,
+          lifeEvents: [now],
+        ).years.every((year) => year.moveCosts == 0),
+        isTrue,
+      );
+    });
   });
 
   test('each child adds its yearly cost from its birth year', () {

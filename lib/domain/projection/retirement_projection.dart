@@ -34,6 +34,10 @@ class const ProjectionYear({
   /// What goes to the mortgage servicer: principal and interest, plus tax
   /// and insurance when the loan has escrow.
   required final double mortgagePayment,
+
+  /// A move's costs this year: selling the old home, carrying it until it
+  /// sells, buyer closing costs, and movers (0 without a move).
+  final double moveCosts = 0,
 }) extends SavingsBalances {
   double get netWorth => liquid + college + homeEquity;
 }
@@ -125,9 +129,6 @@ class RetirementProjection({
   static const _earlyWithdrawalPenalty = 0.10;
   static const _debtApr = 0.09;
 
-  /// Agent commission and seller closing costs, as a share of the sale price.
-  static const _homeSellingCostShare = 0.06;
-
   /// Age today; null until [ProjectionAssumptions.birthDate] is set.
   int? get currentAge {
     final birthDate = assumptions.birthDate;
@@ -173,6 +174,15 @@ class RetirementProjection({
       payrollContributionsAnnual: start.payrollContributionsAnnual,
     );
   }();
+
+  /// [lifePlan] plus the assumptions' assumed move, if any: the plan the
+  /// years run on.
+  late final LifePlan lifePlanWithAssumedMove = switch (assumptions.assumedMove(
+    currentHome: lifePlan.homeOn(start.today),
+  )) {
+    null => lifePlan,
+    final HomeOwnership assumedHome => lifePlan.withHome(assumedHome),
+  };
 
   /// The job event's take-home on [day], or the last 365 days' without one.
   double _takeHomeAnnualOn(DateTime day) =>
@@ -233,7 +243,7 @@ class _YearByYear({
   late double college = projection.start.balanceFor(
     AccountTaxTreatment.college,
   );
-  late HomeOwnership? _home = projection.lifePlan.homeOn(
+  late HomeOwnership? _home = projection.lifePlanWithAssumedMove.homeOn(
     projection.start.today,
   );
 
@@ -255,8 +265,12 @@ class _YearByYear({
       projection.assumptions.retirementTaxPercent / 100;
   int _yearsElapsed = 0;
 
+  /// Set by [_moveIfTheHomeChanged] for the year being advanced.
+  double _moveCostsThisYear = 0;
+
   ProjectionYear advanceTo(int age, {required int year}) {
     _yearsElapsed++;
+    _moveCostsThisYear = 0;
     final isRetired = age > retirementAge;
     final midYear = DateTime(year, 7, 1);
     _growAccounts();
@@ -270,7 +284,7 @@ class _YearByYear({
     }
     final double spending =
         _spendingAnnual +
-        projection.lifePlan.childCostsIn(year) +
+        projection.lifePlanWithAssumedMove.childCostsIn(year) +
         (isRetired ? _healthInsurance(age) : 0);
     final _MortgagePaidInAYear mortgagePaid = _payTheMortgageForAYear();
     final double principalAndInterest = mortgagePaid.principalAndInterest;
@@ -278,7 +292,7 @@ class _YearByYear({
         principalAndInterest + (_home?.carryingCostAnnual(_homeValue) ?? 0);
     final double paidFromCollege = math.min(
       college,
-      projection.lifePlan.collegeCostsIn(year),
+      projection.lifePlanWithAssumedMove.collegeCostsIn(year),
     );
     college -= paidFromCollege;
 
@@ -304,6 +318,7 @@ class _YearByYear({
       mortgagePrincipal: mortgagePaid.principal,
       mortgagePayment:
           principalAndInterest + _escrowedTaxAndInsurance(principalAndInterest),
+      moveCosts: _moveCostsThisYear,
     );
   }
 
@@ -336,15 +351,35 @@ class _YearByYear({
           ? RetirementProjection._medicarePremiumMonthly
           : RetirementProjection._selfPayHealthInsuranceMonthly);
 
-  /// When a different home event applies, sells the home you hold (proceeds
-  /// after selling costs and the loan go to taxable) and buys the new one
-  /// (the cash part of its price comes from taxable).
+  /// When a different home event applies, moves: carries the home you hold
+  /// for the new home's [HomeOwnership.monthsCarryingPreviousHome], sells it
+  /// (proceeds after its selling costs and the loan go to taxable), and buys
+  /// the new one (its cash part, closing costs, and movers come from
+  /// taxable).
   void _moveIfTheHomeChanged(DateTime midYear) {
-    final HomeOwnership? nextHome = projection.lifePlan.homeOn(midYear);
-    if (nextHome?.id == _home?.id) return;
+    final HomeOwnership? nextHome = projection.lifePlanWithAssumedMove.homeOn(
+      midYear,
+    );
+    final HomeOwnership? previousHome = _home;
+    if (nextHome?.id == previousHome?.id) return;
+    final double carryingUntilSold = nextHome == null || previousHome == null
+        ? 0
+        : nextHome.monthsCarryingPreviousHome /
+              12 *
+              (_principalAndInterestAnnualNominal / _priceLevel +
+                  previousHome.carryingCostAnnual(_homeValue));
+    final double sellingCosts =
+        _homeValue *
+        (previousHome?.sellingCostPercent ??
+            HomeOwnership.lastSaleSellingCostPercent) /
+        100;
+    final double buyingCosts = nextHome == null
+        ? 0
+        : nextHome.price * nextHome.closingCostPercent / 100 +
+              nextHome.movingCost;
+    _moveCostsThisYear = carryingUntilSold + sellingCosts + buyingCosts;
     taxable +=
-        _homeValue * (1 - RetirementProjection._homeSellingCostShare) -
-        _mortgageBalanceNominal / _priceLevel;
+        _homeValue - _mortgageBalanceNominal / _priceLevel - _moveCostsThisYear;
     _home = nextHome;
     _homeValue = (nextHome?.price ?? 0).toDouble();
     _mortgageBalanceNominal = (nextHome?.loanAmount ?? 0) * _priceLevel;

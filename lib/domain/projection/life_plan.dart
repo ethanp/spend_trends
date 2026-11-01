@@ -25,6 +25,11 @@ class LifePlan(List<LifeEvent> lifeEvents) {
   double collegeCostsIn(int year) =>
       children.fold(0.0, (total, child) => total + child.collegeCostIn(year));
 
+  /// This plan plus [home], which applies from its start like any home
+  /// event; the saved life events are untouched.
+  LifePlan withHome(HomeOwnership home) =>
+      LifePlan([..._latestStartedFirst, home]);
+
   T? _latestApplying<T extends LifeEvent>(DateTime day) {
     for (final lifeEvent in _latestStartedFirst) {
       if (lifeEvent is T && lifeEvent.appliesOn(day)) return lifeEvent;

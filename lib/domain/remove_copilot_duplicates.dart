@@ -85,7 +85,7 @@ class MatchingSimplefinCharges._({
 
   /// The live feed often posts a charge a day or more from the day Copilot
   /// dated it. Nearest day first.
-  static const _postingLagDays = [0, 1, -1, 2, -2, 3, -3];
+  static const _postingLagDays = [0, 1, -1, 2, -2, 3, -3, 4, -4, 5, -5];
 
   /// Like [takeMatch] but does not reserve the SimpleFIN row.
   BankTransaction? findMatch({

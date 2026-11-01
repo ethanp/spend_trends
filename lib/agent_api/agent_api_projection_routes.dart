@@ -73,6 +73,7 @@ class const AgentApiProjectionRoutes({
             'spending': year.spending.round(),
             'housing': year.housing.round(),
             'mortgagePayment': year.mortgagePayment.round(),
+            'moveCosts': year.moveCosts.round(),
           },
       ],
     });

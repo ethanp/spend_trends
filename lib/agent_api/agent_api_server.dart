@@ -11,6 +11,7 @@ import 'package:shelf_router/shelf_router.dart';
 
 import 'package:spend_trends/agent_api/agent_api_audit_routes.dart';
 import 'package:spend_trends/agent_api/agent_api_empower_routes.dart';
+import 'package:spend_trends/agent_api/agent_api_life_plan_routes.dart';
 import 'package:spend_trends/agent_api/agent_api_bank_routes.dart';
 import 'package:spend_trends/agent_api/agent_api_import_routes.dart';
 import 'package:spend_trends/agent_api/agent_api_json.dart';
@@ -83,6 +84,7 @@ class AgentApiServer({
       ..get('/health', (Request request) => jsonOk({'ok': true}));
     AgentApiAuditRoutes(container: container).mount(router);
     AgentApiEmpowerRoutes(container: container).mount(router);
+    AgentApiLifePlanRoutes(container: container).mount(router);
     AgentApiReadRoutes(container: container).mount(router);
     AgentApiWriteRoutes(container: container).mount(router);
     AgentApiImportRoutes(container: container).mount(router);

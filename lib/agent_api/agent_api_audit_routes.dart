@@ -292,7 +292,7 @@ class const AgentApiAuditRoutes({required final ProviderContainer container}) {
   }
 
   /// What `POST /duplicates/remove` would delete: Copilot rows the linked
-  /// live-feed account recorded again (up to 3 days apart), and repeats on
+  /// live-feed account recorded again (up to 5 days apart), and repeats on
   /// one account.
   Future<Response> _duplicates(Request request) async {
     final snapshot = await CategorizationSnapshot.load(container);

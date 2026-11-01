@@ -161,10 +161,23 @@ restored), and the pair nets to the interest.''';
         'fromHistoryAccountId keeps that history account’s transactions)',
     'POST /accounts/<accountId>/balance {balanceCents, recordedOn?} '
         '(manual accounts; recordedOn YYYY-MM-DD, default today)',
+    'GET /life-events (jobs, homes, children the projection plans with; '
+        'each with its kind’s details)',
+    'POST /life-events {id?, kind: milestone|job|home|childBirth, title, '
+        'startedOn, endedOn?, note?, details?} (creates, or replaces by id; '
+        'a future home event is a planned move)',
+    'DELETE /life-events/<eventId>',
+    'GET /owned-assets (homes and other assets, sale dates, valuations)',
+    'POST /owned-assets/<assetId>/valuations {valueCents, valuedOn}',
+    'PATCH /owned-assets/<assetId>/valuations/<valuationId> {valueCents?, '
+        'valuedOn?} (a home counts as 0 from its sale date)',
     'GET /projections (retirement projection: starting point, assumptions, '
         'earliest retirement age, yearly balances)',
     'PATCH /projections/assumptions {birthDate? (YYYY-MM-DD), retirementAge?, '
-        'realReturnPercent?, ... } (null clears birthDate or an override)',
+        'realReturnPercent?, ..., assumedMoveYear?, assumedMovePrice?, '
+        'assumedMoveDownPayment?, assumedMoveMortgageRatePercent?} (null '
+        'clears birthDate, an override, or the assumed move; an assumed move '
+        'is a 30-year-fixed home the projection adds without a life event)',
     'GET /categories',
     'GET /accounts',
     'GET /rules?search=<pattern or note text>&category=<id>'

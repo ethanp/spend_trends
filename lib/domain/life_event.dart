@@ -15,7 +15,106 @@ sealed class const LifeEvent({
   final DateTime? endedOn,
   final String? note,
 }) {
+  /// Builds the kind [kind] names from its stored [details] (the JSON
+  /// [details] returns); missing fields take their defaults.
+  factory fromStorage({
+    required String id,
+    required LifeEventKind kind,
+    required String title,
+    required DateTime startedOn,
+    DateTime? endedOn,
+    String? note,
+    Map<String, dynamic> details = const {},
+  }) => switch (kind) {
+    LifeEventKind.milestone => Milestone(
+      id: id,
+      title: title,
+      startedOn: startedOn,
+      endedOn: endedOn,
+      note: note,
+    ),
+    LifeEventKind.job => Job(
+      id: id,
+      title: title,
+      startedOn: startedOn,
+      endedOn: endedOn,
+      note: note,
+      takeHomeSalaryAnnual: details['takeHomeSalaryAnnual'] as int? ?? 0,
+      takeHomeBonusAnnual: details['takeHomeBonusAnnual'] as int? ?? 0,
+    ),
+    LifeEventKind.home => HomeOwnership(
+      id: id,
+      title: title,
+      startedOn: startedOn,
+      endedOn: endedOn,
+      note: note,
+      price: details['price'] as int? ?? 0,
+      downPayment: details['downPayment'] as int? ?? 0,
+      mortgage: switch (details['mortgage']) {
+        final Map<String, dynamic> mortgage => Mortgage(
+          ratePercent: (mortgage['ratePercent'] as num).toDouble(),
+          years: mortgage['years'] as int,
+          hasEscrow: mortgage['hasEscrow'] as bool,
+        ),
+        _ => null,
+      },
+      insuranceAnnual: details['insuranceAnnual'] as int? ?? 0,
+      hoaAnnual: details['hoaAnnual'] as int? ?? 0,
+      maintenancePercent:
+          (details['maintenancePercent'] as num?)?.toDouble() ?? 0,
+      propertyTaxPercent:
+          (details['propertyTaxPercent'] as num?)?.toDouble() ?? 0,
+      closingCostPercent:
+          (details['closingCostPercent'] as num?)?.toDouble() ??
+          HomeOwnership.typicalClosingCostPercent,
+      sellingCostPercent:
+          (details['sellingCostPercent'] as num?)?.toDouble() ??
+          HomeOwnership.lastSaleSellingCostPercent,
+      monthsCarryingPreviousHome:
+          details['monthsCarryingPreviousHome'] as int? ??
+          HomeOwnership.lastMoveMonthsCarryingPreviousHome,
+      movingCost:
+          details['movingCost'] as int? ?? HomeOwnership.lastMoveMovingCost,
+    ),
+    LifeEventKind.childBirth => ChildBirth(
+      id: id,
+      title: title,
+      startedOn: startedOn,
+      endedOn: endedOn,
+      note: note,
+    ),
+  };
+
   LifeEventKind get kind;
+
+  /// The kind's own fields as stored JSON; null for kinds with none.
+  Map<String, Object?>? get details => switch (this) {
+    Milestone() || ChildBirth() => null,
+    final Job job => {
+      'takeHomeSalaryAnnual': job.takeHomeSalaryAnnual,
+      'takeHomeBonusAnnual': job.takeHomeBonusAnnual,
+    },
+    final HomeOwnership home => {
+      'price': home.price,
+      'downPayment': home.downPayment,
+      'mortgage': switch (home.mortgage) {
+        null => null,
+        final mortgage => {
+          'ratePercent': mortgage.ratePercent,
+          'years': mortgage.years,
+          'hasEscrow': mortgage.hasEscrow,
+        },
+      },
+      'insuranceAnnual': home.insuranceAnnual,
+      'hoaAnnual': home.hoaAnnual,
+      'maintenancePercent': home.maintenancePercent,
+      'propertyTaxPercent': home.propertyTaxPercent,
+      'closingCostPercent': home.closingCostPercent,
+      'sellingCostPercent': home.sellingCostPercent,
+      'monthsCarryingPreviousHome': home.monthsCarryingPreviousHome,
+      'movingCost': home.movingCost,
+    },
+  };
 
   bool get isPoint {
     final end = endedOn;
@@ -160,7 +259,37 @@ class const HomeOwnership({
 
   /// Property tax a year, as a share of the home's value.
   required final double propertyTaxPercent,
+
+  /// Buyer closing costs (lender, title, escrow fees) paid in cash when
+  /// buying, as a share of [price].
+  final double closingCostPercent = typicalClosingCostPercent,
+
+  /// What selling this home costs (commission, title, tax proration,
+  /// concessions), as a share of its value when sold.
+  final double sellingCostPercent = lastSaleSellingCostPercent,
+
+  /// Months the previous home is still owned and paid for after moving in:
+  /// its mortgage, tax, insurance, and upkeep.
+  final int monthsCarryingPreviousHome = lastMoveMonthsCarryingPreviousHome,
+
+  /// Movers and other one-off costs of moving in, in dollars.
+  final int movingCost = lastMoveMovingCost,
 }) extends LifeEvent {
+  /// Buyers usually pay 2–3%; the 2026 purchase paid about 0.4% because the
+  /// seller covered most of it, so the typical low end is the default.
+  static const typicalClosingCostPercent = 2.0;
+
+  /// The Lancefield Ct sale (Sep 2026): $395,000, of which about $34,850
+  /// went to selling costs ($360,146 paid off the loan and the closing).
+  static const lastSaleSellingCostPercent = 8.8;
+
+  /// Lancefield Ct was carried from the Jan 2026 move-in until its Sep 2026
+  /// sale.
+  static const lastMoveMonthsCarryingPreviousHome = 9;
+
+  /// Movers for the Jan 2026 move ($886).
+  static const lastMoveMovingCost = 900;
+
   @override
   LifeEventKind get kind => LifeEventKind.home;
 
