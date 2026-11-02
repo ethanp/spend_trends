@@ -401,6 +401,13 @@ void main() {
       );
     }
     expect(
+      projection.earliestRetirementYear,
+      projection
+          .yearsRetiringAt(earliest)
+          .firstWhere((year) => year.age == earliest)
+          .year,
+    );
+    expect(
       projection.yearsRetiringAt(50).last.liquid,
       greaterThan(projection.yearsRetiringAt(45).last.liquid),
     );

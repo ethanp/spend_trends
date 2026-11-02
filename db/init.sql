@@ -73,22 +73,8 @@ CREATE TABLE IF NOT EXISTS life_events (
     ended_on BIGINT,
     note TEXT,
     kind TEXT NOT NULL DEFAULT 'milestone'
-        CHECK (kind IN ('milestone', 'job', 'home', 'childBirth')),
+        CHECK (kind IN ('milestone', 'job', 'owned', 'rental', 'childBirth')),
     details_json TEXT
-);
-
-CREATE TABLE IF NOT EXISTS housing_stays (
-    id TEXT PRIMARY KEY,
-    label TEXT NOT NULL,
-    started_on BIGINT NOT NULL,
-    note TEXT
-);
-
-CREATE TABLE IF NOT EXISTS job_stays (
-    id TEXT PRIMARY KEY,
-    label TEXT NOT NULL,
-    started_on BIGINT NOT NULL,
-    note TEXT
 );
 
 CREATE TABLE IF NOT EXISTS sync_state (

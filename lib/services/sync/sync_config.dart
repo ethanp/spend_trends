@@ -15,8 +15,6 @@ const _fkDependencies = <String, Set<String>>{
   'simplefin_pulls': {},
   'simplefin_pull_accounts': {'simplefin_pulls'},
   'life_events': {},
-  'housing_stays': {},
-  'job_stays': {},
   'transactions': {'accounts', 'categories'},
   'categorization_rules': {'categories', 'accounts'},
 };

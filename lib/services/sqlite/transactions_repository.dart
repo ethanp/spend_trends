@@ -264,7 +264,7 @@ class TransactionsRepository(final PowerSyncDatabase _powerSync) {
   }
 
   static String? _normalizedNote(String? note) {
-    final trimmed = note?.trim() ?? '';
+    final trimmed = note.trimmedOrEmpty;
     if (trimmed.isEmpty) return null;
     return trimmed;
   }

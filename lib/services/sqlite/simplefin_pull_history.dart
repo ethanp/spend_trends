@@ -321,8 +321,8 @@ class SimpleFinPullHistory(final PowerSyncDatabase _powerSync) {
     final finishedMillis = row['finished_at'] as int?;
     return SimpleFinPullRecord(
       id: row['id'] as String,
-      kind: SimpleFinPullKind.fromStorage(row['kind'] as String? ?? ''),
-      status: SimpleFinPullStatus.fromStorage(row['status'] as String? ?? ''),
+      kind: SimpleFinPullKind.fromStorage(row['kind'] as String),
+      status: SimpleFinPullStatus.fromStorage(row['status'] as String),
       startedAt: DateTime.fromMillisecondsSinceEpoch(
         startedMillis,
         isUtc: true,
@@ -344,7 +344,7 @@ class SimpleFinPullHistory(final PowerSyncDatabase _powerSync) {
       accountId: row['account_id'] as String?,
       accountExternalId: row['account_external_id'] as String?,
       connId: row['conn_id'] as String?,
-      accountLabel: row['account_label'] as String? ?? '',
+      accountLabel: row['account_label'] as String,
       transactionCount: row['transaction_count'] as int? ?? 0,
       status: SimpleFinPullAccountStatus.fromStorage(
         row['status'] as String? ?? 'ok',

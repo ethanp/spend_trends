@@ -2,11 +2,11 @@ import 'package:ethan_sync/ethan_sync.dart';
 import 'package:ethan_ui/ethan_ui.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:intl/intl.dart';
 import 'package:spend_trends/app_identity.dart';
+import 'package:spend_trends/features/projections/fire_outlook_card.dart';
 import 'package:spend_trends/domain/category.dart';
 import 'package:spend_trends/domain/category_group.dart';
-import 'package:spend_trends/domain/month_summary.dart';
+import 'package:spend_trends/domain/category_spend_pace.dart';
 import 'package:spend_trends/features/categories/categories_burn_pane.dart';
 import 'package:spend_trends/features/categories/category_browse_list.dart';
 import 'package:spend_trends/features/categories/category_editor_sheet.dart';
@@ -25,16 +25,14 @@ class const CategoriesScreen() extends ConsumerStatefulWidget {
 
 class _CategoriesScreenState() extends ConsumerState<CategoriesScreen> {
   static const _rightPaneWidth = 640.0;
-  static final _monthLabelFormat = DateFormat('MMM yyyy');
 
   String? _selectedCategoryId;
 
   @override
   Widget build(BuildContext context) {
-    final String yearMonth = ref.watch(currentYearMonthProvider);
     final categoriesAsync = ref.watch(categoriesListProvider);
     final groupsAsync = ref.watch(categoryGroupsProvider);
-    final rowsAsync = ref.watch(categoryMonthRowsProvider(yearMonth));
+    final pacesAsync = ref.watch(categorySpendPacesProvider);
 
     return Scaffold(
       backgroundColor: Colors.transparent,
@@ -44,6 +42,7 @@ class _CategoriesScreenState() extends ConsumerState<CategoriesScreen> {
         leading: const ESyncPhaseIcon(),
         automaticallyImplyLeading: false,
         actions: [
+          const FireOutlookCard(),
           IconButton(
             icon: const Icon(Icons.add),
             onPressed: () => _showAddMenu(context),
@@ -53,20 +52,18 @@ class _CategoriesScreenState() extends ConsumerState<CategoriesScreen> {
       body: SafeArea(
         bottom: false,
         child: _body(
-          yearMonth: yearMonth,
           categoriesAsync: categoriesAsync,
           groupsAsync: groupsAsync,
-          rowsAsync: rowsAsync,
+          pacesAsync: pacesAsync,
         ),
       ),
     );
   }
 
   Widget _body({
-    required String yearMonth,
     required AsyncValue<List<SpendCategory>> categoriesAsync,
     required AsyncValue<List<CategoryGroup>> groupsAsync,
-    required AsyncValue<List<CategoryMonthRow>> rowsAsync,
+    required AsyncValue<List<CategorySpendPace>> pacesAsync,
   }) {
     if (categoriesAsync.isLoading || groupsAsync.isLoading) {
       return const Center(child: CircularProgressIndicator());
@@ -92,14 +89,15 @@ class _CategoriesScreenState() extends ConsumerState<CategoriesScreen> {
     if (categories.isEmpty) return _emptyState(context);
 
     final groups = groupsAsync.requireValue;
-    final rowsById = {
-      for (final row in rowsAsync.asData?.value ?? <CategoryMonthRow>[])
-        row.categoryId: row,
+    final pacesByCategoryId = {
+      for (final spendPace
+          in pacesAsync.asData?.value ?? const <CategorySpendPace>[])
+        spendPace.categoryId: spendPace,
     };
     final sections = CategoryListSections.from(
       categories: categories,
       groups: groups,
-      rowsById: rowsById,
+      pacesByCategoryId: pacesByCategoryId,
     ).sections;
     final categoriesById = {
       for (final category in categories) category.id: category,
@@ -109,9 +107,8 @@ class _CategoriesScreenState() extends ConsumerState<CategoriesScreen> {
       initialSizedWidth: _rightPaneWidth,
       maxSizedWidth: _rightPaneWidth,
       left: CategoryBrowseList(
-        yearMonthLabel: _formatYearMonth(yearMonth),
         sections: sections,
-        rowsById: rowsById,
+        pacesByCategoryId: pacesByCategoryId,
         selectedCategoryId: _selectedCategoryId,
         onGroupOpened: (section) =>
             GroupEditorSheet.show(context, ref: ref, group: section.group),
@@ -122,7 +119,7 @@ class _CategoriesScreenState() extends ConsumerState<CategoriesScreen> {
       right: CategoriesBurnPane(
         selectedCategoryId: _selectedCategoryId,
         categoriesById: categoriesById,
-        rowsById: rowsById,
+        pacesByCategoryId: pacesByCategoryId,
         onCategoryOpened: (category) =>
             CategoryEditorSheet.show(context, ref: ref, category: category),
       ),
@@ -139,15 +136,6 @@ class _CategoriesScreenState() extends ConsumerState<CategoriesScreen> {
       return;
     }
     setState(() => _selectedCategoryId = category.id);
-  }
-
-  String _formatYearMonth(String yearMonth) {
-    final parts = yearMonth.split('-');
-    if (parts.length != 2) return yearMonth;
-    final year = int.tryParse(parts[0]);
-    final month = int.tryParse(parts[1]);
-    if (year == null || month == null) return yearMonth;
-    return _monthLabelFormat.format(DateTime(year, month));
   }
 
   void _showAddMenu(BuildContext context) {

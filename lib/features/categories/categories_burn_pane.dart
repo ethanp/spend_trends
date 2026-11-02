@@ -3,17 +3,18 @@ import 'package:ethan_utils/ethan_utils.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:spend_trends/domain/category.dart';
-import 'package:spend_trends/domain/month_summary.dart';
+import 'package:spend_trends/domain/category_spend_pace.dart';
 import 'package:spend_trends/domain/special_category.dart';
 import 'package:spend_trends/widgets/app_primary_button.dart';
 
 import 'categories_providers.dart';
+import 'category_spend_windows_row.dart';
 import 'rule_match_caption_line.dart';
 
 class const CategoriesBurnPane({
   required final String? selectedCategoryId,
   required final Map<String, SpendCategory> categoriesById,
-  required final Map<String, CategoryMonthRow> rowsById,
+  required final Map<String, CategorySpendPace> pacesByCategoryId,
   required final void Function(SpendCategory category) onCategoryOpened,
 }) extends ConsumerWidget {
   @override
@@ -34,9 +35,9 @@ class const CategoriesBurnPane({
 
   int get _totalBurnCents {
     var total = 0;
-    for (final entry in rowsById.entries) {
+    for (final entry in pacesByCategoryId.entries) {
       if (SpecialCategory.isFlowId(entry.key)) continue;
-      total += entry.value.annualizedSpendCents;
+      total += entry.value.oneYearAnnualCents;
     }
     return total;
   }
@@ -45,13 +46,13 @@ class const CategoriesBurnPane({
     final totalBurn = _totalBurnCents;
     final ranked =
         [
-          for (final entry in rowsById.entries)
+          for (final entry in pacesByCategoryId.entries)
             if (!SpecialCategory.isFlowId(entry.key) &&
-                entry.value.annualizedSpendCents > 0)
+                entry.value.oneYearAnnualCents > 0)
               entry.value,
         ]..sort(
           (left, right) =>
-              right.annualizedSpendCents.compareTo(left.annualizedSpendCents),
+              right.oneYearAnnualCents.compareTo(left.oneYearAnnualCents),
         );
     final top = ranked.take(3).toList();
 
@@ -76,8 +77,8 @@ class const CategoriesBurnPane({
               totalBurn == 0
                   ? row.categoryName
                   : '${row.categoryName} · '
-                        '${_percentOf(row.annualizedSpendCents, totalBurn)} · '
-                        '${formatCents(row.annualizedSpendCents)} / yr',
+                        '${_percentOf(row.oneYearAnnualCents, totalBurn)} · '
+                        '${formatCents(row.oneYearAnnualCents)} / yr',
               style: EText.body.medium,
             ),
             const SizedBox(height: ELayout.spaceXs),
@@ -93,9 +94,8 @@ class const CategoriesBurnPane({
   }
 
   Widget _categoryDetail(WidgetRef ref, SpendCategory category) {
-    final row = rowsById[category.id];
-    final spent = row?.spentCents ?? 0;
-    final annual = row?.annualizedSpendCents ?? 0;
+    final CategorySpendPace? spendPace = pacesByCategoryId[category.id];
+    final int annual = spendPace?.oneYearAnnualCents ?? 0;
     final totalBurn = _totalBurnCents;
     final rules =
         ref.watch(categorizationRulesProvider).asData?.value ??
@@ -116,17 +116,16 @@ class const CategoriesBurnPane({
         ],
         const SizedBox(height: ELayout.spaceLg),
         Text(
-          'This month',
+          'Average spend per month',
           style: EText.caption.copyWith(fontWeight: FontWeight.w600),
         ),
         const SizedBox(height: ELayout.spaceXs),
-        Text(
-          formatCents(spent),
-          style: EText.section.copyWith(fontWeight: FontWeight.w600),
+        CategorySpendWindowsRow(
+          monthlyCents: (window) => spendPace?.monthlyCents(window) ?? 0,
         ),
         const SizedBox(height: ELayout.spaceMd),
         Text(
-          'Annual pace',
+          '1y annual pace',
           style: EText.caption.copyWith(fontWeight: FontWeight.w600),
         ),
         const SizedBox(height: ELayout.spaceXs),

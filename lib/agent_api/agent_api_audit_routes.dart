@@ -348,7 +348,7 @@ enum _NoteMode() {
   replace;
 
   String notedText({required String? existing, required String note}) {
-    final String current = existing?.trim() ?? '';
+    final String current = existing.trimmedOrEmpty;
     if (this == _NoteMode.replace || current.isEmpty) return note;
     if (current.contains(note)) return current;
     return '$current · $note';

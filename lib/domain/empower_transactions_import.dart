@@ -23,8 +23,8 @@ class const EmpowerTransaction({
       userAccountId: json['userAccountId'] as int,
       postedDay: CalendarDay.of(year, month, day),
       amountCents: json['isCredit'] == true ? magnitudeCents : -magnitudeCents,
-      description: (json['description'] as String? ?? '').trim(),
-      transactionType: (json['transactionType'] as String? ?? '').trim(),
+      description: (json['description'] as String).trim(),
+      transactionType: (json['transactionType'] as String).trim(),
     );
   }
 

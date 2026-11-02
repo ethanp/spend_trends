@@ -1,11 +1,10 @@
 import 'package:ethan_ui/ethan_ui.dart';
-import 'package:ethan_utils/ethan_utils.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:spend_trends/domain/category.dart';
 import 'package:spend_trends/domain/category_group.dart';
 import 'package:spend_trends/domain/conscious_spending_area.dart';
-import 'package:spend_trends/domain/month_summary.dart';
+import 'package:spend_trends/domain/category_spend_pace.dart';
 import 'package:spend_trends/domain/special_category.dart';
 import 'package:spend_trends/providers/spend_data_changed.dart';
 import 'package:spend_trends/services/sqlite/categories_repository.dart';
@@ -15,6 +14,7 @@ import 'package:spend_trends/widgets/app_sheet_panel.dart';
 import 'categories_providers.dart';
 import 'category_editor_identity.dart';
 import 'category_editor_merge.dart';
+import 'category_spend_windows_row.dart';
 import 'rule_match_caption_line.dart';
 
 /// Create or edit a category name (and optional group membership).
@@ -151,16 +151,11 @@ class _CategoryEditorSheetState() extends ConsumerState<CategoryEditorSheet> {
 
   Widget _editBody() {
     final category = widget.category!;
-    final yearMonth = ref.watch(currentYearMonthProvider);
-    final monthRows =
-        ref.watch(categoryMonthRowsProvider(yearMonth)).asData?.value ??
-        const <CategoryMonthRow>[];
-    CategoryMonthRow? monthRow;
-    for (final row in monthRows) {
-      if (row.categoryId == category.id) {
-        monthRow = row;
-        break;
-      }
+    CategorySpendPace? spendPace;
+    for (final categoryPace
+        in ref.watch(categorySpendPacesProvider).asData?.value ??
+            const <CategorySpendPace>[]) {
+      if (categoryPace.categoryId == category.id) spendPace = categoryPace;
     }
     final rules =
         ref.watch(categorizationRulesProvider).asData?.value ??
@@ -186,11 +181,13 @@ class _CategoryEditorSheetState() extends ConsumerState<CategoryEditorSheet> {
         _identityFields(autofocus: false),
         const SizedBox(height: ELayout.spaceLg),
         Text(
-          'This month',
+          'Average spend per month',
           style: EText.caption.copyWith(fontWeight: FontWeight.w600),
         ),
         const SizedBox(height: ELayout.spaceSm),
-        _monthSpendLine(monthRow),
+        CategorySpendWindowsRow(
+          monthlyCents: (window) => spendPace?.monthlyCents(window) ?? 0,
+        ),
         const SizedBox(height: ELayout.spaceLg),
         Text(
           'Rules',
@@ -215,17 +212,6 @@ class _CategoryEditorSheetState() extends ConsumerState<CategoryEditorSheet> {
           ),
         ],
       ],
-    );
-  }
-
-  Widget _monthSpendLine(CategoryMonthRow? monthRow) {
-    final spent = monthRow?.spentCents ?? 0;
-    final annual = monthRow?.annualizedSpendCents ?? 0;
-    return Text(
-      annual == 0
-          ? '${formatCents(spent)} this month'
-          : '${formatCents(spent)} this month · ${formatCents(annual)} / yr',
-      style: EText.body.medium,
     );
   }
 

@@ -182,9 +182,9 @@ class RemoveCopilotDuplicates({
   Future<void> _deleteKeepingNotes(List<CopilotDuplicate> duplicates) async {
     final notedKeeperIds = <String>{};
     for (final pair in duplicates) {
-      final duplicateNote = pair.duplicate.note?.trim() ?? '';
+      final duplicateNote = pair.duplicate.note.trimmedOrEmpty;
       if (duplicateNote.isNotEmpty &&
-          (pair.keeper.note?.trim() ?? '').isEmpty &&
+          pair.keeper.note.trimmedOrEmpty.isEmpty &&
           notedKeeperIds.add(pair.keeper.id)) {
         await _transactionsRepository.setNote(
           transactionId: pair.keeper.id,
@@ -271,7 +271,7 @@ class RemoveCopilotDuplicates({
 
   static int _keepScore(BankTransaction transaction) {
     var score = 0;
-    if ((transaction.note?.trim() ?? '').isNotEmpty) score += 50;
+    if (transaction.note.trimmedOrEmpty.isNotEmpty) score += 50;
     // Prefer live-bank rows over Copilot re-imports when external ids differ.
     if (!transaction.isCopilotImport) score += 20;
     return score;

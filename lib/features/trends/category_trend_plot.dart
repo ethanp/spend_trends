@@ -1,10 +1,11 @@
 import 'dart:math' as math;
 
 import 'package:ethan_ui/ethan_ui.dart';
+import 'package:ethan_utils/ethan_utils.dart';
 import 'package:flutter/material.dart';
 import 'package:spend_trends/domain/life_event.dart';
-import 'package:spend_trends/domain/stay_chain.dart';
 import 'package:spend_trends/features/trends/category_trend_series.dart';
+import 'package:spend_trends/features/trends/trend_overlay_lane.dart';
 import 'package:spend_trends/features/trends/trend_value_scale.dart';
 
 /// Laid-out Trends chart: date axis, value scale, and drawable series.
@@ -12,22 +13,17 @@ class CategoryTrendPlot._({
   required final EChartPlot chart,
   required final TrendValueScale scale,
   required final List<CategoryTrendSeries> drawableSeries,
-  final int? housingLane,
-  final int? jobLane,
-  final int? lifeEventLane,
+  required final List<TrendOverlayLane> overlayLanes,
 }) {
   static const leftPadding = 48.0;
   static const rightPadding = 12.0;
   static const bottomPadding = 24.0;
-  static const overlayLaneHeight = 44.0;
   static const _plotTopInset = 12.0;
 
   factory from({
     required Size size,
     required List<CategoryTrendSeries> seriesList,
     EChartVisibleRange? visibleRange,
-    StayChain? housingChain,
-    StayChain? jobChain,
     List<LifeEvent> lifeEvents = const [],
   }) {
     final plottableSeries = [
@@ -40,12 +36,6 @@ class CategoryTrendPlot._({
         if (series.hasPointsBetween(plottedDates.start, plottedDates.end))
           series,
     ];
-    var nextLane = 0;
-    final housingLane = housingChain != null && !housingChain.isEmpty
-        ? nextLane++
-        : null;
-    final jobLane = jobChain != null && !jobChain.isEmpty ? nextLane++ : null;
-    final lifeEventLane = lifeEvents.isNotEmpty ? nextLane++ : null;
     var highestSmoothedCents = 0.0;
     for (final series in drawableSeries) {
       highestSmoothedCents = math.max(
@@ -56,27 +46,56 @@ class CategoryTrendPlot._({
         ),
       );
     }
-    return CategoryTrendPlot._(
-      chart: EChartPlot(
-        size: size,
-        leftPadding: leftPadding,
-        rightPadding: rightPadding,
-        topPadding: nextLane == 0
-            ? _plotTopInset
-            : nextLane * overlayLaneHeight,
-        bottomPadding: bottomPadding,
-        start: plottedDates.start,
-        end: plottedDates.end,
-        valueScale: EChartValueScale.nice(
-          highestSmoothedCents,
-          fallbackMax: 10000,
+    EChartPlot chartBelow(double topPadding) => EChartPlot(
+      size: size,
+      leftPadding: leftPadding,
+      rightPadding: rightPadding,
+      topPadding: topPadding,
+      bottomPadding: bottomPadding,
+      start: plottedDates.start,
+      end: plottedDates.end,
+      valueScale: EChartValueScale.nice(
+        highestSmoothedCents,
+        fallbackMax: 10000,
+      ),
+    );
+    final xAxis = chartBelow(0);
+    final chartMin = plottedDates.start.startOfDay;
+    final chartMax = plottedDates.end.startOfDay;
+    final visibleLifeEvents =
+        [
+          for (final lifeEvent in lifeEvents)
+            if (lifeEvent.intersectsChart(
+              chartMinDate: chartMin,
+              chartMaxDate: chartMax,
+            ))
+              lifeEvent,
+        ]..sort(
+          (firstEvent, secondEvent) =>
+              firstEvent.startedOn.compareTo(secondEvent.startedOn),
+        );
+    final overlayLanes = <TrendOverlayLane>[];
+    for (final lifeEventLane in LifeEventLane.values) {
+      final laneLifeEvents = visibleLifeEvents.whereL(
+        (lifeEvent) => lifeEvent.kind.lane == lifeEventLane,
+      );
+      if (laneLifeEvents.isEmpty) continue;
+      overlayLanes.add(
+        TrendOverlayLane.stackedBelow(
+          top: overlayLanes.isEmpty ? 0 : overlayLanes.last.bottom,
+          xAxis: xAxis,
+          lifeEventLane: lifeEventLane,
+          visibleLifeEvents: laneLifeEvents,
         ),
+      );
+    }
+    return CategoryTrendPlot._(
+      chart: chartBelow(
+        overlayLanes.isEmpty ? _plotTopInset : overlayLanes.last.bottom,
       ),
       scale: TrendValueScale.niceForMax(highestSmoothedCents),
       drawableSeries: drawableSeries,
-      housingLane: housingLane,
-      jobLane: jobLane,
-      lifeEventLane: lifeEventLane,
+      overlayLanes: overlayLanes,
     );
   }
 

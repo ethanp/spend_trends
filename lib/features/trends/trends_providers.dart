@@ -21,11 +21,13 @@ import 'package:spend_trends/providers/spend_data_changed.dart';
 import 'package:spend_trends/services/sqlite/imported_net_worth_days_repository.dart';
 
 import 'build_trends_charts.dart';
+import 'conscious_spending_numbers.dart';
 import 'trends_chart_bundle.dart';
 
 const _log = ELogger('Trends');
 
-/// Shared yr/mo/day display rate for every Trends chart and the three numbers.
+/// Shared yr/mo/day display rate for every Trends pace chart and its
+/// contributors.
 final trendSpendRateProvider =
     NotifierProvider<TrendSpendRateNotifier, TrendSpendRate>(
       TrendSpendRateNotifier.new,
@@ -62,9 +64,40 @@ final importedNetWorthDaysProvider = FutureProvider<List<ImportedNetWorthDay>>((
   return repository.listAll();
 });
 
+/// The three numbers, apart from the charts so the card fills in as soon as
+/// its own inputs load. Runs on another isolate: it scans every transaction.
+final consciousSpendingNumbersProvider =
+    FutureProvider<ConsciousSpendingNumbers>((ref) async {
+      final List<BankTransaction> transactions = await ref.watch(
+        transactionsListProvider.future,
+      );
+      final List<SpendCategory> categories = await ref.watch(
+        categoriesListProvider.future,
+      );
+      final List<Account> accounts = (await ref.watch(
+        accountsMapProvider.future,
+      )).values.toList();
+      final List<AccountBalanceSnapshot> balanceSnapshots = await ref.watch(
+        accountBalanceSnapshotsProvider.future,
+      );
+      final List<LifeEvent> lifeEvents = await ref.watch(
+        lifeEventsProvider.future,
+      );
+      return Isolate.run(
+        () => ConsciousSpendingNumbers.endingOn(
+          transactions: transactions,
+          categories: categories,
+          accounts: accounts,
+          balanceSnapshots: balanceSnapshots,
+          lifeEvents: lifeEvents,
+          today: DateTime.now(),
+        ),
+      );
+    });
+
 /// Every Trends chart from the live tables. The series math scans every
-/// transaction against a three-year kernel, so it runs on another isolate
-/// and the spinner keeps turning.
+/// transaction against a three-year kernel, so it runs on another isolate;
+/// each chart card holds its place until it lands.
 final trendsChartBundleProvider = FutureProvider<TrendsChartBundle>((
   ref,
 ) async {
@@ -90,7 +123,6 @@ final trendsChartBundleProvider = FutureProvider<TrendsChartBundle>((
   final List<ImportedNetWorthDay> importedNetWorthDays = await ref.watch(
     importedNetWorthDaysProvider.future,
   );
-  final List<LifeEvent> lifeEvents = await ref.watch(lifeEventsProvider.future);
   final int inputsLoadedMs = stopwatch.elapsedMilliseconds;
   final List<Account> accountList = accounts.values.toList();
   final TrendsChartBundle bundle = await Isolate.run(
@@ -102,7 +134,6 @@ final trendsChartBundleProvider = FutureProvider<TrendsChartBundle>((
       ownedAssets: ownedAssets,
       balanceSnapshots: balanceSnapshots,
       importedNetWorthDays: importedNetWorthDays,
-      lifeEvents: lifeEvents,
     ),
   );
   _log.log(

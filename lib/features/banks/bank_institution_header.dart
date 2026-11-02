@@ -1,3 +1,4 @@
+import 'package:ethan_utils/ethan_utils.dart';
 import 'package:ethan_ui/ethan_ui.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -129,7 +130,7 @@ class _BankInstitutionHeaderState()
   Future<void> _commitRename() async {
     if (!_editing || _saving) return;
     final nextLabel = _nameController.text.trim();
-    final official = widget.sampleAccount.connName?.trim() ?? '';
+    final official = widget.sampleAccount.connName.trimmedOrEmpty;
     final unchanged =
         nextLabel == widget.displayName ||
         (nextLabel.isEmpty &&

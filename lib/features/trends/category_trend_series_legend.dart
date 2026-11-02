@@ -5,10 +5,12 @@ import 'package:spend_trends/domain/account_kind.dart';
 import 'package:spend_trends/domain/trend_spend_rate.dart';
 import 'package:spend_trends/features/trends/category_trend_distribution_legend.dart';
 import 'package:spend_trends/features/trends/category_trend_series.dart';
+import 'package:spend_trends/features/trends/net_worth_legend_table.dart';
 import 'package:spend_trends/features/trends/trend_legend_swatch.dart';
-import 'package:spend_trends/theme/finance_colors.dart';
+import 'package:spend_trends/features/trends/trend_spend_rate_toggle.dart';
 
 /// Legend under a trends chart: meta chips, plus ranked chips or distribution.
+/// Pace legends lead with the yr/mo/day toggle their amounts are shown in.
 class const CategoryTrendSeriesLegend({
   required final List<CategoryTrendSeries> seriesList,
   required final Set<String> hiddenSeriesIds,
@@ -24,7 +26,21 @@ class const CategoryTrendSeriesLegend({
   @override
   Widget build(BuildContext context) {
     if (seriesList.isEmpty) return const SizedBox.shrink();
+    if (valueKind != TrendValueKind.pace) return _seriesEntries();
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const Align(
+          alignment: Alignment.centerRight,
+          child: TrendSpendRateToggle(),
+        ),
+        const SizedBox(height: ELayout.spaceSm),
+        _seriesEntries(),
+      ],
+    );
+  }
 
+  Widget _seriesEntries() {
     final metaSeries = [
       for (final series in seriesList)
         if (series.isMetaLegend) series,
@@ -48,7 +64,7 @@ class const CategoryTrendSeriesLegend({
             onSeriesSoloed: onSeriesSoloed,
           )
         : useNetWorthTable
-        ? _NetWorthLegendTable(
+        ? NetWorthLegendTable(
             seriesList: rankedSeries,
             hiddenSeriesIds: hiddenSeriesIds,
             valueKind: valueKind,
@@ -248,179 +264,6 @@ class const _LegendColumnDivider({final double? height})
   }
 }
 
-/// Net worth account rows as a signed-amount table, grouped by account kind.
-class const _NetWorthLegendTable({
-  required final List<CategoryTrendSeries> seriesList,
-  required final Set<String> hiddenSeriesIds,
-  required final TrendValueKind valueKind,
-  required final DateTime? inspectDate,
-  required final ValueChanged<String> onSeriesToggled,
-  required final ValueChanged<String> onSeriesSoloed,
-}) extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    final groups = _groupsFromSeries(seriesList);
-    final showSectionLabels =
-        groups.length > 1 ||
-        (groups.length == 1 && groups.first.sectionName != 'Other');
-
-    return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: ELayout.spaceSm,
-        vertical: ELayout.spaceXs,
-      ),
-      decoration: BoxDecoration(
-        color: EColors.surface.withValues(alpha: 0.55),
-        borderRadius: ELayout.borderRadiusSm,
-        border: Border.all(color: EColors.border.withValues(alpha: 0.7)),
-      ),
-      child: Table(
-        columnWidths: const {0: FlexColumnWidth(), 1: IntrinsicColumnWidth()},
-        defaultVerticalAlignment: TableCellVerticalAlignment.middle,
-        children: [
-          for (
-            var groupIndex = 0;
-            groupIndex < groups.length;
-            groupIndex++
-          ) ...[
-            if (showSectionLabels)
-              _sectionHeaderRow(
-                groups[groupIndex].sectionName,
-                padTop: groupIndex > 0,
-              ),
-            for (final series in groups[groupIndex].seriesList)
-              _accountRow(series),
-          ],
-        ],
-      ),
-    );
-  }
-
-  TableRow _sectionHeaderRow(String sectionName, {required bool padTop}) {
-    return TableRow(
-      children: [
-        Padding(
-          padding: EdgeInsets.only(
-            top: padTop ? ELayout.spaceSm : 0,
-            bottom: ELayout.spaceXs,
-          ),
-          child: Text(
-            sectionName,
-            style: EText.caption.copyWith(
-              fontWeight: FontWeight.w600,
-              color: FinanceColors.accentPrimary,
-            ),
-          ),
-        ),
-        const SizedBox.shrink(),
-      ],
-    );
-  }
-
-  TableRow _accountRow(CategoryTrendSeries series) {
-    final isHidden = hiddenSeriesIds.contains(series.id);
-    final cents = CategoryTrendLegendAmount(
-      series: series,
-      valueKind: valueKind,
-      inspectDate: inspectDate,
-    ).cents;
-    return TableRow(
-      children: [
-        GestureDetector(
-          onTap: () => onSeriesToggled(series.id),
-          onDoubleTap: () => onSeriesSoloed(series.id),
-          behavior: HitTestBehavior.opaque,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: ELayout.spaceXs),
-            child: Row(
-              children: [
-                TrendLegendSwatch(series: series, isHidden: isHidden),
-                const SizedBox(width: ELayout.spaceSm),
-                Expanded(
-                  child: Text(
-                    series.name,
-                    style: isHidden
-                        ? EText.caption.copyWith(color: EColors.textMuted)
-                        : EText.caption.copyWith(color: EColors.textPrimary),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-        GestureDetector(
-          onTap: () => onSeriesToggled(series.id),
-          onDoubleTap: () => onSeriesSoloed(series.id),
-          behavior: HitTestBehavior.opaque,
-          child: Padding(
-            padding: const EdgeInsets.only(
-              left: ELayout.spaceMd,
-              top: ELayout.spaceXs,
-              bottom: ELayout.spaceXs,
-            ),
-            child: Text(
-              formatCentsWholeDollars(cents),
-              style: _signedAmountStyle(
-                cents,
-                isHidden: isHidden,
-              ).copyWith(fontFeatures: const [FontFeature.tabularFigures()]),
-              textAlign: TextAlign.right,
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  static List<_LegendSectionGroup> _groupsFromSeries(
-    List<CategoryTrendSeries> seriesList,
-  ) {
-    final byName = <String, List<CategoryTrendSeries>>{};
-    final sectionOrder = <String>[];
-    for (final series in seriesList) {
-      final key = series.legendGroup?.trim();
-      final sectionName = key == null || key.isEmpty ? 'Other' : key;
-      if (!byName.containsKey(sectionName)) {
-        sectionOrder.add(sectionName);
-        byName[sectionName] = [];
-      }
-      byName[sectionName]!.add(series);
-    }
-    return [
-      for (final name in sectionOrder)
-        _LegendSectionGroup(
-          sectionName: name,
-          seriesList: _sortedByMagnitudeDesc(byName[name]!),
-        ),
-    ];
-  }
-
-  static List<CategoryTrendSeries> _sortedByMagnitudeDesc(
-    List<CategoryTrendSeries> seriesList,
-  ) {
-    final sorted = [...seriesList];
-    sorted.sort((left, right) {
-      final leftCents = CategoryTrendLegendAmount(
-        series: left,
-        valueKind: TrendValueKind.level,
-      ).cents.abs();
-      final rightCents = CategoryTrendLegendAmount(
-        series: right,
-        valueKind: TrendValueKind.level,
-      ).cents.abs();
-      return rightCents.compareTo(leftCents);
-    });
-    return sorted;
-  }
-}
-
-class const _LegendSectionGroup({
-  required final String sectionName,
-  required final List<CategoryTrendSeries> seriesList,
-});
-
 /// Signed legend amount: latest when idle, nearest point when inspecting.
 class const CategoryTrendLegendAmount({
   required final CategoryTrendSeries series,
@@ -453,6 +296,15 @@ class const CategoryTrendLegendAmount({
     return '$amountLabel ${spendRate.shortLabel}';
   }
 
+  /// Assets read green, debts red; hidden rows go muted.
+  static TextStyle signedAmountStyle(int cents, {required bool isHidden}) {
+    final base = EText.caption.copyWith(fontWeight: FontWeight.w600);
+    if (isHidden) return base.copyWith(color: EColors.textMuted);
+    if (cents > 0) return base.copyWith(color: EColors.success);
+    if (cents < 0) return base.copyWith(color: EColors.danger);
+    return base;
+  }
+
   bool get _isLiability {
     if (series.dotted) return true;
     final group = series.legendGroup;
@@ -469,19 +321,9 @@ TextStyle? _legendValueStyle({
   required TrendValueKind valueKind,
 }) {
   final TextStyle? signed = valueKind == TrendValueKind.level
-      ? _signedAmountStyle(cents, isHidden: isHidden)
+      ? CategoryTrendLegendAmount.signedAmountStyle(cents, isHidden: isHidden)
       : null;
   if (!isHidden) return signed;
   final shown = signed ?? EText.caption.copyWith(fontWeight: FontWeight.w600);
   return shown.merge(_hiddenLegendText);
-}
-
-TextStyle _signedAmountStyle(int cents, {required bool isHidden}) {
-  final base = EText.caption.copyWith(fontWeight: FontWeight.w600);
-  if (isHidden) {
-    return base.copyWith(color: EColors.textMuted);
-  }
-  if (cents > 0) return base.copyWith(color: EColors.success);
-  if (cents < 0) return base.copyWith(color: EColors.danger);
-  return base;
 }

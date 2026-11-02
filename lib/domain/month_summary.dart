@@ -14,14 +14,3 @@ class const AccountSpendRow({
   required final String accountName,
   required final int spentCents,
 });
-
-class const CategoryMonthRow({
-  required final String categoryId,
-  required final String categoryName,
-
-  /// Trailing-year outflow, scaled up if fewer than 365 observed days.
-  required final int annualizedSpendCents,
-
-  /// Calendar-month outflow for the selected year-month.
-  required final int spentCents,
-});

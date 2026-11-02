@@ -3,6 +3,7 @@ import 'package:ethan_ui/ethan_ui.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:spend_trends/app_identity.dart';
+import 'package:spend_trends/features/projections/fire_outlook_card.dart';
 import 'package:spend_trends/domain/account.dart';
 import 'package:spend_trends/domain/transaction.dart';
 import 'package:spend_trends/features/banks/banks_net_worth_pane.dart';
@@ -46,6 +47,7 @@ class _BanksScreenState() extends ConsumerState<BanksScreen> {
         title: 'Banks',
         leading: ESyncPhaseIcon(),
         automaticallyImplyLeading: false,
+        actions: [FireOutlookCard()],
       ),
       body: SafeArea(
         bottom: false,

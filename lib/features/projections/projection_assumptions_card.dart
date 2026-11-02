@@ -207,12 +207,7 @@ class const _AssumedMoveSwitchRow({
     final bool isOn = projection.assumptions.assumedMoveYear != null;
     return Row(
       children: [
-        Expanded(
-          child: Text(
-            'Assume a move (sells the current home; 30-yr fixed)',
-            style: EText.caption,
-          ),
-        ),
+        Expanded(child: Text('Assume a move', style: EText.caption)),
         Switch(
           value: isOn,
           onChanged: (assumesMove) =>

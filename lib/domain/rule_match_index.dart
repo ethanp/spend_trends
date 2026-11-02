@@ -1,3 +1,4 @@
+import 'package:ethan_utils/ethan_utils.dart';
 import 'package:spend_trends/domain/category.dart';
 import 'package:spend_trends/domain/transaction.dart';
 
@@ -49,7 +50,7 @@ class RuleMatchIndex(List<CategorizationRule> rules) {
 class _MatchText(BankTransaction transaction) {
   final String merchant = transaction.normalizedMerchant.toLowerCase();
   final String description = transaction.rawDescription.trim().toLowerCase();
-  final String note = (transaction.note ?? '').trim().toLowerCase();
+  final String note = transaction.note.trimmedOrEmpty.toLowerCase();
   late final String descriptionMerchantAndNote =
       '$description\n$merchant\n$note';
 }

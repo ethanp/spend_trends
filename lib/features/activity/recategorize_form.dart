@@ -88,7 +88,7 @@ class _RecategorizeFormState() extends ConsumerState<RecategorizeForm> {
 
   bool get _noteDirty {
     final current = _noteController.text.trim();
-    final original = (widget.transaction.note ?? '').trim();
+    final original = widget.transaction.note.trimmedOrEmpty;
     return current != original;
   }
 

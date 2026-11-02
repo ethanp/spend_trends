@@ -153,7 +153,7 @@ class const BankAccountDetailPane({required final Account account})
       groups: const <CategoryGroup>[],
       valueKind: TrendValueKind.level,
       enableContributors: false,
-      chartHeight: 420,
+      maxChartHeight: 420,
     );
   }
 }

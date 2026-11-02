@@ -16,9 +16,11 @@ class const LifeEventBasics({
 /// kind changes.
 sealed class LifeEventDetailsForm {
   factory forKind(LifeEventKind kind, {LifeEvent? lifeEvent}) => switch (kind) {
-    LifeEventKind.milestone || LifeEventKind.childBirth => _NoDetailsForm(kind),
+    LifeEventKind.milestone ||
+    LifeEventKind.rental ||
+    LifeEventKind.childBirth => _NoDetailsForm(kind),
     LifeEventKind.job => _JobDetailsForm(lifeEvent is Job ? lifeEvent : null),
-    LifeEventKind.home => _HomeDetailsForm(
+    LifeEventKind.owned => _HomeDetailsForm(
       lifeEvent is HomeOwnership ? lifeEvent : null,
     ),
   };
@@ -37,22 +39,14 @@ class _NoDetailsForm(final LifeEventKind kind) implements LifeEventDetailsForm {
   List<Widget> fields(VoidCallback rebuild) => const [];
 
   @override
-  LifeEvent eventWith(LifeEventBasics basics) => switch (kind) {
-    LifeEventKind.childBirth => ChildBirth(
-      id: basics.id,
-      title: basics.title,
-      startedOn: basics.startedOn,
-      endedOn: basics.endedOn,
-      note: basics.note,
-    ),
-    _ => Milestone(
-      id: basics.id,
-      title: basics.title,
-      startedOn: basics.startedOn,
-      endedOn: basics.endedOn,
-      note: basics.note,
-    ),
-  };
+  LifeEvent eventWith(LifeEventBasics basics) => LifeEvent.fromStorage(
+    id: basics.id,
+    kind: kind,
+    title: basics.title,
+    startedOn: basics.startedOn,
+    endedOn: basics.endedOn,
+    note: basics.note,
+  );
 
   @override
   void dispose() {}

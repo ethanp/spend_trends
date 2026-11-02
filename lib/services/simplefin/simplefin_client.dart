@@ -352,7 +352,7 @@ class SimpleFinClient({http.Client? httpClient}) {
         .toList();
 
     return SimpleFinAccount(
-      id: json['id'] as String? ?? '',
+      id: json['id'] as String,
       name: json['name'] as String? ?? 'Account',
       currency: json['currency'] as String? ?? 'USD',
       balance: json['balance']?.toString() ?? '0',
@@ -366,10 +366,10 @@ class SimpleFinClient({http.Client? httpClient}) {
 
   static SimpleFinTransaction _parseTransaction(Map<String, dynamic> json) {
     return SimpleFinTransaction(
-      id: json['id'] as String? ?? '',
+      id: json['id'] as String,
       posted: (json['posted'] as Object?).asIntOrNull() ?? 0,
       amount: json['amount']?.toString() ?? '0',
-      description: json['description'] as String? ?? '',
+      description: json['description'] as String,
       pending: json['pending'] == true,
     );
   }

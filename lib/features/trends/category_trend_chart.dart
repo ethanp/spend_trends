@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:ethan_ui/ethan_ui.dart';
 import 'package:ethan_utils/ethan_utils.dart';
 import 'package:flutter/material.dart';
@@ -6,7 +8,6 @@ import 'package:spend_trends/domain/category.dart';
 import 'package:spend_trends/domain/category_group.dart';
 import 'package:spend_trends/domain/account.dart';
 import 'package:spend_trends/domain/life_event.dart';
-import 'package:spend_trends/domain/stay_chain.dart';
 import 'package:spend_trends/domain/transaction.dart';
 import 'package:spend_trends/domain/trend_spend_rate.dart';
 import 'package:spend_trends/features/trends/category_trend_inspect_overlay.dart';
@@ -36,8 +37,6 @@ class const CategoryTrendChart({
   required final List<CategoryGroup> groups,
   final List<Account> accounts = const [],
   final List<LifeEvent> lifeEvents = const [],
-  final StayChain? housingChain,
-  final StayChain? jobChain,
   final String? subtitle =
       'Annual pace · tap a line for top contributors · hover to inspect · '
       'tap legend to show/hide · double-tap to solo',
@@ -56,7 +55,13 @@ class const CategoryTrendChart({
 
   /// Shown between the plot and the legend; drives every Trends chart's window.
   final Widget? rangeScrubber,
-  final double chartHeight = 560,
+
+  /// Height on wide screens; phone-width charts scale down with their width.
+  final double maxChartHeight = 560,
+
+  /// While the series still compute, the card keeps its full height so the
+  /// lines land in place instead of pushing the page down.
+  final bool seriesStillComputing = false,
 }) extends ConsumerStatefulWidget {
   @override
   ConsumerState<CategoryTrendChart> createState() => _CategoryTrendChartState();
@@ -64,6 +69,9 @@ class const CategoryTrendChart({
 
 class _CategoryTrendChartState() extends ConsumerState<CategoryTrendChart> {
   static final _headlineAmountStyle = EText.section.copyWith(fontSize: 22);
+
+  /// Keeps a phone-width plot (overlay lanes included) inside one screen.
+  static const _narrowHeightPerWidth = 1.05;
 
   late final Set<String> _hiddenSeriesIds = {
     ...widget.initiallyHiddenSeriesIds,
@@ -171,7 +179,7 @@ class _CategoryTrendChartState() extends ConsumerState<CategoryTrendChart> {
         Text(figure.label, style: EText.caption),
         const SizedBox(height: ELayout.spaceXs),
         Text(
-          formatCents(figure.cents),
+          formatCentsWholeDollars(figure.cents),
           style: figure.cents < 0
               ? _headlineAmountStyle.copyWith(color: EColors.danger)
               : _headlineAmountStyle,
@@ -184,39 +192,52 @@ class _CategoryTrendChartState() extends ConsumerState<CategoryTrendChart> {
     TrendSpendRate spendRate,
     EChartVisibleRange? visibleRange,
   ) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final plotSize = Size(
+          constraints.maxWidth,
+          math.min(
+            widget.maxChartHeight,
+            constraints.maxWidth * _narrowHeightPerWidth,
+          ),
+        );
+        return SizedBox.fromSize(
+          size: plotSize,
+          child: _plotOrPlaceholder(plotSize, spendRate, visibleRange),
+        );
+      },
+    );
+  }
+
+  Widget _plotOrPlaceholder(
+    Size plotSize,
+    TrendSpendRate spendRate,
+    EChartVisibleRange? visibleRange,
+  ) {
     if (!_visibleSeries.any((series) => series.canPlot)) {
-      return SizedBox(
-        height: widget.chartHeight,
-        child: Center(child: Text('Need more history', style: EText.caption)),
+      return Center(
+        child: Text(
+          widget.seriesStillComputing ? 'Computing…' : 'Need more history',
+          style: EText.caption,
+        ),
       );
     }
-
-    return SizedBox(
-      height: widget.chartHeight,
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          final plotSize = Size(constraints.maxWidth, constraints.maxHeight);
-          final plot = CategoryTrendPlot.from(
-            size: plotSize,
-            seriesList: _visibleSeries,
-            visibleRange: visibleRange,
-            housingChain: widget.housingChain,
-            jobChain: widget.jobChain,
-            lifeEvents: widget.lifeEvents,
-          );
-          if (plot.drawableSeries.isEmpty) {
-            return Center(
-              child: Text('No history in this range', style: EText.caption),
-            );
-          }
-          return _inspectablePlot(
-            plot,
-            plotSize: plotSize,
-            spendRate: spendRate,
-            visibleRange: visibleRange,
-          );
-        },
-      ),
+    final plot = CategoryTrendPlot.from(
+      size: plotSize,
+      seriesList: _visibleSeries,
+      visibleRange: visibleRange,
+      lifeEvents: widget.lifeEvents,
+    );
+    if (plot.drawableSeries.isEmpty) {
+      return Center(
+        child: Text('No history in this range', style: EText.caption),
+      );
+    }
+    return _inspectablePlot(
+      plot,
+      plotSize: plotSize,
+      spendRate: spendRate,
+      visibleRange: visibleRange,
     );
   }
 
@@ -250,8 +271,6 @@ class _CategoryTrendChartState() extends ConsumerState<CategoryTrendChart> {
                   seriesList: _visibleSeries,
                   visibleRange: visibleRange,
                   lifeEvents: widget.lifeEvents,
-                  housingChain: widget.housingChain,
-                  jobChain: widget.jobChain,
                   spendRate: spendRate,
                   valueKind: widget.valueKind,
                 ),

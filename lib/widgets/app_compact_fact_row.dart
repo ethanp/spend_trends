@@ -28,6 +28,9 @@ class const AppCompactFactRow({
   required final String title,
   final Widget? leading,
   final String? caption,
+
+  /// Under the caption, inside the title column (e.g. a figures strip).
+  final Widget? detail,
   final Widget? amount,
   final double? amountWidth,
   final Widget? trailing,
@@ -122,6 +125,10 @@ class const AppCompactFactRow({
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
           ),
+        if (detail != null) ...[
+          const SizedBox(height: ELayout.spaceXs),
+          detail!,
+        ],
       ],
     );
   }

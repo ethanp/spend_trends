@@ -6,7 +6,8 @@ import 'package:spend_trends/theme/finance_colors.dart';
 
 import 'trends_providers.dart';
 
-/// yr/mo/day chips that set the display rate for everything on Trends.
+/// yr/mo/day chips that set the display rate shared by every pace chart on
+/// Trends.
 class const TrendSpendRateToggle() extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {

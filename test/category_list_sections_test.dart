@@ -23,7 +23,7 @@ void main() {
         const CategoryGroup(id: 'grp_wants', name: 'Wants', sortOrder: 0),
         SpecialCategory.incomeGroup,
       ],
-      rowsById: const {},
+      pacesByCategoryId: const {},
     ).sections;
 
     expect(sections.map((section) => section.title), [

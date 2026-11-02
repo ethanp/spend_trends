@@ -42,8 +42,6 @@ sync_rules:
           - SELECT * FROM transactions
           - SELECT * FROM categorization_rules
           - SELECT * FROM life_events
-          - SELECT * FROM housing_stays
-          - SELECT * FROM job_stays
           - SELECT * FROM sync_state
           - SELECT * FROM simplefin_pulls
           - SELECT * FROM simplefin_pull_accounts

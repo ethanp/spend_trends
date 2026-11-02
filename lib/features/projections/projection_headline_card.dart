@@ -58,9 +58,8 @@ class const ProjectionHeadlineCard({
       return 'Savings run out before ${projection.assumptions.endAge} '
           'at any retirement age';
     }
-    final year =
-        projection.start.today.year + earliest - projection.currentAge!;
-    return 'Earliest retirement: age $earliest ($year)';
+    return 'Earliest retirement: age $earliest '
+        '(${projection.earliestRetirementYear})';
   }
 
   String _plannedRetirementCaption() {

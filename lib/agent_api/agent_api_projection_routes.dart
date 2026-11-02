@@ -32,6 +32,7 @@ class const AgentApiProjectionRoutes({
           'adds its yearly cost.',
       'currentAge': projection.currentAge,
       'earliestRetirementAge': projection.earliestRetirementAge,
+      'earliestRetirementYear': projection.earliestRetirementYear,
       'savingsTarget': switch (projection.savingsTarget) {
         null => null,
         final target => {

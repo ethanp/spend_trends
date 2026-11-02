@@ -160,6 +160,13 @@ class RetirementProjection({
     return null;
   }();
 
+  /// The simulated year [earliestRetirementAge] falls in; null with it.
+  int? get earliestRetirementYear {
+    final int? earliest = earliestRetirementAge;
+    if (earliest == null) return null;
+    return start.today.year + earliest - currentAge!;
+  }
+
   /// What retiring at [ProjectionAssumptions.retirementAge] asks of today's
   /// budget; null without a birth date.
   late final RetirementSavingsTarget? savingsTarget = () {

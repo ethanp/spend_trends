@@ -53,7 +53,6 @@ class const ProjectionChartCard({
   required final RetirementProjection projection,
 }) extends ConsumerWidget {
   static const _chartHeight = 320.0;
-  static const _earliestRetirementColor = EColors.success;
   static const _plannedRetirementColor = EColors.warning;
   static const _todayColor = EColors.textMuted;
 
@@ -174,7 +173,7 @@ class const ProjectionChartCard({
         if (projection.earliestRetirementAge != null)
           _YearMarker(
             date: _dateAtAge(projection.earliestRetirementAge!),
-            color: _earliestRetirementColor,
+            color: FinanceColors.earliestRetirement,
           ),
       ],
     );

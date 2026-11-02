@@ -42,7 +42,7 @@ sealed class const LifeEvent({
       takeHomeSalaryAnnual: details['takeHomeSalaryAnnual'] as int? ?? 0,
       takeHomeBonusAnnual: details['takeHomeBonusAnnual'] as int? ?? 0,
     ),
-    LifeEventKind.home => HomeOwnership(
+    LifeEventKind.owned => HomeOwnership(
       id: id,
       title: title,
       startedOn: startedOn,
@@ -76,6 +76,13 @@ sealed class const LifeEvent({
       movingCost:
           details['movingCost'] as int? ?? HomeOwnership.lastMoveMovingCost,
     ),
+    LifeEventKind.rental => Rental(
+      id: id,
+      title: title,
+      startedOn: startedOn,
+      endedOn: endedOn,
+      note: note,
+    ),
     LifeEventKind.childBirth => ChildBirth(
       id: id,
       title: title,
@@ -89,7 +96,7 @@ sealed class const LifeEvent({
 
   /// The kind's own fields as stored JSON; null for kinds with none.
   Map<String, Object?>? get details => switch (this) {
-    Milestone() || ChildBirth() => null,
+    Milestone() || Rental() || ChildBirth() => null,
     final Job job => {
       'takeHomeSalaryAnnual': job.takeHomeSalaryAnnual,
       'takeHomeBonusAnnual': job.takeHomeBonusAnnual,
@@ -166,13 +173,29 @@ sealed class const LifeEvent({
 }
 
 /// Which kind of [LifeEvent] a row holds.
-enum LifeEventKind() {
-  milestone,
-  job,
-  home,
-  childBirth;
+enum LifeEventKind({required final LifeEventLane lane}) {
+  milestone(lane: LifeEventLane.milestones),
+  job(lane: LifeEventLane.job),
+  owned(lane: LifeEventLane.housing),
+  rental(lane: LifeEventLane.housing),
+  childBirth(lane: LifeEventLane.children);
 
   String get label => nameAsCapitalizedWords;
+}
+
+/// Where life events are grouped: the Life Events list's sections and the
+/// Trends overlay lanes.
+enum LifeEventLane() {
+  housing,
+  job,
+  milestones,
+  children;
+
+  String get title => nameAsCapitalizedWords;
+
+  /// True when this lane's title already names its events' kind.
+  bool get holdsOneKind =>
+      LifeEventKind.values.where((kind) => kind.lane == this).length == 1;
 }
 
 /// A marker on the charts with no effect on the projection.
@@ -291,7 +314,7 @@ class const HomeOwnership({
   static const lastMoveMovingCost = 900;
 
   @override
-  LifeEventKind get kind => LifeEventKind.home;
+  LifeEventKind get kind => LifeEventKind.owned;
 
   int get loanAmount => mortgage == null ? 0 : price - downPayment;
 
@@ -305,6 +328,19 @@ class const HomeOwnership({
 
   double propertyTaxAnnual(double homeValue) =>
       homeValue * propertyTaxPercent / 100;
+}
+
+/// Renting a place; marks the housing lane and has no effect on the
+/// projection.
+class const Rental({
+  required super.id,
+  required super.title,
+  required super.startedOn,
+  super.endedOn,
+  super.note,
+}) extends LifeEvent {
+  @override
+  LifeEventKind get kind => LifeEventKind.rental;
 }
 
 /// A child born (or due) on [startedOn], and what raising them costs.

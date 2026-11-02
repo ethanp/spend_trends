@@ -8,6 +8,7 @@ import 'package:spend_trends/features/projections/projection_assumptions_card.da
 import 'package:spend_trends/features/projections/projection_chart_card.dart';
 import 'package:spend_trends/features/projections/projection_headline_card.dart';
 import 'package:spend_trends/features/projections/projection_starting_point_card.dart';
+import 'package:spend_trends/features/projections/fire_outlook_card.dart';
 import 'package:spend_trends/features/projections/projections_providers.dart';
 
 /// Retirement projection from live balances and last year's flows, with the
@@ -25,6 +26,7 @@ class const ProjectionsScreen() extends ConsumerWidget {
         title: 'Projections',
         leading: ESyncPhaseIcon(),
         automaticallyImplyLeading: false,
+        actions: [FireOutlookCard()],
       ),
       body: SafeArea(
         bottom: false,

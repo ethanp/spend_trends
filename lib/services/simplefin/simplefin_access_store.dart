@@ -1,4 +1,4 @@
-import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:ethan_utils/ethan_utils.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 /// Resolves the SimpleFIN Access URL.
@@ -44,7 +44,7 @@ class SimpleFinAccessStore({FlutterSecureStorage? storage}) {
   Future<bool> get isConnected async => await read() != null;
 
   Uri? _uriFromEnv() {
-    final value = dotenv.env[envAccessUrlKey]?.trim() ?? '';
+    final value = dotenv.env[envAccessUrlKey].trimmedOrEmpty;
     if (value.isEmpty) return null;
     final uri = Uri.tryParse(value);
     if (uri == null || uri.scheme != 'https') return null;

@@ -3,6 +3,7 @@ import 'package:ethan_ui/ethan_ui.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:spend_trends/app_identity.dart';
+import 'package:spend_trends/features/projections/fire_outlook_card.dart';
 import 'package:spend_trends/domain/account.dart';
 import 'package:spend_trends/domain/category.dart';
 import 'package:spend_trends/domain/transaction.dart';
@@ -81,14 +82,18 @@ class _ActivityScreenState() extends ConsumerState<ActivityScreen> {
         automaticallyImplyLeading: false,
         reloadProgressLabel: headerReloadProgressLabel,
         actions: [
-          TextButton(
-            onPressed: () => SuggestCategoriesSheet.show(context),
-            child: const Text('Suggest categories'),
-          ),
-          TextButton(
-            onPressed: () => ActivityScreen.refresh(context, ref),
-            child: const Text('Pull bank transactions'),
-          ),
+          const FireOutlookCard(),
+          if (AppBrowseSplitShell.isSplit(context)) ...[
+            TextButton(
+              onPressed: () => SuggestCategoriesSheet.show(context),
+              child: const Text('Suggest categories'),
+            ),
+            TextButton(
+              onPressed: () => ActivityScreen.refresh(context, ref),
+              child: const Text('Pull bank transactions'),
+            ),
+          ] else
+            _narrowHeaderActionsMenu(),
         ],
       ),
       body: SafeArea(
@@ -104,6 +109,25 @@ class _ActivityScreenState() extends ConsumerState<ActivityScreen> {
           data: _transactionList,
         ),
       ),
+    );
+  }
+
+  /// Phone width cannot fit the FIRE card beside two labeled buttons.
+  Widget _narrowHeaderActionsMenu() {
+    return PopupMenuButton<VoidCallback>(
+      tooltip: 'Activity actions',
+      icon: const Icon(Icons.more_horiz),
+      onSelected: (action) => action(),
+      itemBuilder: (menuContext) => [
+        PopupMenuItem(
+          value: () => SuggestCategoriesSheet.show(context),
+          child: const Text('Suggest categories'),
+        ),
+        PopupMenuItem(
+          value: () => ActivityScreen.refresh(context, ref),
+          child: const Text('Pull bank transactions'),
+        ),
+      ],
     );
   }
 

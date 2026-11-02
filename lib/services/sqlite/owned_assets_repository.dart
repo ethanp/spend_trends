@@ -181,7 +181,7 @@ class OwnedAssetsRepository(final PowerSyncDatabase _powerSync) {
   }
 
   static String? _normalizedNote(String? note) {
-    final trimmed = note?.trim() ?? '';
+    final trimmed = note.trimmedOrEmpty;
     return trimmed.isEmpty ? null : trimmed;
   }
 }

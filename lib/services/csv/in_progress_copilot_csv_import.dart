@@ -55,7 +55,7 @@ class InProgressCopilotCsvImport({
 
   /// Queues a note only when [transactionId] currently has none in the batch.
   void backfillNote(String transactionId, String? note) {
-    final trimmed = note?.trim() ?? '';
+    final trimmed = note.trimmedOrEmpty;
     if (trimmed.isEmpty || transactionId.isEmpty) return;
     pendingNoteById.putIfAbsent(transactionId, () => trimmed);
   }
@@ -67,7 +67,7 @@ class InProgressCopilotCsvImport({
   }) {
     final presence = TransactionPresence(
       id: transaction.id,
-      hasNote: (transaction.note?.trim() ?? '').isNotEmpty,
+      hasNote: transaction.note.trimmedOrEmpty.isNotEmpty,
     );
     existingByExternalKey[externalKey] = presence;
     existingByContentKey[contentKey] = presence;

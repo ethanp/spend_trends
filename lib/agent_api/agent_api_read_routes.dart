@@ -79,10 +79,15 @@ keep any existing note. Reasonable assumptions belong in notes too; mark them
 
 Notes are also how one transaction gets a category its bank text cannot:
 contains rules match notes, and setting a note re-runs the rules on that
-transaction. Identical bank text that means different things (an "Outgoing
-Wire" to a crypto exchange vs. one to a title company) gets a distinguishing
-phrase in the note and a contains rule on that phrase; scope the rule to the
-account when an exact rule on the bank text would otherwise outrank it.
+transaction. When bank text is generic ("Deposit Mobile Banking", a check
+number, "Outgoing Wire", a Zelle), label the transaction instead of ruling on
+the bank text: append a note that names what it is in the proper term
+("homeowner's insurance premium refund", "title company closing wire") plus
+what it is assumed or known from, then add a contains rule on that label
+phrase. Do not key a rule on the user's loose wording or on a generic word
+scoped to an account to make it win. A label longer than the generic rule's
+pattern outranks it; scope the label rule to an account only when the
+generic rule it must beat is itself scoped or exact.
 
 Lifestyle costs are Fixed costs plus Guilt-free: the spending the FIRE
 number rests on. A rule with "excludesFromLifestyleCosts": true leaves what

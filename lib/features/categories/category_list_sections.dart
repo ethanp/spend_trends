@@ -1,23 +1,32 @@
 import 'package:spend_trends/domain/category.dart';
 import 'package:spend_trends/domain/category_group.dart';
-import 'package:spend_trends/domain/month_summary.dart';
+import 'package:spend_trends/domain/category_spend_pace.dart';
 
 /// One block on the Categories list: a named group or Ungrouped.
 class const CategoryListSection({
   required final String title,
   required final List<SpendCategory> categories,
-  required final int monthTotalCents,
+  required final Map<String, CategorySpendPace> pacesByCategoryId,
 
   /// Non-null when the header opens the group editor.
   final CategoryGroup? group,
-});
+}) {
+  /// The members' summed average monthly spend over [window].
+  int monthlyCents(CategorySpendWindow window) {
+    var totalCents = 0;
+    for (final category in categories) {
+      totalCents += pacesByCategoryId[category.id]?.monthlyCents(window) ?? 0;
+    }
+    return totalCents;
+  }
+}
 
-/// Groups → Ungrouped; members sorted by this-month spend desc.
+/// Groups → Ungrouped; members sorted by 1y average spend desc.
 class CategoryListSections._(final List<CategoryListSection> sections) {
   factory from({
     required List<SpendCategory> categories,
     required List<CategoryGroup> groups,
-    required Map<String, CategoryMonthRow> rowsById,
+    required Map<String, CategorySpendPace> pacesByCategoryId,
   }) {
     final groupsById = {for (final group in groups) group.id: group};
     final membersByGroupId = <String, List<SpendCategory>>{};
@@ -37,24 +46,24 @@ class CategoryListSections._(final List<CategoryListSection> sections) {
       final members = List<SpendCategory>.from(
         membersByGroupId[group.id] ?? const <SpendCategory>[],
       );
-      _sortByMonthSpend(members, rowsById);
+      _sortByOneYearSpend(members, pacesByCategoryId);
       sections.add(
         CategoryListSection(
           title: group.name,
           group: group,
           categories: members,
-          monthTotalCents: _monthTotal(members, rowsById),
+          pacesByCategoryId: pacesByCategoryId,
         ),
       );
     }
 
     if (ungrouped.isNotEmpty) {
-      _sortByMonthSpend(ungrouped, rowsById);
+      _sortByOneYearSpend(ungrouped, pacesByCategoryId);
       sections.add(
         CategoryListSection(
           title: 'Ungrouped',
           categories: ungrouped,
-          monthTotalCents: _monthTotal(ungrouped, rowsById),
+          pacesByCategoryId: pacesByCategoryId,
         ),
       );
     }
@@ -62,27 +71,19 @@ class CategoryListSections._(final List<CategoryListSection> sections) {
     return CategoryListSections._(sections);
   }
 
-  static void _sortByMonthSpend(
+  static void _sortByOneYearSpend(
     List<SpendCategory> categories,
-    Map<String, CategoryMonthRow> rowsById,
+    Map<String, CategorySpendPace> pacesByCategoryId,
   ) {
+    int oneYearSpend(SpendCategory category) =>
+        pacesByCategoryId[category.id]?.monthlyCents(
+          CategorySpendWindow.oneYear,
+        ) ??
+        0;
     categories.sort((left, right) {
-      final leftSpend = rowsById[left.id]?.spentCents ?? 0;
-      final rightSpend = rowsById[right.id]?.spentCents ?? 0;
-      final spendCompare = rightSpend.compareTo(leftSpend);
+      final spendCompare = oneYearSpend(right).compareTo(oneYearSpend(left));
       if (spendCompare != 0) return spendCompare;
       return left.name.toLowerCase().compareTo(right.name.toLowerCase());
     });
-  }
-
-  static int _monthTotal(
-    List<SpendCategory> categories,
-    Map<String, CategoryMonthRow> rowsById,
-  ) {
-    var total = 0;
-    for (final category in categories) {
-      total += rowsById[category.id]?.spentCents ?? 0;
-    }
-    return total;
   }
 }

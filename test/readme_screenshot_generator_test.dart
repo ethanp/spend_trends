@@ -13,7 +13,6 @@ import 'package:spend_trends/domain/life_event.dart';
 import 'package:spend_trends/domain/owned_asset.dart';
 import 'package:spend_trends/domain/owned_asset_kind.dart';
 import 'package:spend_trends/domain/special_category.dart';
-import 'package:spend_trends/domain/stay_chain.dart';
 import 'package:spend_trends/domain/transaction.dart';
 import 'package:spend_trends/features/trends/trends_providers.dart';
 import 'package:spend_trends/features/trends/trends_screen.dart';
@@ -21,7 +20,6 @@ import 'package:spend_trends/features/activity/transactions_list_provider.dart';
 import 'package:spend_trends/features/banks/banks_providers.dart';
 import 'package:spend_trends/features/banks/connection_status.dart';
 import 'package:spend_trends/features/categories/categories_providers.dart';
-import 'package:spend_trends/features/life_chains/life_chain_providers.dart';
 import 'package:spend_trends/features/life_events/life_events_providers.dart';
 import 'package:spend_trends/features/owned_assets/owned_assets_providers.dart';
 
@@ -59,10 +57,6 @@ void main() {
               (ref) async => fixtures.ownedAssets,
             ),
             lifeEventsProvider.overrideWith((ref) async => fixtures.lifeEvents),
-            housingChainProvider.overrideWith(
-              (ref) async => fixtures.housingChain,
-            ),
-            jobChainProvider.overrideWith((ref) async => StayChain(const [])),
             syncStatusDetailsProvider.overrideWithValue(
               SyncStatusDetails(
                 phase: SyncPhase.synced,
@@ -190,20 +184,18 @@ class _OverviewSpend() {
       startedOn: DateTime(2024, 6, 1),
       endedOn: DateTime(2024, 6, 1),
     ),
-  ];
-
-  final housingChain = StayChain([
-    ChainStay(
+    Rental(
       id: 'apt',
-      label: 'Oak St apartment',
+      title: 'Oak St apartment',
       startedOn: DateTime(2023, 1, 1),
+      endedOn: DateTime(2024, 5, 31),
     ),
-    ChainStay(
+    Rental(
       id: 'house',
-      label: 'Current house',
+      title: 'Current house',
       startedOn: DateTime(2024, 6, 1),
     ),
-  ]);
+  ];
 
   List<BankTransaction> get transactions {
     final rows = <BankTransaction>[];

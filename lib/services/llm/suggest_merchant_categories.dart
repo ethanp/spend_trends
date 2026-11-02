@@ -226,8 +226,8 @@ class SuggestMerchantCategories({
     final suggestions = payload['suggestions'] as List<dynamic>? ?? [];
     final results = <CategorySuggestion>[];
     for (final item in suggestions.whereType<Map<String, dynamic>>()) {
-      final merchant = (item['merchant'] as String? ?? '').toUpperCase();
-      final categoryName = (item['category'] as String? ?? '').trim();
+      final merchant = (item['merchant'] as String).toUpperCase();
+      final categoryName = (item['category'] as String).trim();
       if (merchant.isEmpty || categoryName.isEmpty) continue;
       if (CategoryName(categoryName).isCatchAll) continue;
 

@@ -4,70 +4,50 @@ import 'package:ethan_ui/ethan_ui.dart';
 import 'package:ethan_utils/ethan_utils.dart';
 import 'package:flutter/material.dart';
 import 'package:spend_trends/domain/category.dart';
-import 'package:spend_trends/domain/month_summary.dart';
+import 'package:spend_trends/domain/category_spend_pace.dart';
 import 'package:spend_trends/domain/special_category.dart';
 import 'package:spend_trends/features/categories/category_list_sections.dart';
+import 'package:spend_trends/features/categories/category_spend_windows_row.dart';
 import 'package:spend_trends/util/category_color.dart';
 import 'package:spend_trends/widgets/app_compact_fact_row.dart';
 
-/// Shared title and amount columns so every category card is the widest card.
-class const CategoryBrowseColumnWidths({
-  required final double title,
-  required final double amount,
-}) {
-  static const amountHeader = 'This month';
+/// Shared title column width so every category card is the widest card.
+class const CategoryBrowseColumnWidths({required final double title}) {
   static const titleMax = 260.0;
   static const leadingWidth = 10.0;
   static const trailingWidth = 16.0;
 
-  factory measure({
-    required List<CategoryListSection> sections,
-    required Map<String, CategoryMonthRow> rowsById,
-  }) {
+  factory measure({required List<CategoryListSection> sections}) {
     final titleStyle = EText.section.copyWith(fontWeight: FontWeight.w600);
-    final captionStyle = EText.caption;
-    final amountStyle = EText.body.medium.copyWith(fontWeight: FontWeight.w600);
     final titles = <String>[];
     final captions = <String>[];
-    final amounts = <String>[formatCents(0)];
-
     for (final section in sections) {
       titles.add(section.title);
-      if (section.categories.any((category) => !category.isFlow)) {
-        amounts.add(formatCents(section.monthTotalCents));
-      }
       for (final category in section.categories) {
         titles.add(category.name);
-        captions.add(
-          CategoryBrowseFactRow.captionFor(category, rowsById[category.id]),
-        );
-        if (!category.isFlow) {
-          amounts.add(formatCents(rowsById[category.id]?.spentCents ?? 0));
-        }
+        captions.add(CategoryBrowseFactRow.captionFor(category));
       }
     }
-
     return CategoryBrowseColumnWidths(
       title: math.min(
         titleMax,
         math.max(
-          titles.widestLaidOutWidth(titleStyle),
-          captions.widestLaidOutWidth(captionStyle),
+          CategorySpendWindowsRow.width,
+          math.max(
+            titles.widestLaidOutWidth(titleStyle),
+            captions.widestLaidOutWidth(EText.caption),
+          ),
         ),
-      ),
-      amount: math.max(
-        amountHeader.laidOutWidth(EText.caption),
-        amounts.widestLaidOutWidth(amountStyle),
       ),
     );
   }
 }
 
-/// Left Categories browse list (month strip + grouped compact fact rows).
+/// Left Categories browse list: grouped compact fact rows, each with its
+/// average monthly spend over 2y · 1y · 6mo · 3mo.
 class const CategoryBrowseList({
-  required final String yearMonthLabel,
   required final List<CategoryListSection> sections,
-  required final Map<String, CategoryMonthRow> rowsById,
+  required final Map<String, CategorySpendPace> pacesByCategoryId,
   required final String? selectedCategoryId,
   required final void Function(CategoryListSection section) onGroupOpened,
   required final void Function(SpendCategory category) onCategorySelected,
@@ -75,20 +55,20 @@ class const CategoryBrowseList({
 }) extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    final columnWidths = CategoryBrowseColumnWidths.measure(
-      sections: sections,
-      rowsById: rowsById,
-    );
+    final columnWidths = CategoryBrowseColumnWidths.measure(sections: sections);
     return ListView(
       padding: ETabBarOverlay.paddingOf(context),
       children: [
-        _columnHeader(columnWidths),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: ELayout.spaceMd),
+          child: Text('Average spend per month', style: EText.caption),
+        ),
         const SizedBox(height: ELayout.spaceMd),
         for (var index = 0; index < sections.length; index++) ...[
           if (index > 0) const SizedBox(height: ELayout.spaceLg),
           CategoryBrowseSection(
             section: sections[index],
-            rowsById: rowsById,
+            pacesByCategoryId: pacesByCategoryId,
             columnWidths: columnWidths,
             selectedCategoryId: selectedCategoryId,
             onGroupOpened: sections[index].group == null
@@ -101,40 +81,11 @@ class const CategoryBrowseList({
       ],
     );
   }
-
-  Widget _columnHeader(CategoryBrowseColumnWidths columnWidths) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: ELayout.spaceMd),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const SizedBox(width: CategoryBrowseColumnWidths.leadingWidth),
-          const SizedBox(width: ELayout.spaceMd),
-          SizedBox(
-            width: columnWidths.title,
-            child: Text(yearMonthLabel, style: EText.caption),
-          ),
-          const SizedBox(width: ELayout.spaceMd),
-          SizedBox(
-            width: columnWidths.amount,
-            child: Text(
-              CategoryBrowseColumnWidths.amountHeader,
-              style: EText.caption,
-              maxLines: 1,
-              textAlign: TextAlign.right,
-            ),
-          ),
-          const SizedBox(width: ELayout.spaceSm),
-          const SizedBox(width: CategoryBrowseColumnWidths.trailingWidth),
-        ],
-      ),
-    );
-  }
 }
 
 class const CategoryBrowseSection({
   required final CategoryListSection section,
-  required final Map<String, CategoryMonthRow> rowsById,
+  required final Map<String, CategorySpendPace> pacesByCategoryId,
   required final CategoryBrowseColumnWidths columnWidths,
   required final String? selectedCategoryId,
   required final VoidCallback? onGroupOpened,
@@ -162,7 +113,7 @@ class const CategoryBrowseSection({
           const SizedBox(height: ELayout.spaceSm),
           CategoryBrowseFactRow(
             category: category,
-            row: rowsById[category.id],
+            spendPace: pacesByCategoryId[category.id],
             columnWidths: columnWidths,
             selected: selectedCategoryId == category.id,
             onCategorySelected: () => onCategorySelected(category),
@@ -178,14 +129,12 @@ class const CategoryBrowseSection({
       leading: const SizedBox(width: CategoryBrowseColumnWidths.leadingWidth),
       title: section.title,
       titleWidth: columnWidths.title,
-      amount: _hidesSpendTotal
-          ? const SizedBox.shrink()
-          : Text(
-              formatCents(section.monthTotalCents),
-              style: EText.caption.copyWith(fontWeight: FontWeight.w600),
-              maxLines: 1,
+      detail: _hidesSpendTotal
+          ? null
+          : CategorySpendWindowsRow(
+              monthlyCents: section.monthlyCents,
+              emphasized: false,
             ),
-      amountWidth: columnWidths.amount,
       trailing: onGroupOpened == null
           ? const SizedBox(width: CategoryBrowseColumnWidths.trailingWidth)
           : const Icon(
@@ -202,23 +151,16 @@ class const CategoryBrowseSection({
 
 class const CategoryBrowseFactRow({
   required final SpendCategory category,
-  required final CategoryMonthRow? row,
+  required final CategorySpendPace? spendPace,
   required final CategoryBrowseColumnWidths columnWidths,
   required final bool selected,
   required final VoidCallback onCategorySelected,
   required final VoidCallback onCategoryOpened,
 }) extends StatelessWidget {
-  static String captionFor(SpendCategory category, CategoryMonthRow? row) {
-    final builtInCaption = category.builtInCaption;
-    if (builtInCaption != null) return builtInCaption;
-    final annual = row?.annualizedSpendCents ?? 0;
-    final String paceCaption = annual == 0
-        ? 'No annual pace yet'
-        : '${formatCents(annual)} / yr';
-    final area = category.consciousSpendingArea;
-    if (area == null) return paceCaption;
-    return '${area.displayName} · $paceCaption';
-  }
+  static String captionFor(SpendCategory category) =>
+      category.builtInCaption ??
+      category.consciousSpendingArea?.displayName ??
+      'No spending area';
 
   @override
   Widget build(BuildContext context) {
@@ -230,16 +172,13 @@ class const CategoryBrowseFactRow({
         decoration: BoxDecoration(color: tint, shape: BoxShape.circle),
       ),
       title: category.name,
-      caption: captionFor(category, row),
+      caption: captionFor(category),
       titleWidth: columnWidths.title,
-      amount: category.isFlow
-          ? const SizedBox.shrink()
-          : Text(
-              formatCents(row?.spentCents ?? 0),
-              style: EText.body.medium.copyWith(fontWeight: FontWeight.w600),
-              maxLines: 1,
+      detail: category.isFlow
+          ? null
+          : CategorySpendWindowsRow(
+              monthlyCents: (window) => spendPace?.monthlyCents(window) ?? 0,
             ),
-      amountWidth: columnWidths.amount,
       trailing: GestureDetector(
         onTap: onCategoryOpened,
         child: const Icon(

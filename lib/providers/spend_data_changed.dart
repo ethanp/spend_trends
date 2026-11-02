@@ -9,7 +9,7 @@ const _log = ELogger('SpendDataChanged');
 
 /// App-wide spend-data invalidation bus.
 ///
-/// Incremented by activity, banks, categories, life_chains, life_events,
+/// Incremented by activity, banks, categories, life_events,
 /// owned_assets, and settings after writes, and by any local or synced
 /// change to a spend-data table.
 final spendDataChangedProvider = NotifierProvider<SpendDataChanged, int>(

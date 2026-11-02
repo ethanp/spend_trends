@@ -11,11 +11,14 @@ abstract final class FinanceColors() {
   /// Charts / secondary emphasis.
   static const accentSecondary = Color(0xFFE9C46A);
 
-  /// Housing chain, Housing category, Trends “Spending” series.
+  /// Housing life-event lane, Housing category, Trends “Spending” series.
   static const housing = Color(0xFFE76F51);
 
-  /// Job life-chain band on Trends.
+  /// Job life-event lane.
   static const job = EColors.success;
+
+  /// Earliest retirement age: the projection chart marker and FIRE card.
+  static const earliestRetirement = EColors.success;
 
   /// Savings on the three numbers: pay left after the three areas.
   static const savings = Color(0xFF8ECAE6);

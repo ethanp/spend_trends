@@ -61,16 +61,6 @@ const Schema spendTrendsSchema = Schema([
     Column.text('kind'),
     Column.text('details_json'),
   ]),
-  Table('housing_stays', [
-    Column.text('label'),
-    Column.integer('started_on'),
-    Column.text('note'),
-  ]),
-  Table('job_stays', [
-    Column.text('label'),
-    Column.integer('started_on'),
-    Column.text('note'),
-  ]),
   Table('sync_state', [Column.text('key'), Column.text('value')]),
   Table('simplefin_pulls', [
     Column.integer('started_at'),

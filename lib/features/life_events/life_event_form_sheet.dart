@@ -81,7 +81,7 @@ class _LifeEventFormSheetState() extends ConsumerState<LifeEventFormSheet> {
 
   @override
   Widget build(BuildContext context) {
-    return AppSheetPanel.compact(
+    return AppSheetPanel(
       child: Padding(
         padding: const EdgeInsets.all(ELayout.spaceLg),
         child: SingleChildScrollView(
@@ -151,23 +151,32 @@ class _LifeEventFormSheetState() extends ConsumerState<LifeEventFormSheet> {
   }
 
   Widget _kindControl() {
-    return SegmentedButton<LifeEventKind>(
-      segments: [
+    return Wrap(
+      spacing: ELayout.spaceXs,
+      runSpacing: ELayout.spaceXs,
+      children: [
         for (final kind in LifeEventKind.values)
-          ButtonSegment(value: kind, label: Text(kind.label)),
+          ChoiceChip(
+            label: Text(kind.label),
+            selected: kind == _kind,
+            showCheckmark: false,
+            visualDensity: VisualDensity.compact,
+            materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            onSelected: (_) => _selectKind(kind),
+          ),
       ],
-      selected: {_kind},
-      onSelectionChanged: (selection) {
-        _detailsForm.dispose();
-        setState(() {
-          _kind = selection.first;
-          _detailsForm = LifeEventDetailsForm.forKind(
-            _kind,
-            lifeEvent: widget.lifeEvent,
-          );
-        });
-      },
     );
+  }
+
+  void _selectKind(LifeEventKind kind) {
+    _detailsForm.dispose();
+    setState(() {
+      _kind = kind;
+      _detailsForm = LifeEventDetailsForm.forKind(
+        _kind,
+        lifeEvent: widget.lifeEvent,
+      );
+    });
   }
 
   Widget _dateModeControl() {

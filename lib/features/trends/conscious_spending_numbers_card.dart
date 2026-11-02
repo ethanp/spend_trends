@@ -12,9 +12,10 @@ import 'package:spend_trends/theme/finance_colors.dart';
 /// The three numbers over 2y · 1y · 6mo against their guidelines, dollars
 /// always as a month over a year. Investments' guideline is what retiring at
 /// the planned age needs, once the projection can run (birth year set);
-/// Ramit's 10% until then.
+/// Ramit's 10% until then. Null [consciousSpendingNumbers] (still computing)
+/// keeps the card's full shape with dashes, so the numbers land without a jump.
 class const ConsciousSpendingNumbersCard({
-  required final ConsciousSpendingNumbers consciousSpendingNumbers,
+  required final ConsciousSpendingNumbers? consciousSpendingNumbers,
 }) extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -47,48 +48,48 @@ class const ConsciousSpendingNumbersCard({
                 ),
             },
           ),
-          const SizedBox(height: ELayout.spaceMd),
-          Text(
-            'Through ${DateFormat.yMMMd().format(consciousSpendingNumbers.lastDay)}. '
-            'Pay is take-home plus payroll contributions; each target dollar '
-            'figure applies the guideline to that window’s pay. Mortgage '
-            'principal counts as Investments (home equity), not Fixed costs; '
-            'interest, escrow, and mortgage insurance stay in Housing. Lifestyle '
-            'costs are Fixed costs plus Guilt-free. Spending a rule excludes '
-            'from them (a home overlap, a closing) keeps its category but '
-            'stays out of both and out of the FIRE projection. Savings is pay '
-            'left after all of it, negative when cash was drawn down; its '
-            'target is 0%.',
-            style: EText.caption,
-          ),
           if (retirementTarget != null) ...[
-            const SizedBox(height: ELayout.spaceXs),
+            const SizedBox(height: ELayout.spaceMd),
             Text(
               _retirementTargetCaption(retirementTarget),
-              style: EText.caption,
+              style: EText.body.small.copyWith(color: EColors.textSecondary),
             ),
           ],
+          const SizedBox(height: ELayout.spaceSm),
+          Text(_readingKeyCaption, style: EText.caption),
         ],
       ),
     );
   }
 
+  /// What to change to retire as planned, in this month's terms.
   String _retirementTargetCaption(RetirementSavingsTarget target) {
-    final String spending = _monthAndYearPhrase(
+    final String spendingCap = _perMonthPhrase(
       (target.maxNonHousingSpendingAnnual * 100).round(),
     );
-    final String investing = _monthAndYearPhrase(
+    final String investing = _perMonthPhrase(
       (target.requiredInvestingAnnual.clamp(0, double.infinity) * 100).round(),
     );
-    return 'Retiring at ${target.retirementAge} (Projections): spend up to '
-        '$spending outside housing, invest $investing including mortgage '
-        'principal.';
+    return 'To retire at ${target.retirementAge} as planned: spend at most '
+        '$spendingCap outside housing and invest $investing, mortgage '
+        'principal included.';
   }
 
-  /// `$6.7k/mo ($80k/yr)`.
-  static String _monthAndYearPhrase(int annualCents) =>
-      '${formatCentsWholeDollars((annualCents / 12).round())}/mo '
-      '(${formatCentsWholeDollars(annualCents)}/yr)';
+  /// How fresh the grid is, how to read its colors, and the definitions that
+  /// change what a number means.
+  String get _readingKeyCaption {
+    final String throughPhrase = consciousSpendingNumbers == null
+        ? 'Computing'
+        : 'Through ${DateFormat.MMMd().format(consciousSpendingNumbers!.lastDay)}';
+    return '$throughPhrase. Green beats the guideline, red misses it. Pay '
+        'includes payroll contributions. Mortgage principal is Investments. '
+        'Excluded is one-offs like a closing, kept out of the FIRE '
+        'projection. Savings is what is left; negative means cash was '
+        'drawn down.';
+  }
+
+  static String _perMonthPhrase(int annualCents) =>
+      '${formatCentsWholeDollars((annualCents / 12).round())}/mo';
 }
 
 /// Small multiples: one block per area, spending excluded from lifestyle
@@ -99,7 +100,7 @@ class const ConsciousSpendingNumbersCard({
 /// only a row label plus one column per window and fits a phone. Color marks
 /// only how far each share sits from its guideline.
 class const _ConsciousSpendingNumbersGrid({
-  required final ConsciousSpendingNumbers consciousSpendingNumbers,
+  required final ConsciousSpendingNumbers? consciousSpendingNumbers,
   required final Map<ConsciousSpendingArea, ConsciousSpendingGuideline>
   guidelineByArea,
 }) extends StatelessWidget {
@@ -124,34 +125,34 @@ class const _ConsciousSpendingNumbersGrid({
             name: area.displayName,
             color: area.color,
             guideline: guidelineByArea[area]!,
-            percentOfPay: (totals) => totals.percentOfPay(area),
-            annualCents: (totals) => totals.annualCents(area),
+            percentOfPay: (totals) => totals?.percentOfPay(area),
+            annualCents: (totals) => totals?.annualCents(area),
           ),
         _numberBlock(
           name: 'Excluded from lifestyle costs',
           color: FinanceColors.excludedFromLifestyleCosts,
-          percentOfPay: (totals) => totals.excludedFromLifestylePercentOfPay,
-          annualCents: (totals) => totals.annualExcludedFromLifestyleCents,
+          percentOfPay: (totals) => totals?.excludedFromLifestylePercentOfPay,
+          annualCents: (totals) => totals?.annualExcludedFromLifestyleCents,
         ),
         _numberBlock(
           name: 'Savings',
           color: FinanceColors.savings,
           guideline: ConsciousSpendingGuideline.savings,
-          percentOfPay: (totals) => totals.savingsPercentOfPay,
-          annualCents: (totals) => totals.annualSavingsCents,
+          percentOfPay: (totals) => totals?.savingsPercentOfPay,
+          annualCents: (totals) => totals?.annualSavingsCents,
         ),
       ],
     );
   }
 
   /// A null [guideline] (excluded spending) has no target: no target row,
-  /// no color.
+  /// no color. The figure readers get null totals while the numbers compute.
   Widget _numberBlock({
     required String name,
     required Color color,
     ConsciousSpendingGuideline? guideline,
-    required int? Function(ConsciousSpendingWindowTotals) percentOfPay,
-    required int Function(ConsciousSpendingWindowTotals) annualCents,
+    required int? Function(ConsciousSpendingWindowTotals?) percentOfPay,
+    required int? Function(ConsciousSpendingWindowTotals?) annualCents,
   }) {
     return Padding(
       padding: const EdgeInsets.only(top: ELayout.spaceMd),
@@ -165,7 +166,7 @@ class const _ConsciousSpendingNumbersGrid({
             windowCells: [
               for (final window in _windows)
                 _percentCell(
-                  percentOfPay(consciousSpendingNumbers.totalsFor(window)),
+                  percentOfPay(consciousSpendingNumbers?.totalsFor(window)),
                   guideline,
                 ),
             ],
@@ -175,7 +176,7 @@ class const _ConsciousSpendingNumbersGrid({
             windowCells: [
               for (final window in _windows)
                 _monthOverYearCell(
-                  annualCents(consciousSpendingNumbers.totalsFor(window)),
+                  annualCents(consciousSpendingNumbers?.totalsFor(window)),
                   monthStyle: _valueStyle,
                 ),
             ],
@@ -186,9 +187,7 @@ class const _ConsciousSpendingNumbersGrid({
               windowCells: [
                 for (final window in _windows)
                   _monthOverYearCell(
-                    guideline.impliedCents(
-                      consciousSpendingNumbers.totalsFor(window).annualPayCents,
-                    ),
+                    _impliedTargetCents(guideline, window),
                     monthStyle: _labelStyle,
                   ),
               ],
@@ -196,6 +195,16 @@ class const _ConsciousSpendingNumbersGrid({
         ],
       ),
     );
+  }
+
+  int? _impliedTargetCents(
+    ConsciousSpendingGuideline guideline,
+    ConsciousSpendingWindow window,
+  ) {
+    final ConsciousSpendingWindowTotals? totals = consciousSpendingNumbers
+        ?.totalsFor(window);
+    if (totals == null) return null;
+    return guideline.impliedCents(totals.annualPayCents);
   }
 
   /// Block name, then its guideline percent when it has one.
@@ -223,8 +232,9 @@ class const _ConsciousSpendingNumbersGrid({
     );
   }
 
-  /// The month's dollars, with the year's beneath in muted caption.
-  Widget _monthOverYearCell(int annualCents, {required TextStyle monthStyle}) {
+  /// The month's dollars, with the year's beneath in muted caption. Null
+  /// (still computing) keeps both lines as dashes.
+  Widget _monthOverYearCell(int? annualCents, {required TextStyle monthStyle}) {
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.end,
@@ -233,14 +243,19 @@ class const _ConsciousSpendingNumbersGrid({
           TextSpan(
             children: [
               TextSpan(
-                text: _signedWholeDollars((annualCents / 12).round()),
+                text: annualCents == null
+                    ? '—'
+                    : _signedWholeDollars((annualCents / 12).round()),
                 style: monthStyle,
               ),
               TextSpan(text: ' /mo', style: _unitStyle),
             ],
           ),
         ),
-        Text('${_signedWholeDollars(annualCents)} /yr', style: _unitStyle),
+        Text(
+          '${annualCents == null ? '—' : _signedWholeDollars(annualCents)} /yr',
+          style: _unitStyle,
+        ),
       ],
     );
   }

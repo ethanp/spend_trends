@@ -66,8 +66,8 @@ class const SimpleFinConnection({
 }) {
   factory fromJson(Map<String, dynamic> json) {
     return SimpleFinConnection(
-      id: json['conn_id'] as String? ?? '',
-      name: json['name'] as String? ?? '',
+      id: json['conn_id'] as String,
+      name: json['name'] as String,
       orgUrl: json['org_url'] as String?,
     );
   }
