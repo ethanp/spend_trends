@@ -25,7 +25,6 @@ class const SpendCategory({
   required final int sortOrder,
   required final bool archived,
   final String? colorToken,
-  final String? groupId,
   final ConsciousSpendingArea? consciousSpendingArea,
 }) {
   SpendCategory copyWith({
@@ -33,8 +32,6 @@ class const SpendCategory({
     int? sortOrder,
     bool? archived,
     String? colorToken,
-    String? groupId,
-    bool clearGroupId = false,
     ConsciousSpendingArea? consciousSpendingArea,
     bool clearConsciousSpendingArea = false,
   }) {
@@ -44,7 +41,6 @@ class const SpendCategory({
       sortOrder: sortOrder ?? this.sortOrder,
       archived: archived ?? this.archived,
       colorToken: colorToken ?? this.colorToken,
-      groupId: clearGroupId ? null : (groupId ?? this.groupId),
       consciousSpendingArea: clearConsciousSpendingArea
           ? null
           : (consciousSpendingArea ?? this.consciousSpendingArea),

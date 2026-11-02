@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:spend_trends/use_cases/categories/categorizer.dart';
 import 'package:spend_trends/domain/categories/category.dart';
-import 'package:spend_trends/domain/categories/category_group.dart';
 import 'package:spend_trends/domain/categories/rule_change_plan.dart';
 import 'package:spend_trends/domain/transactions/transaction.dart';
 import 'package:spend_trends/ui/activity/activity_column_widths.dart';
@@ -73,9 +72,6 @@ Widget _harness({
     overrides: [
       categorizerProvider.overrideWith((ref) async => categorizer),
       categoriesListProvider.overrideWith((ref) async => const [_groceries]),
-      categoryGroupsProvider.overrideWith(
-        (ref) async => const <CategoryGroup>[],
-      ),
       categorizationRulesProvider.overrideWith((ref) async => rules),
       accountsMapProvider.overrideWith((ref) async => const {}),
       transactionsRepositoryProvider.overrideWith(

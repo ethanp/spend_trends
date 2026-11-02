@@ -1,12 +1,12 @@
 import 'package:spend_trends/domain/categories/category.dart';
-import 'package:spend_trends/domain/categories/category_group.dart';
+import 'package:spend_trends/domain/categories/conscious_spending_area.dart';
 import 'package:spend_trends/domain/transactions/transaction.dart';
 import 'package:spend_trends/ui/trends/build_trends_charts.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:spend_trends/ui/trends/trend_chart_catalog.dart';
 
 void main() {
-  test('Trends emits group rollup plus member category series', () {
+  test('Trends emits spending-area rollup plus member category series', () {
     final start = DateTime(2024, 1, 1);
     final transactions = [
       _txn(id: 'd0', day: start, categoryId: 'cat_dining', amountCents: -1000),
@@ -40,14 +40,14 @@ void main() {
           name: 'Dining',
           sortOrder: 0,
           archived: false,
-          groupId: 'grp_wants',
+          consciousSpendingArea: ConsciousSpendingArea.guiltFree,
         ),
         SpendCategory(
           id: 'cat_travel',
           name: 'Travel',
           sortOrder: 1,
           archived: false,
-          groupId: 'grp_wants',
+          consciousSpendingArea: ConsciousSpendingArea.guiltFree,
         ),
         SpendCategory(
           id: 'cat_housing',
@@ -56,36 +56,42 @@ void main() {
           archived: false,
         ),
       ],
-      groups: const [
-        CategoryGroup(id: 'grp_wants', name: 'Wants', sortOrder: 0),
-      ],
       endDate: start.add(const Duration(days: 1)),
     );
 
     final seriesIds = bundle.categorySpend.map((series) => series.id).toList();
-    expect(seriesIds, contains(TrendChartCatalog.groupSeriesId('grp_wants')));
+    expect(
+      seriesIds,
+      contains(
+        TrendChartCatalog.areaSpendSeriesId(ConsciousSpendingArea.guiltFree),
+      ),
+    );
     expect(seriesIds, contains('cat_housing'));
     expect(seriesIds, contains('cat_dining'));
     expect(seriesIds, contains('cat_travel'));
 
-    final wants = bundle.categorySpend.firstWhere(
-      (series) => series.id == TrendChartCatalog.groupSeriesId('grp_wants'),
+    final guiltFree = bundle.categorySpend.firstWhere(
+      (series) =>
+          series.id ==
+          TrendChartCatalog.areaSpendSeriesId(ConsciousSpendingArea.guiltFree),
     );
-    expect(wants.name, 'Wants');
+    expect(guiltFree.name, 'Guilt-free');
     // Dining $10 + Travel $20 per day → $30/day → $10,950/yr annualized.
-    expect(wants.points.last.rollingCents, closeTo(1095000, 0.01));
+    expect(guiltFree.points.last.rollingCents, closeTo(1095000, 0.01));
 
     final dining = bundle.categorySpend.firstWhere(
       (series) => series.id == 'cat_dining',
     );
     expect(dining.name, 'Dining');
     expect(
-      dining.memberOfGroupSeriesId,
-      TrendChartCatalog.groupSeriesId('grp_wants'),
+      dining.memberOfRollupSeriesId,
+      TrendChartCatalog.areaSpendSeriesId(ConsciousSpendingArea.guiltFree),
     );
-    // Group rollup is listed before its member lines.
+    // The area rollup is listed before its member lines.
     expect(
-      seriesIds.indexOf(TrendChartCatalog.groupSeriesId('grp_wants')),
+      seriesIds.indexOf(
+        TrendChartCatalog.areaSpendSeriesId(ConsciousSpendingArea.guiltFree),
+      ),
       lessThan(seriesIds.indexOf('cat_dining')),
     );
   });

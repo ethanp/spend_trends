@@ -5,7 +5,6 @@ import 'package:intl/intl.dart';
 import 'package:spend_trends/domain/accounts/account.dart';
 import 'package:spend_trends/domain/accounts/account_balance_snapshot.dart';
 import 'package:spend_trends/domain/categories/category.dart';
-import 'package:spend_trends/domain/categories/category_group.dart';
 import 'package:spend_trends/domain/transactions/transaction.dart';
 import 'package:spend_trends/domain/trends/trend_spend_rate.dart';
 import 'package:spend_trends/data/repositories/transactions_repository.dart';
@@ -153,7 +152,6 @@ class const BankAccountDetailPane({required final Account account})
       seriesList: [accountSeries],
       transactions: const <BankTransaction>[],
       categories: const <SpendCategory>[],
-      groups: const <CategoryGroup>[],
       valueKind: TrendValueKind.level,
       enableContributors: false,
       maxChartHeight: 420,

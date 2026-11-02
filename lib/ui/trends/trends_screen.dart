@@ -6,7 +6,6 @@ import 'package:spend_trends/app_identity.dart';
 import 'package:spend_trends/ui/projections/fire_outlook_card.dart';
 import 'package:spend_trends/domain/accounts/account.dart';
 import 'package:spend_trends/domain/categories/category.dart';
-import 'package:spend_trends/domain/categories/category_group.dart';
 import 'package:spend_trends/domain/projection/life_event.dart';
 import 'package:spend_trends/domain/accounts/owned_asset.dart';
 import 'package:spend_trends/domain/transactions/transaction.dart';
@@ -119,7 +118,6 @@ class const TrendsScreen() extends ConsumerWidget {
       seriesStillComputing: bundle == null,
       transactions: chartContext.transactions,
       categories: chartContext.categories,
-      groups: chartContext.groups,
       accounts: chartContext.accounts,
       lifeEvents: chartContext.lifeEvents,
       initiallyHiddenSeriesIds: const {TrendChartCatalog.transferSeriesId},
@@ -149,7 +147,6 @@ class const TrendsScreen() extends ConsumerWidget {
       seriesStillComputing: bundle == null,
       transactions: chartContext.transactions,
       categories: chartContext.categories,
-      groups: chartContext.groups,
       accounts: chartContext.accounts,
       lifeEvents: chartContext.lifeEvents,
       valueKind: TrendValueKind.level,
@@ -167,7 +164,6 @@ class const TrendsScreen() extends ConsumerWidget {
       seriesStillComputing: bundle == null,
       transactions: chartContext.transactions,
       categories: chartContext.categories,
-      groups: chartContext.groups,
       accounts: chartContext.accounts,
       lifeEvents: chartContext.lifeEvents,
       useDistributionLegend: true,
@@ -226,14 +222,12 @@ class const TrendsScreen() extends ConsumerWidget {
 class const _ChartContext({
   required final List<BankTransaction> transactions,
   required final List<SpendCategory> categories,
-  required final List<CategoryGroup> groups,
   required final List<Account> accounts,
   required final List<LifeEvent> lifeEvents,
 }) {
   factory watch(WidgetRef ref) => _ChartContext(
     transactions: ref.watch(transactionsListProvider).value ?? const [],
     categories: ref.watch(categoriesListProvider).value ?? const [],
-    groups: ref.watch(categoryGroupsProvider).value ?? const [],
     accounts: ref.watch(accountsMapProvider).value?.values.toList() ?? const [],
     lifeEvents: ref.watch(lifeEventsProvider).value ?? const [],
   );

@@ -5,7 +5,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:spend_trends/domain/categories/category.dart';
 import 'package:spend_trends/domain/categories/rule_change_plan.dart';
-import 'package:spend_trends/domain/categories/category_group.dart';
 import 'package:spend_trends/domain/transactions/transaction.dart';
 import 'package:spend_trends/data/repositories/accounts_repository.dart';
 import 'package:spend_trends/data/repositories/categories_repository.dart';
@@ -261,16 +260,12 @@ class _ManageRuleSheetState() extends ConsumerState<ManageRuleSheet> {
     final categories =
         ref.read(categoriesListProvider).asData?.value ??
         const <SpendCategory>[];
-    final groups =
-        ref.read(categoryGroupsProvider).asData?.value ??
-        const <CategoryGroup>[];
     final selected = await showModalBottomSheet<SpendCategory>(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (sheetContext) => _TargetCategoryPickerSheet(
         categories: categories,
-        groups: groups,
         selectedCategoryId: _rule.categoryId,
         onCategorySelected: (category) =>
             Navigator.of(sheetContext).pop(category),
@@ -434,7 +429,6 @@ class _ManageRuleSheetState() extends ConsumerState<ManageRuleSheet> {
 
 class const _TargetCategoryPickerSheet({
   required final List<SpendCategory> categories,
-  required final List<CategoryGroup> groups,
   required final String selectedCategoryId,
   required final ValueChanged<SpendCategory> onCategorySelected,
 }) extends StatelessWidget {
@@ -461,7 +455,6 @@ class const _TargetCategoryPickerSheet({
               children: [
                 CategoryPicker(
                   categories: categories,
-                  groups: groups,
                   selectedId: selectedCategoryId,
                   onCategorySelected: onCategorySelected,
                 ),

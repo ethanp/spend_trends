@@ -2,7 +2,6 @@ import 'package:ethan_ui/ethan_ui.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:spend_trends/domain/categories/category.dart';
-import 'package:spend_trends/domain/categories/category_group.dart';
 import 'package:spend_trends/domain/categories/conscious_spending_area.dart';
 import 'package:spend_trends/domain/categories/category_spend_pace.dart';
 import 'package:spend_trends/domain/categories/special_category.dart';
@@ -40,7 +39,6 @@ class const CategoryEditorSheet({final SpendCategory? category})
 
 class _CategoryEditorSheetState() extends ConsumerState<CategoryEditorSheet> {
   late final TextEditingController _nameController;
-  String? _selectedGroupId;
   ConsciousSpendingArea? _selectedArea;
   bool _busy = false;
   String? _error;
@@ -53,7 +51,6 @@ class _CategoryEditorSheetState() extends ConsumerState<CategoryEditorSheet> {
   void initState() {
     super.initState();
     _nameController = TextEditingController(text: widget.category?.name ?? '');
-    _selectedGroupId = widget.category?.groupId;
     _selectedArea = widget.category?.consciousSpendingArea;
   }
 
@@ -113,15 +110,9 @@ class _CategoryEditorSheetState() extends ConsumerState<CategoryEditorSheet> {
   }
 
   Widget _identityFields({required bool autofocus}) {
-    final groups =
-        ref.watch(categoryGroupsProvider).asData?.value ??
-        const <CategoryGroup>[];
     return CategoryEditorIdentityFields(
       nameController: _nameController,
       autofocus: autofocus,
-      groups: groups,
-      selectedGroupId: _selectedGroupId,
-      onGroupSelected: (groupId) => setState(() => _selectedGroupId = groupId),
       selectedArea: _selectedArea,
       onAreaSelected: (area) => setState(() => _selectedArea = area),
     );
@@ -282,10 +273,6 @@ class _CategoryEditorSheetState() extends ConsumerState<CategoryEditorSheet> {
     if (_isEditing) {
       final categoryId = widget.category!.id;
       await repository.renameCategory(categoryId: categoryId, name: name);
-      await repository.setCategoryGroup(
-        categoryId: categoryId,
-        groupId: _selectedGroupId,
-      );
       await repository.setConsciousSpendingArea(
         categoryId: categoryId,
         area: _selectedArea,
@@ -293,12 +280,6 @@ class _CategoryEditorSheetState() extends ConsumerState<CategoryEditorSheet> {
       return;
     }
     final created = await repository.createCategory(name: name);
-    if (_selectedGroupId != null) {
-      await repository.setCategoryGroup(
-        categoryId: created.id,
-        groupId: _selectedGroupId,
-      );
-    }
     if (_selectedArea != null) {
       await repository.setConsciousSpendingArea(
         categoryId: created.id,

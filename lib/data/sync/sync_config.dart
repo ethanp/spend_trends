@@ -9,8 +9,7 @@ const _log = ELogger('SpendTrendsSync');
 /// FK graph for upload ordering (table → tables it references).
 const _fkDependencies = <String, Set<String>>{
   'accounts': {},
-  'category_groups': {},
-  'categories': {'category_groups'},
+  'categories': {},
   'sync_state': {},
   'simplefin_pulls': {},
   'simplefin_pull_accounts': {'simplefin_pulls'},

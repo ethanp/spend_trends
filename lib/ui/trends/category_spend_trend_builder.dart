@@ -1,11 +1,12 @@
 import 'package:spend_trends/domain/categories/category.dart';
-import 'package:spend_trends/domain/categories/category_group.dart';
+import 'package:spend_trends/domain/categories/conscious_spending_area.dart';
 import 'package:spend_trends/domain/categories/special_category.dart';
 import 'package:spend_trends/domain/transactions/transaction.dart';
 import 'package:spend_trends/ui/trends/category_trend_series.dart';
 import 'package:spend_trends/ui/trends/annual_pace_smoother.dart';
 import 'package:spend_trends/ui/trends/trend_chart_catalog.dart';
 import 'package:spend_trends/ui/theme/category_color.dart';
+import 'package:spend_trends/ui/theme/finance_colors.dart';
 import 'package:ethan_utils/ethan_utils.dart';
 import 'package:flutter/material.dart';
 
@@ -65,12 +66,12 @@ class const CategorySpendDailyMaps({
   }
 }
 
-/// Builds category / group / all-spend / affordability guide series.
+/// Builds spending-area rollup / category / all-spend / affordability guide
+/// series.
 class const CategorySpendTrendBuilder({
   required final CategorySpendDailyMaps spendMaps,
   required final Map<CalendarDay, double> incomeByDay,
   required final List<SpendCategory> categories,
-  required final List<CategoryGroup> groups,
   required final Set<String> flowCategoryIds,
   required final List<DateTime> chartDates,
   required final DateTime historyFloor,
@@ -102,7 +103,7 @@ class const CategorySpendTrendBuilder({
 
     final housingAffordabilitySeries = _housingAffordabilitySeries();
     final partitioned = _partitionCategories();
-    final rankedSeries = _rankedGroupAndCategorySeries(partitioned);
+    final rankedSeries = _rankedAreaAndCategorySeries(partitioned);
     final uncategorizedSeries = _uncategorizedSeries();
 
     return [
@@ -130,41 +131,40 @@ class const CategorySpendTrendBuilder({
   }
 
   _CategoryPartition _partitionCategories() {
-    final groupsById = {for (final group in groups) group.id: group};
-    final membersByGroupId = <String, List<SpendCategory>>{};
-    final ungroupedCategories = <SpendCategory>[];
+    final membersByArea = <ConsciousSpendingArea, List<SpendCategory>>{};
+    final categoriesWithoutArea = <SpendCategory>[];
 
     for (final category in categories) {
       if (flowCategoryIds.contains(category.id)) continue;
-      final groupId = category.groupId;
-      if (groupId != null && groupsById.containsKey(groupId)) {
-        membersByGroupId.putIfAbsent(groupId, () => []).add(category);
+      final ConsciousSpendingArea? area = category.consciousSpendingArea;
+      if (area != null) {
+        membersByArea.putIfAbsent(area, () => []).add(category);
       } else {
-        ungroupedCategories.add(category);
+        categoriesWithoutArea.add(category);
       }
     }
     return _CategoryPartition(
-      membersByGroupId: membersByGroupId,
-      ungroupedCategories: ungroupedCategories,
+      membersByArea: membersByArea,
+      categoriesWithoutArea: categoriesWithoutArea,
     );
   }
 
-  List<CategoryTrendSeries> _rankedGroupAndCategorySeries(
+  List<CategoryTrendSeries> _rankedAreaAndCategorySeries(
     _CategoryPartition partitioned,
   ) {
     final seriesBlocks = <List<CategoryTrendSeries>>[];
     var paletteIndex = 0;
 
-    for (final group in groups) {
-      final members = partitioned.membersByGroupId[group.id];
+    for (final area in ConsciousSpendingArea.values) {
+      final members = partitioned.membersByArea[area];
       if (members == null || members.isEmpty) continue;
 
-      final groupDaily = <CalendarDay, double>{};
+      final areaDaily = <CalendarDay, double>{};
       final memberSeries = <CategoryTrendSeries>[];
       for (final member in members) {
         final memberDaily = spendMaps.byCategoryId[member.id];
         if (memberDaily == null || memberDaily.isEmpty) continue;
-        _mergeDailyMaps(groupDaily, memberDaily);
+        _mergeDailyMaps(areaDaily, memberDaily);
 
         final memberIsHousing = member.isHousing;
         final builtMember = _paceSeries(
@@ -174,34 +174,31 @@ class const CategorySpendTrendBuilder({
               ? CategoryColor.housing
               : CategoryColor.forCategory(member),
           dailyCents: memberDaily,
-          memberOfGroupSeriesId: TrendChartCatalog.groupSeriesId(group.id),
+          memberOfRollupSeriesId: TrendChartCatalog.areaSpendSeriesId(area),
         );
         if (!builtMember.hasMeaningfulTrend) {
           continue;
         }
         memberSeries.add(builtMember);
       }
-      if (groupDaily.isEmpty) continue;
+      if (areaDaily.isEmpty) continue;
 
-      final groupIsHousing = members.any((member) => member.isHousing);
-      final groupSeries = _paceSeries(
-        id: TrendChartCatalog.groupSeriesId(group.id),
-        name: group.name,
-        lineColor: groupIsHousing
-            ? CategoryColor.housing
-            : CategoryColor.forGroupId(group.id),
-        dailyCents: groupDaily,
+      final areaSeries = _paceSeries(
+        id: TrendChartCatalog.areaSpendSeriesId(area),
+        name: area.displayName,
+        lineColor: area.color,
+        dailyCents: areaDaily,
       );
-      if (!groupSeries.hasMeaningfulTrend) continue;
+      if (!areaSeries.hasMeaningfulTrend) continue;
 
       memberSeries.sort(
         (left, right) =>
             right.latestSmoothedCents.compareTo(left.latestSmoothedCents),
       );
-      seriesBlocks.add([groupSeries, ...memberSeries]);
+      seriesBlocks.add([areaSeries, ...memberSeries]);
     }
 
-    for (final category in partitioned.ungroupedCategories) {
+    for (final category in partitioned.categoriesWithoutArea) {
       final dailySpendCents = spendMaps.byCategoryId[category.id];
       if (dailySpendCents == null || dailySpendCents.isEmpty) continue;
 
@@ -247,7 +244,7 @@ class const CategorySpendTrendBuilder({
     required Map<CalendarDay, double> dailyCents,
     bool dotted = false,
     bool guide = false,
-    String? memberOfGroupSeriesId,
+    String? memberOfRollupSeriesId,
   }) {
     return AnnualPaceSmoother.standard.seriesFromDailyMap(
       id: id,
@@ -258,7 +255,7 @@ class const CategorySpendTrendBuilder({
       dailyCents: dailyCents,
       chartDates: chartDates,
       historyFloor: historyFloor,
-      memberOfGroupSeriesId: memberOfGroupSeriesId,
+      memberOfRollupSeriesId: memberOfRollupSeriesId,
     );
   }
 
@@ -277,6 +274,6 @@ class const CategorySpendTrendBuilder({
 }
 
 class const _CategoryPartition({
-  required final Map<String, List<SpendCategory>> membersByGroupId,
-  required final List<SpendCategory> ungroupedCategories,
+  required final Map<ConsciousSpendingArea, List<SpendCategory>> membersByArea,
+  required final List<SpendCategory> categoriesWithoutArea,
 });

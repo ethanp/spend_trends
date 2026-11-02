@@ -1,15 +1,14 @@
 import 'package:spend_trends/domain/categories/category.dart';
-import 'package:spend_trends/domain/categories/category_group.dart';
 import 'package:spend_trends/domain/categories/category_spend_pace.dart';
+import 'package:spend_trends/domain/categories/conscious_spending_area.dart';
+import 'package:spend_trends/domain/categories/special_category.dart';
 
-/// One block on the Categories list: a named group or Ungrouped.
+/// One block on the Categories list: a spending area, Not spending, or
+/// No spending area.
 class const CategoryListSection({
   required final String title,
   required final List<SpendCategory> categories,
   required final Map<String, CategorySpendPace> pacesByCategoryId,
-
-  /// Non-null when the header opens the group editor.
-  final CategoryGroup? group,
 }) {
   /// The members' summed average monthly spend over [window].
   int monthlyCents(CategorySpendWindow window) {
@@ -21,53 +20,50 @@ class const CategoryListSection({
   }
 }
 
-/// Groups → Ungrouped; members sorted by 1y average spend desc.
+/// Spending areas in plan order → Not spending (Income, Transfer, Asset
+/// sale) → No spending area. Empty sections are left out; members sorted by
+/// 1y average spend desc.
 class CategoryListSections._(final List<CategoryListSection> sections) {
+  static const notSpendingTitle = 'Not spending';
+  static const noSpendingAreaTitle = 'No spending area';
+
   factory from({
     required List<SpendCategory> categories,
-    required List<CategoryGroup> groups,
     required Map<String, CategorySpendPace> pacesByCategoryId,
   }) {
-    final groupsById = {for (final group in groups) group.id: group};
-    final membersByGroupId = <String, List<SpendCategory>>{};
-    final ungrouped = <SpendCategory>[];
+    final membersByArea = <ConsciousSpendingArea, List<SpendCategory>>{};
+    final notSpending = <SpendCategory>[];
+    final noSpendingArea = <SpendCategory>[];
 
     for (final category in categories) {
-      final groupId = category.groupId;
-      if (groupId != null && groupsById.containsKey(groupId)) {
-        membersByGroupId.putIfAbsent(groupId, () => []).add(category);
+      final ConsciousSpendingArea? area = category.consciousSpendingArea;
+      if (area != null) {
+        membersByArea.putIfAbsent(area, () => []).add(category);
+      } else if (category.isFlow) {
+        notSpending.add(category);
       } else {
-        ungrouped.add(category);
+        noSpendingArea.add(category);
       }
     }
 
     final sections = <CategoryListSection>[];
-    for (final group in groups) {
-      final members = List<SpendCategory>.from(
-        membersByGroupId[group.id] ?? const <SpendCategory>[],
-      );
+    void addSection(String title, List<SpendCategory> members) {
+      if (members.isEmpty) return;
       _sortByOneYearSpend(members, pacesByCategoryId);
       sections.add(
         CategoryListSection(
-          title: group.name,
-          group: group,
+          title: title,
           categories: members,
           pacesByCategoryId: pacesByCategoryId,
         ),
       );
     }
 
-    if (ungrouped.isNotEmpty) {
-      _sortByOneYearSpend(ungrouped, pacesByCategoryId);
-      sections.add(
-        CategoryListSection(
-          title: 'Ungrouped',
-          categories: ungrouped,
-          pacesByCategoryId: pacesByCategoryId,
-        ),
-      );
+    for (final area in ConsciousSpendingArea.values) {
+      addSection(area.displayName, membersByArea[area] ?? []);
     }
-
+    addSection(notSpendingTitle, notSpending);
+    addSection(noSpendingAreaTitle, noSpendingArea);
     return CategoryListSections._(sections);
   }
 

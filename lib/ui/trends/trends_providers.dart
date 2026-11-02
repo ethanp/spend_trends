@@ -6,7 +6,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:spend_trends/domain/accounts/account.dart';
 import 'package:spend_trends/domain/accounts/account_balance_snapshot.dart';
 import 'package:spend_trends/domain/categories/category.dart';
-import 'package:spend_trends/domain/categories/category_group.dart';
 import 'package:spend_trends/domain/accounts/imported_net_worth_day.dart';
 import 'package:spend_trends/domain/projection/life_event.dart';
 import 'package:spend_trends/domain/accounts/owned_asset.dart';
@@ -99,9 +98,6 @@ final trendsChartBundleProvider = FutureProvider<TrendsChartBundle>((
   final List<SpendCategory> categories = await ref.watch(
     categoriesListProvider.future,
   );
-  final List<CategoryGroup> groups = await ref.watch(
-    categoryGroupsProvider.future,
-  );
   final Map<String, Account> accounts = await ref.watch(
     accountsMapProvider.future,
   );
@@ -120,7 +116,6 @@ final trendsChartBundleProvider = FutureProvider<TrendsChartBundle>((
     () => const BuildTrendsCharts().build(
       transactions: transactions,
       categories: categories,
-      groups: groups,
       accounts: accountList,
       ownedAssets: ownedAssets,
       balanceSnapshots: balanceSnapshots,

@@ -61,7 +61,6 @@ void main() {
       overrides: [
         transactionsListProvider.overrideWith((ref) async => const []),
         categoriesListProvider.overrideWith((ref) async => const []),
-        categoryGroupsProvider.overrideWith((ref) async => const []),
         accountsMapProvider.overrideWith((ref) async => accounts),
         accountBalanceSnapshotsProvider.overrideWith((ref) async => const []),
         importedNetWorthDaysProvider.overrideWith((ref) async => const []),

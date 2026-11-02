@@ -7,9 +7,7 @@ import 'package:flutter/material.dart';
 
 /// Stable colors for category identity across Activity / Trends.
 ///
-/// Grouped categories share a hue from [SpendCategory.groupId], with a
-/// per-category shade so members stay related but distinct. Ungrouped
-/// categories keep a per-category palette color. Built-ins stay pinned.
+/// Each category keeps a per-category palette color. Built-ins stay pinned.
 class CategoryColor._() {
   static const uncategorized = EColors.textMuted;
   static const housing = FinanceColors.housing;
@@ -31,11 +29,7 @@ class CategoryColor._() {
     Color(0xFFF72585),
   ];
 
-  static Color forCategoryId(
-    String? categoryId, {
-    String? categoryName,
-    String? groupId,
-  }) {
+  static Color forCategoryId(String? categoryId, {String? categoryName}) {
     if (SpecialCategory.isHousingId(categoryId) ||
         SpecialCategory.isHousingName(categoryName)) {
       return housing;
@@ -47,19 +41,9 @@ class CategoryColor._() {
     }
     if (SpecialCategory.isTransferId(categoryId)) return transfer;
     if (SpecialCategory.isAssetSaleId(categoryId)) return assetSale;
-    final trimmedGroupId = groupId?.trim();
-    if (trimmedGroupId != null && trimmedGroupId.isNotEmpty) {
-      return forGroupId(trimmedGroupId).shadeKeyedBy(categoryId);
-    }
     return palette[categoryId.stableHash % palette.length];
   }
 
-  static Color forCategory(SpendCategory category) => forCategoryId(
-    category.id,
-    categoryName: category.name,
-    groupId: category.groupId,
-  );
-
-  static Color forGroupId(String groupId) =>
-      palette[groupId.stableHash % palette.length];
+  static Color forCategory(SpendCategory category) =>
+      forCategoryId(category.id, categoryName: category.name);
 }

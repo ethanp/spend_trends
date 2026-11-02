@@ -70,7 +70,6 @@ void main() {
         tapDate: spikeDay,
         transactions: transactions,
         categories: const [dining],
-        groups: const [],
       );
 
       expect(topContributors, hasLength(5));
@@ -102,7 +101,6 @@ void main() {
         tapDate: spikeDay,
         transactions: transactions,
         categories: const [dining],
-        groups: const [],
         limit: 100,
       );
       final contributionSum = allContributors.fold<double>(
@@ -188,7 +186,6 @@ void main() {
       tapDate: refundDay,
       transactions: transactions,
       categories: const [housing],
-      groups: const [],
     );
 
     expect(topContributors, isNotEmpty);
@@ -234,7 +231,6 @@ void main() {
         tapDate: end,
         transactions: transactions,
         categories: const [],
-        groups: const [],
       ),
       isEmpty,
     );

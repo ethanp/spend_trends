@@ -1,7 +1,6 @@
 import 'package:spend_trends/domain/accounts/account.dart';
 import 'package:spend_trends/domain/accounts/account_balance_snapshot.dart';
 import 'package:spend_trends/domain/categories/category.dart';
-import 'package:spend_trends/domain/categories/category_group.dart';
 import 'package:spend_trends/domain/accounts/imported_net_worth_day.dart';
 import 'package:spend_trends/domain/accounts/owned_asset.dart';
 import 'package:spend_trends/domain/categories/special_category.dart';
@@ -18,7 +17,6 @@ class const BuildTrendsCharts() {
   TrendsChartBundle build({
     required List<BankTransaction> transactions,
     required List<SpendCategory> categories,
-    List<CategoryGroup> groups = const [],
     List<Account> accounts = const [],
     List<OwnedAssetWithValuations> ownedAssets = const [],
     List<AccountBalanceSnapshot> balanceSnapshots = const [],
@@ -76,7 +74,6 @@ class const BuildTrendsCharts() {
             spendMaps: spendMaps,
             incomeByDay: cashFlowMaps.incomeByDay,
             categories: categories,
-            groups: groups,
             flowCategoryIds: spendExcludedIds,
             chartDates: chartRange.dates,
             historyFloor: chartRange.start,

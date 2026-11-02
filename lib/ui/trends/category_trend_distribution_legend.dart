@@ -11,7 +11,7 @@ import 'package:spend_trends/ui/trends/distribution_whisker_painter.dart';
 import 'package:spend_trends/ui/trends/trend_legend_swatch.dart';
 import 'package:spend_trends/ui/trends/trend_value_scale.dart';
 
-/// Shared-scale min/med/avg/max/now whiskers for ranked category/group series.
+/// Shared-scale min/med/avg/max/now whiskers for ranked area/category series.
 class const CategoryTrendDistributionLegend({
   required final List<CategoryTrendSeries> seriesList,
   required final Set<String> hiddenSeriesIds,
@@ -33,7 +33,7 @@ class const CategoryTrendDistributionLegend({
 
 class _CategoryTrendDistributionLegendState()
     extends State<CategoryTrendDistributionLegend> {
-  String? _expandedGroupSeriesId;
+  String? _expandedRollupSeriesId;
 
   @override
   Widget build(BuildContext context) {
@@ -163,7 +163,7 @@ class _CategoryTrendDistributionLegendState()
     required TrendValueScale scale,
     required double labelBlockHeight,
   }) {
-    final isExpanded = _expandedGroupSeriesId == cluster.rollup.id;
+    final isExpanded = _expandedRollupSeriesId == cluster.rollup.id;
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -247,16 +247,16 @@ class _CategoryTrendDistributionLegendState()
         pastYearTotalLabel: _pastYearTotalLabel(series),
         onActivated: () => widget.onSeriesToggled(series.id),
         onSoloActivated: () => widget.onSeriesSoloed(series.id),
-        onExpandToggled: canExpand ? () => _toggleGroupMembers(series) : null,
+        onExpandToggled: canExpand ? () => _toggleRollupMembers(series) : null,
       ),
     );
   }
 
-  void _toggleGroupMembers(CategoryTrendSeries groupSeries) {
+  void _toggleRollupMembers(CategoryTrendSeries rollupSeries) {
     setState(() {
-      _expandedGroupSeriesId = _expandedGroupSeriesId == groupSeries.id
+      _expandedRollupSeriesId = _expandedRollupSeriesId == rollupSeries.id
           ? null
-          : groupSeries.id;
+          : rollupSeries.id;
     });
   }
 
@@ -318,7 +318,7 @@ class const _DistributionColumn({
   required final VoidCallback onActivated,
   required final VoidCallback onSoloActivated,
 
-  /// Group rollups only: the chevron shows or hides the member columns.
+  /// Spending-area rollups only: the chevron shows or hides the member columns.
   required final VoidCallback? onExpandToggled,
 }) extends StatelessWidget {
   @override

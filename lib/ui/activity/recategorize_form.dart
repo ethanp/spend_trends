@@ -6,7 +6,6 @@ import 'package:intl/intl.dart';
 import 'package:spend_trends/domain/accounts/account.dart';
 import 'package:spend_trends/domain/categories/category.dart';
 import 'package:spend_trends/use_cases/categories/categorizer.dart';
-import 'package:spend_trends/domain/categories/category_group.dart';
 import 'package:spend_trends/domain/categories/rule_change_plan.dart';
 import 'package:spend_trends/domain/transactions/transaction.dart';
 import 'package:spend_trends/ui/activity/contains_pattern_rematch.dart';
@@ -95,7 +94,6 @@ class _RecategorizeFormState() extends ConsumerState<RecategorizeForm> {
   @override
   Widget build(BuildContext context) {
     final categoriesAsync = ref.watch(categoriesListProvider);
-    final groupsAsync = ref.watch(categoryGroupsProvider);
 
     if (categoriesAsync.hasError && !categoriesAsync.hasValue) {
       return Padding(
@@ -114,7 +112,6 @@ class _RecategorizeFormState() extends ConsumerState<RecategorizeForm> {
     }
 
     final categories = categoriesAsync.requireValue;
-    final groups = groupsAsync.asData?.value ?? const <CategoryGroup>[];
     return ListView(
       keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
       padding: ETabBarOverlay.paddingOf(
@@ -143,7 +140,7 @@ class _RecategorizeFormState() extends ConsumerState<RecategorizeForm> {
           Text(_error!, style: EText.caption.copyWith(color: EColors.danger)),
         ],
         const SizedBox(height: ELayout.spaceLg),
-        _categoryPicker(categories, groups),
+        _categoryPicker(categories),
       ],
     );
   }
@@ -348,13 +345,9 @@ class _RecategorizeFormState() extends ConsumerState<RecategorizeForm> {
     );
   }
 
-  Widget _categoryPicker(
-    List<SpendCategory> categories,
-    List<CategoryGroup> groups,
-  ) {
+  Widget _categoryPicker(List<SpendCategory> categories) {
     return CategoryPicker(
       categories: categories,
-      groups: groups,
       selectedId: widget.transaction.categoryId,
       onCategorySelected: _assign,
     );

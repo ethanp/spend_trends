@@ -4,13 +4,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:spend_trends/domain/categories/category.dart';
 import 'package:spend_trends/domain/categories/rule_change_plan.dart';
-import 'package:spend_trends/domain/categories/category_group.dart';
 import 'package:spend_trends/domain/categories/overlapping_merchant_contains_rules.dart';
 import 'package:spend_trends/data/repositories/categories_repository.dart';
 import 'package:spend_trends/use_cases/categories/categorizer.dart';
 import 'package:spend_trends/data/sync/spend_data_changed.dart';
 import 'package:spend_trends/ui/theme/finance_colors.dart';
-import 'package:spend_trends/ui/widgets/category_picker.dart';
+import 'package:spend_trends/ui/categories/category_list_sections.dart';
 import 'package:spend_trends/ui/widgets/excluded_from_lifestyle_costs_word.dart';
 
 /// Existing contains-rules that overlap a candidate pattern.
@@ -242,15 +241,12 @@ class const _OverlapRuleCategoryMenu({
     final List<SpendCategory> categories =
         ref.watch(categoriesListProvider).asData?.value ??
         const <SpendCategory>[];
-    final List<CategoryGroup> groups =
-        ref.watch(categoryGroupsProvider).asData?.value ??
-        const <CategoryGroup>[];
     return MenuAnchor(
       consumeOutsideTap: true,
       alignmentOffset: const Offset(0, 4),
       style: _menuStyle(context),
       builder: (context, controller, child) => _categoryButton(controller),
-      menuChildren: _categoryMenuItems(categories, groups),
+      menuChildren: _categoryMenuItems(categories),
     );
   }
 
@@ -294,32 +290,28 @@ class const _OverlapRuleCategoryMenu({
     );
   }
 
-  List<Widget> _categoryMenuItems(
-    List<SpendCategory> categories,
-    List<CategoryGroup> groups,
-  ) {
-    final List<CategoryPickerSection> sections = CategoryPickerSections.from(
+  List<Widget> _categoryMenuItems(List<SpendCategory> categories) {
+    final List<CategoryListSection> sections = CategoryListSections.from(
       categories: categories,
-      groups: groups,
+      pacesByCategoryId: const {},
     ).sections;
     return [
       for (final section in sections) ...[
-        if (section.title != null)
-          Padding(
-            padding: const EdgeInsets.fromLTRB(
-              ELayout.spaceMd,
-              ELayout.spaceSm,
-              ELayout.spaceMd,
-              ELayout.spaceXs,
-            ),
-            child: Text(
-              section.title!,
-              style: EText.caption.copyWith(
-                fontWeight: FontWeight.w600,
-                color: FinanceColors.accentPrimary,
-              ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(
+            ELayout.spaceMd,
+            ELayout.spaceSm,
+            ELayout.spaceMd,
+            ELayout.spaceXs,
+          ),
+          child: Text(
+            section.title,
+            style: EText.caption.copyWith(
+              fontWeight: FontWeight.w600,
+              color: FinanceColors.accentPrimary,
             ),
           ),
+        ),
         for (final category in section.categories)
           MenuItemButton(
             onPressed: enabled ? () => onCategorySelected(category) : null,

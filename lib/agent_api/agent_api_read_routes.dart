@@ -142,9 +142,6 @@ restored), and the pair nets to the interest.''';
             .length,
         'rules': snapshot.rules.length,
       },
-      'groups': snapshot.groups.mapL(
-        (group) => {'id': group.id, 'name': group.name},
-      ),
       'categories': snapshot.categories.map(snapshot.categoryJson).toList(),
       'accounts': snapshot.accounts.map(snapshot.accountJson).toList(),
       'endpoints': _endpointIndex,
@@ -233,10 +230,9 @@ restored), and the pair nets to the interest.''';
     'POST /transactions/import {transactions: [{accountId, postedOn, '
         'amountCents, description, externalId, note?}]} (idempotent; skips '
         'rows another source already has; re-runs rules)',
-    'POST /categories {name, groupId?, consciousSpendingArea?}',
-    'PATCH /categories/<categoryId> {name?, groupId?, consciousSpendingArea?}',
+    'POST /categories {name, consciousSpendingArea?}',
+    'PATCH /categories/<categoryId> {name?, consciousSpendingArea?}',
     'POST /categories/<categoryId>/merge {intoCategoryId}',
-    'POST /groups {name}',
   ];
 
   /// Exactly what the Trends dashboard card shows.

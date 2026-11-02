@@ -1,15 +1,11 @@
 import 'package:ethan_ui/ethan_ui.dart';
 import 'package:flutter/material.dart';
-import 'package:spend_trends/domain/categories/category_group.dart';
 import 'package:spend_trends/domain/categories/conscious_spending_area.dart';
 import 'package:spend_trends/ui/theme/finance_colors.dart';
 
 class const CategoryEditorIdentityFields({
   required final TextEditingController nameController,
   required final bool autofocus,
-  required final List<CategoryGroup> groups,
-  required final String? selectedGroupId,
-  required final ValueChanged<String?> onGroupSelected,
   required final ConsciousSpendingArea? selectedArea,
   required final ValueChanged<ConsciousSpendingArea?> onAreaSelected,
 }) extends StatelessWidget {
@@ -21,12 +17,6 @@ class const CategoryEditorIdentityFields({
         CategoryEditorNameField(
           nameController: nameController,
           autofocus: autofocus,
-        ),
-        const SizedBox(height: ELayout.spaceMd),
-        CategoryEditorGroupPicker(
-          groups: groups,
-          selectedGroupId: selectedGroupId,
-          onGroupSelected: onGroupSelected,
         ),
         const SizedBox(height: ELayout.spaceMd),
         CategoryEditorAreaPicker(
@@ -53,40 +43,6 @@ class const CategoryEditorNameField({
   }
 }
 
-class const CategoryEditorGroupPicker({
-  required final List<CategoryGroup> groups,
-  required final String? selectedGroupId,
-  required final ValueChanged<String?> onGroupSelected,
-}) extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text('Group', style: EText.caption),
-        const SizedBox(height: ELayout.spaceXs),
-        Wrap(
-          spacing: ELayout.spaceSm,
-          runSpacing: ELayout.spaceSm,
-          children: [
-            CategoryEditorGroupChip(
-              label: 'None',
-              isSelected: selectedGroupId == null,
-              onActivated: () => onGroupSelected(null),
-            ),
-            for (final group in groups)
-              CategoryEditorGroupChip(
-                label: group.name,
-                isSelected: selectedGroupId == group.id,
-                onActivated: () => onGroupSelected(group.id),
-              ),
-          ],
-        ),
-      ],
-    );
-  }
-}
-
 class const CategoryEditorAreaPicker({
   required final ConsciousSpendingArea? selectedArea,
   required final ValueChanged<ConsciousSpendingArea?> onAreaSelected,
@@ -96,19 +52,19 @@ class const CategoryEditorAreaPicker({
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Area', style: EText.caption),
+        Text('Spending area', style: EText.caption),
         const SizedBox(height: ELayout.spaceXs),
         Wrap(
           spacing: ELayout.spaceSm,
           runSpacing: ELayout.spaceSm,
           children: [
-            CategoryEditorGroupChip(
+            CategoryEditorAreaChip(
               label: 'None',
               isSelected: selectedArea == null,
               onActivated: () => onAreaSelected(null),
             ),
             for (final area in ConsciousSpendingArea.values)
-              CategoryEditorGroupChip(
+              CategoryEditorAreaChip(
                 label: area.displayName,
                 isSelected: selectedArea == area,
                 onActivated: () => onAreaSelected(area),
@@ -120,7 +76,7 @@ class const CategoryEditorAreaPicker({
   }
 }
 
-class const CategoryEditorGroupChip({
+class const CategoryEditorAreaChip({
   required final String label,
   required final bool isSelected,
   required final VoidCallback onActivated,

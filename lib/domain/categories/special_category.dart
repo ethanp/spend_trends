@@ -1,5 +1,4 @@
 import 'package:spend_trends/domain/categories/category.dart';
-import 'package:spend_trends/domain/categories/category_group.dart';
 import 'package:spend_trends/domain/categories/conscious_spending_area.dart';
 
 /// Built-in categories with stable ids.
@@ -7,7 +6,7 @@ import 'package:spend_trends/domain/categories/conscious_spending_area.dart';
 /// [income] is take-home pay. [investments] holds 401(k)-style contributions
 /// that fill the Investments area of the conscious spending plan.
 /// [transfer] and [assetSale] are excluded from spend and income totals and
-/// stay ungrouped. [assetSale] is a one-time lump sum (house sale, payoff
+/// have no spending area. [assetSale] is a one-time lump sum (house sale, payoff
 /// at closing) that net worth plots apart from saving.
 /// [housing] is a built-in spend category (kept in spend Trends / month rows)
 /// so its color and future housing-specific behavior stay consistent.
@@ -17,7 +16,6 @@ enum SpecialCategory({
   required final int sortOrder,
   final bool countsAsIncome = false,
   final bool excludedFromSpend = false,
-  final String? defaultGroupId,
   final ConsciousSpendingArea? defaultConsciousSpendingArea,
 
   /// Editor explanation for a built-in that cannot be renamed or deleted.
@@ -35,7 +33,6 @@ enum SpecialCategory({
     sortOrder: 1000,
     countsAsIncome: true,
     excludedFromSpend: true,
-    defaultGroupId: 'grp_income',
     lockedCaption:
         'Income · excluded from spend trends. '
         'It cannot be renamed or deleted.',
@@ -55,7 +52,7 @@ enum SpecialCategory({
     name: 'Investments',
     sortOrder: 1002,
     excludedFromSpend: true,
-    defaultGroupId: 'grp_income',
+    defaultConsciousSpendingArea: ConsciousSpendingArea.investments,
   ),
   assetSale(
     id: 'cat_asset_sale',
@@ -68,10 +65,6 @@ enum SpecialCategory({
         'Use it for one-time proceeds like a house sale; '
         'net worth shows them as lump sums.',
   );
-
-  static const incomeGroupId = 'grp_income';
-  static const incomeGroupName = 'Income';
-  static const incomeGroupSortOrder = 2;
 
   static final ids = {for (final special in values) special.id};
 
@@ -99,12 +92,6 @@ enum SpecialCategory({
 
   static final housingName = CategoryName(housing.name);
   static final investmentsName = CategoryName(investments.name);
-
-  static CategoryGroup get incomeGroup => const CategoryGroup(
-    id: incomeGroupId,
-    name: incomeGroupName,
-    sortOrder: incomeGroupSortOrder,
-  );
 
   static SpecialCategory? fromId(String? categoryId) {
     for (final special in values) {
@@ -137,8 +124,6 @@ enum SpecialCategory({
   static bool isInvestmentsId(String? categoryId) =>
       categoryId == investments.id;
 
-  static bool isIncomeGroupId(String? groupId) => groupId == incomeGroupId;
-
   static bool isReservedName(String name) => idForReservedName(name) != null;
 
   static String? idForReservedName(String name) =>
@@ -149,7 +134,6 @@ enum SpecialCategory({
     name: name,
     sortOrder: sortOrder,
     archived: archived,
-    groupId: defaultGroupId,
     consciousSpendingArea: defaultConsciousSpendingArea,
   );
 }

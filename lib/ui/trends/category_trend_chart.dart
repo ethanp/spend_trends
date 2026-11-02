@@ -5,7 +5,6 @@ import 'package:ethan_utils/ethan_utils.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:spend_trends/domain/categories/category.dart';
-import 'package:spend_trends/domain/categories/category_group.dart';
 import 'package:spend_trends/domain/accounts/account.dart';
 import 'package:spend_trends/domain/projection/life_event.dart';
 import 'package:spend_trends/domain/transactions/transaction.dart';
@@ -34,7 +33,6 @@ class const CategoryTrendChart({
   required final List<CategoryTrendSeries> seriesList,
   required final List<BankTransaction> transactions,
   required final List<SpendCategory> categories,
-  required final List<CategoryGroup> groups,
   final List<Account> accounts = const [],
   final List<LifeEvent> lifeEvents = const [],
   final String? subtitle =
@@ -43,7 +41,7 @@ class const CategoryTrendChart({
   final String? titleHelp,
   final Set<String> initiallyHiddenSeriesIds = const {},
 
-  /// Shared-scale min/med/avg/max/now whiskers for ranked category/group series.
+  /// Shared-scale min/med/avg/max/now whiskers for ranked area/category series.
   final bool useDistributionLegend = false,
   final TrendValueKind valueKind = TrendValueKind.pace,
 
@@ -346,7 +344,6 @@ class _CategoryTrendChartState() extends ConsumerState<CategoryTrendChart> {
       tapDate: tapDate,
       transactions: widget.transactions,
       categories: widget.categories,
-      groups: widget.groups,
       accounts: widget.accounts,
     );
     if (contributors.isEmpty) return;

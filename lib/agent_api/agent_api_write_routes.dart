@@ -23,8 +23,7 @@ class const AgentApiWriteRoutes({required final ProviderContainer container}) {
       ..post('/rules/recategorize-all', _recategorizeAll)
       ..post('/categories', _createCategory)
       ..patch('/categories/<categoryId>', _updateCategory)
-      ..post('/categories/<categoryId>/merge', _mergeCategory)
-      ..post('/groups', _createGroup);
+      ..post('/categories/<categoryId>/merge', _mergeCategory);
   }
 
   Future<Response> _setNote(Request request, String transactionId) async {
@@ -124,11 +123,11 @@ class const AgentApiWriteRoutes({required final ProviderContainer container}) {
     final category = await categoriesRepository.createCategory(
       name: body.requiredString('name'),
     );
-    await _applyCategoryPlacement(categoriesRepository, category.id, body);
+    await _applySpendingArea(categoriesRepository, category.id, body);
     return _respondAfterWrite({'id': category.id});
   }
 
-  /// Only keys present in the body change; `null` clears group / area.
+  /// Only keys present in the body change; `null` clears the area.
   Future<Response> _updateCategory(Request request, String categoryId) async {
     final body = await request.readJsonObject();
     final CategoriesRepository categoriesRepository = await container.read(
@@ -140,21 +139,15 @@ class const AgentApiWriteRoutes({required final ProviderContainer container}) {
         name: body.requiredString('name'),
       );
     }
-    await _applyCategoryPlacement(categoriesRepository, categoryId, body);
+    await _applySpendingArea(categoriesRepository, categoryId, body);
     return _respondAfterWrite({'id': categoryId});
   }
 
-  Future<void> _applyCategoryPlacement(
+  Future<void> _applySpendingArea(
     CategoriesRepository categoriesRepository,
     String categoryId,
     Map<String, dynamic> body,
   ) async {
-    if (body.containsKey('groupId')) {
-      await categoriesRepository.setCategoryGroup(
-        categoryId: categoryId,
-        groupId: body['groupId'] as String?,
-      );
-    }
     if (body.containsKey('consciousSpendingArea')) {
       final areaName = body['consciousSpendingArea'] as String?;
       final area = ConsciousSpendingArea.fromStorage(areaName);
@@ -178,17 +171,6 @@ class const AgentApiWriteRoutes({required final ProviderContainer container}) {
       intoCategoryId: body.requiredString('intoCategoryId'),
     );
     return _respondAfterWrite({'mergedInto': body['intoCategoryId']});
-  }
-
-  Future<Response> _createGroup(Request request) async {
-    final body = await request.readJsonObject();
-    final CategoriesRepository categoriesRepository = await container.read(
-      categoriesRepositoryProvider.future,
-    );
-    final group = await categoriesRepository.createGroup(
-      name: body.requiredString('name'),
-    );
-    return _respondAfterWrite({'id': group.id});
   }
 
   Response _respondAfterWrite(Map<String, Object?> outcome) {

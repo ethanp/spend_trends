@@ -22,7 +22,6 @@ class const CategoryBrowseList({
   required final List<CategoryListSection> sections,
   required final Map<String, CategorySpendPace> pacesByCategoryId,
   required final String? selectedCategoryId,
-  required final void Function(CategoryListSection section) onGroupOpened,
   required final void Function(SpendCategory category) onCategorySelected,
   required final void Function(SpendCategory category) onCategoryOpened,
 }) extends StatelessWidget {
@@ -42,9 +41,6 @@ class const CategoryBrowseList({
             section: sections[index],
             pacesByCategoryId: pacesByCategoryId,
             selectedCategoryId: selectedCategoryId,
-            onGroupOpened: sections[index].group == null
-                ? null
-                : () => onGroupOpened(sections[index]),
             onCategorySelected: onCategorySelected,
             onCategoryOpened: onCategoryOpened,
           ),
@@ -58,7 +54,6 @@ class const CategoryBrowseSection({
   required final CategoryListSection section,
   required final Map<String, CategorySpendPace> pacesByCategoryId,
   required final String? selectedCategoryId,
-  required final VoidCallback? onGroupOpened,
   required final void Function(SpendCategory category) onCategorySelected,
   required final void Function(SpendCategory category) onCategoryOpened,
 }) extends StatelessWidget {
@@ -72,19 +67,6 @@ class const CategoryBrowseSection({
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         _sectionHeader(),
-        if (section.categories.isEmpty)
-          Padding(
-            padding: const EdgeInsets.fromLTRB(
-              ELayout.spaceMd,
-              0,
-              ELayout.spaceMd,
-              ELayout.spaceSm,
-            ),
-            child: Text(
-              'No categories · tap to edit',
-              style: EText.caption.copyWith(color: EColors.textMuted),
-            ),
-          ),
         for (var index = 0; index < section.categories.length; index++) ...[
           if (index > 0) _tileDivider(),
           CategoryBrowseTile(
@@ -101,50 +83,30 @@ class const CategoryBrowseSection({
   }
 
   Widget _sectionHeader() {
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTap: onGroupOpened,
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(
-          ELayout.spaceMd,
-          ELayout.spaceSm,
-          ELayout.spaceMd,
-          ELayout.spaceSm,
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    section.title.toUpperCase(),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: EText.caption.copyWith(
-                      color: EColors.textMuted,
-                      fontWeight: FontWeight.w600,
-                      letterSpacing: 0.8,
-                    ),
-                  ),
-                ),
-                if (onGroupOpened != null)
-                  const Icon(
-                    Icons.chevron_right,
-                    size: _TileLayout.chevronSize,
-                    color: EColors.textMuted,
-                  ),
-              ],
+    return Padding(
+      padding: const EdgeInsets.all(ELayout.spaceSm)
+          .copyWith(left: ELayout.spaceMd, right: ELayout.spaceMd),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(
+            section.title.toUpperCase(),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: EText.caption.copyWith(
+              color: EColors.textMuted,
+              fontWeight: FontWeight.w600,
+              letterSpacing: 0.8,
             ),
-            if (!_hidesSpendTotal) ...[
-              const SizedBox(height: ELayout.spaceXs),
-              CategorySpendWindowsRow(
-                monthlyCents: section.monthlyCents,
-                emphasized: false,
-              ),
-            ],
+          ),
+          if (!_hidesSpendTotal) ...[
+            const SizedBox(height: ELayout.spaceXs),
+            CategorySpendWindowsRow(
+              monthlyCents: section.monthlyCents,
+              emphasized: false,
+            ),
           ],
-        ),
+        ],
       ),
     );
   }
@@ -211,24 +173,11 @@ class const CategoryBrowseTile({
         ),
         const SizedBox(width: ELayout.spaceMd),
         Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                category.name,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: EText.section.copyWith(fontWeight: FontWeight.w600),
-              ),
-              Text(
-                category.builtInCaption ??
-                    category.consciousSpendingArea?.displayName ??
-                    'No spending area',
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: EText.caption.copyWith(color: EColors.textMuted),
-              ),
-            ],
+          child: Text(
+            category.name,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: EText.section.copyWith(fontWeight: FontWeight.w600),
           ),
         ),
         GestureDetector(

@@ -19,19 +19,12 @@ CREATE TABLE IF NOT EXISTS accounts (
     tax_treatment TEXT CHECK (tax_treatment IN ('traditional', 'roth', 'college', 'taxable', 'excluded'))
 );
 
-CREATE TABLE IF NOT EXISTS category_groups (
-    id TEXT PRIMARY KEY,
-    name TEXT NOT NULL,
-    sort_order INTEGER NOT NULL DEFAULT 0
-);
-
 CREATE TABLE IF NOT EXISTS categories (
     id TEXT PRIMARY KEY,
     name TEXT NOT NULL,
     sort_order INTEGER NOT NULL,
     archived INTEGER NOT NULL DEFAULT 0,
     color_token TEXT,
-    group_id TEXT REFERENCES category_groups(id),
     conscious_spending_area TEXT CHECK (
         conscious_spending_area IS NULL OR
         conscious_spending_area IN ('fixedCosts', 'investments', 'guiltFree')

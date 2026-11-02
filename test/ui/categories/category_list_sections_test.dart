@@ -1,49 +1,50 @@
 import 'package:spend_trends/domain/categories/category.dart';
-import 'package:spend_trends/domain/categories/category_group.dart';
+import 'package:spend_trends/domain/categories/conscious_spending_area.dart';
 import 'package:spend_trends/domain/categories/special_category.dart';
 import 'package:spend_trends/ui/categories/category_list_sections.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  test('Transfer is ungrouped; Income and Investments sit in Income', () {
+  test('categories are sectioned by spending area, then Not spending', () {
     final sections = CategoryListSections.from(
       categories: [
         SpecialCategory.income.asSpendCategory(),
         SpecialCategory.transfer.asSpendCategory(),
         SpecialCategory.investments.asSpendCategory(),
+        SpecialCategory.housing.asSpendCategory(),
         const SpendCategory(
           id: 'cat_dining',
           name: 'Dining',
           sortOrder: 1,
           archived: false,
-          groupId: 'grp_wants',
+          consciousSpendingArea: ConsciousSpendingArea.guiltFree,
         ),
-      ],
-      groups: [
-        const CategoryGroup(id: 'grp_wants', name: 'Wants', sortOrder: 0),
-        SpecialCategory.incomeGroup,
+        const SpendCategory(
+          id: 'cat_new',
+          name: 'New',
+          sortOrder: 2,
+          archived: false,
+        ),
       ],
       pacesByCategoryId: const {},
     ).sections;
 
     expect(sections.map((section) => section.title), [
-      'Wants',
-      'Income',
-      'Ungrouped',
+      'Fixed Costs',
+      'Investments',
+      'Guilt-free',
+      'Not spending',
+      'No spending area',
     ]);
-    expect(sections.any((section) => section.title == 'Cash flow'), isFalse);
-
-    final incomeSection = sections.firstWhere(
-      (section) => section.title == 'Income',
-    );
-    expect(
-      incomeSection.categories.map((category) => category.name),
-      containsAll(['Income', 'Investments']),
-    );
-
-    final ungrouped = sections.firstWhere(
-      (section) => section.title == 'Ungrouped',
-    );
-    expect(ungrouped.categories.map((category) => category.name), ['Transfer']);
+    List<String> namesIn(String title) => sections
+        .firstWhere((section) => section.title == title)
+        .categories
+        .map((category) => category.name)
+        .toList();
+    expect(namesIn('Fixed Costs'), ['Housing']);
+    expect(namesIn('Investments'), ['Investments']);
+    expect(namesIn('Guilt-free'), ['Dining']);
+    expect(namesIn('Not spending'), ['Income', 'Transfer']);
+    expect(namesIn('No spending area'), ['New']);
   });
 }

@@ -3,7 +3,6 @@ import 'package:ethan_utils/ethan_utils.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:spend_trends/domain/categories/category.dart';
-import 'package:spend_trends/domain/categories/category_group.dart';
 import 'package:spend_trends/domain/categories/rule_change_plan.dart';
 import 'package:spend_trends/domain/transactions/transaction.dart';
 import 'package:spend_trends/ui/activity/contains_pattern_rematch.dart';
@@ -153,9 +152,6 @@ class _RuleImpactConfirmSheetState()
     final categories =
         ref.watch(categoriesListProvider).asData?.value ??
         const <SpendCategory>[];
-    final categoryGroups =
-        ref.watch(categoryGroupsProvider).asData?.value ??
-        const <CategoryGroup>[];
     final categoryNameById = {
       for (final category in categories) category.id: category.name,
     };
@@ -170,7 +166,6 @@ class _RuleImpactConfirmSheetState()
               existingRules: existingRules,
               categoryNameById: categoryNameById,
               categories: categories,
-              categoryGroups: categoryGroups,
             ),
           ),
           _actions(),
@@ -209,7 +204,6 @@ class _RuleImpactConfirmSheetState()
     required List<CategorizationRule> existingRules,
     required Map<String, String> categoryNameById,
     required List<SpendCategory> categories,
-    required List<CategoryGroup> categoryGroups,
   }) {
     return ListView(
       keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
@@ -221,7 +215,6 @@ class _RuleImpactConfirmSheetState()
             existingRules: existingRules,
             categoryNameById: categoryNameById,
             categories: categories,
-            categoryGroups: categoryGroups,
           ),
       ],
     );
@@ -232,7 +225,6 @@ class _RuleImpactConfirmSheetState()
     required List<CategorizationRule> existingRules,
     required Map<String, String> categoryNameById,
     required List<SpendCategory> categories,
-    required List<CategoryGroup> categoryGroups,
   }) {
     final rematch = _rematches[groupIndex];
     final related = overlappingMerchantContainsRules(
@@ -244,11 +236,8 @@ class _RuleImpactConfirmSheetState()
     return [
       _TargetCategoryButton(
         categoryName: _groups[groupIndex].categoryName,
-        onActivated: () => _pickTargetCategory(
-          groupIndex: groupIndex,
-          categories: categories,
-          categoryGroups: categoryGroups,
-        ),
+        onActivated: () =>
+            _pickTargetCategory(groupIndex: groupIndex, categories: categories),
       ),
       const SizedBox(height: ELayout.spaceXs),
       TextField(
@@ -332,7 +321,6 @@ class _RuleImpactConfirmSheetState()
   Future<void> _pickTargetCategory({
     required int groupIndex,
     required List<SpendCategory> categories,
-    required List<CategoryGroup> categoryGroups,
   }) async {
     final selected = await showModalBottomSheet<SpendCategory>(
       context: context,
@@ -340,7 +328,6 @@ class _RuleImpactConfirmSheetState()
       backgroundColor: Colors.transparent,
       builder: (sheetContext) => _TargetCategoryPickerSheet(
         categories: categories,
-        groups: categoryGroups,
         selectedCategoryId: _groups[groupIndex].categoryId,
         onCategorySelected: (category) =>
             Navigator.of(sheetContext).pop(category),
@@ -435,7 +422,6 @@ class const _TargetCategoryButton({
 
 class const _TargetCategoryPickerSheet({
   required final List<SpendCategory> categories,
-  required final List<CategoryGroup> groups,
   required final String selectedCategoryId,
   required final ValueChanged<SpendCategory> onCategorySelected,
 }) extends StatelessWidget {
@@ -462,7 +448,6 @@ class const _TargetCategoryPickerSheet({
               children: [
                 CategoryPicker(
                   categories: categories,
-                  groups: groups,
                   selectedId: selectedCategoryId,
                   onCategorySelected: onCategorySelected,
                 ),

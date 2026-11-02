@@ -1,7 +1,6 @@
 import 'package:spend_trends/domain/accounts/account.dart';
 import 'package:spend_trends/domain/categories/cash_flow_breakdown.dart';
 import 'package:spend_trends/domain/categories/category.dart';
-import 'package:spend_trends/domain/categories/category_group.dart';
 import 'package:spend_trends/domain/categories/conscious_spending_area.dart';
 import 'package:spend_trends/domain/categories/special_category.dart';
 import 'package:spend_trends/domain/transactions/transaction.dart';
@@ -26,7 +25,6 @@ class TrendPointContributors._() {
     required DateTime tapDate,
     required List<BankTransaction> transactions,
     required List<SpendCategory> categories,
-    required List<CategoryGroup> groups,
     List<Account> accounts = const [],
     int limit = topCount,
   }) {
@@ -73,7 +71,6 @@ class TrendPointContributors._() {
     final membership = _membershipForSeries(
       seriesId: series.id,
       categories: categories,
-      groups: groups,
     );
     if (membership == null) return const [];
     final cashFlowBreakdown = CashFlowBreakdown(
@@ -137,7 +134,6 @@ class TrendPointContributors._() {
   static _SeriesMembership? _membershipForSeries({
     required String seriesId,
     required List<SpendCategory> categories,
-    required List<CategoryGroup> groups,
   }) {
     if (seriesId == TrendChartCatalog.allSpendSeriesId) {
       return const _SeriesMembership.categorySpend(categoryIds: null);
@@ -157,13 +153,13 @@ class TrendPointContributors._() {
     if (seriesId == TrendChartCatalog.savingsSeriesId) {
       return const _SeriesMembership.cashFlow(_CashFlowLine.savings);
     }
-    if (seriesId.startsWith(TrendChartCatalog.groupSeriesIdPrefix)) {
-      final groupId = seriesId.substring(
-        TrendChartCatalog.groupSeriesIdPrefix.length,
+    if (seriesId.startsWith(TrendChartCatalog.areaSpendSeriesIdPrefix)) {
+      final area = ConsciousSpendingArea.fromStorage(
+        seriesId.substring(TrendChartCatalog.areaSpendSeriesIdPrefix.length),
       );
       final memberIds = {
         for (final category in categories)
-          if (category.groupId == groupId) category.id,
+          if (category.consciousSpendingArea == area) category.id,
       };
       if (memberIds.isEmpty) return null;
       return _SeriesMembership.categorySpend(categoryIds: memberIds);

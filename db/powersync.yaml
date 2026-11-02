@@ -37,7 +37,6 @@ sync_rules:
         priority: 0
         data:
           - SELECT * FROM accounts
-          - SELECT * FROM category_groups
           - SELECT * FROM categories
           - SELECT * FROM transactions
           - SELECT * FROM categorization_rules

@@ -1,5 +1,4 @@
 import 'package:spend_trends/domain/categories/category.dart';
-import 'package:spend_trends/domain/categories/category_group.dart';
 import 'package:spend_trends/domain/categories/conscious_spending_area.dart';
 import 'package:spend_trends/domain/categories/special_category.dart';
 import 'package:ethan_sync/ethan_sync.dart';
@@ -28,14 +27,6 @@ class CategoriesRepository(final PowerSyncDatabase _powerSync) {
     return rows.map(_categoryFromRow).toList();
   }
 
-  Future<List<CategoryGroup>> listGroups() async {
-    final rows = await _powerSync.getAll('''
-      SELECT * FROM category_groups
-      ORDER BY sort_order ASC, name COLLATE NOCASE
-      ''');
-    return rows.map(_groupFromRow).toList();
-  }
-
   Future<void> upsertCategory(SpendCategory category) async {
     await _powerSync.upsert('categories', {
       'id': category.id,
@@ -43,16 +34,7 @@ class CategoriesRepository(final PowerSyncDatabase _powerSync) {
       'sort_order': category.sortOrder,
       'archived': category.archived ? 1 : 0,
       'color_token': category.colorToken,
-      'group_id': category.groupId,
       'conscious_spending_area': category.consciousSpendingArea?.storageValue,
-    });
-  }
-
-  Future<void> upsertGroup(CategoryGroup group) async {
-    await _powerSync.upsert('category_groups', {
-      'id': group.id,
-      'name': group.name,
-      'sort_order': group.sortOrder,
     });
   }
 
@@ -83,27 +65,6 @@ class CategoriesRepository(final PowerSyncDatabase _powerSync) {
     return category;
   }
 
-  Future<CategoryGroup> createGroup({required String name}) async {
-    final trimmedName = name.trim();
-    if (trimmedName.isEmpty) {
-      throw ArgumentError('Group name is required.');
-    }
-    final groups = await listGroups();
-    var nextSortOrder = 0;
-    for (final group in groups) {
-      if (group.sortOrder >= nextSortOrder) {
-        nextSortOrder = group.sortOrder + 1;
-      }
-    }
-    final group = CategoryGroup(
-      id: _uuid.v4(),
-      name: trimmedName,
-      sortOrder: nextSortOrder,
-    );
-    await upsertGroup(group);
-    return group;
-  }
-
   Future<void> renameCategory({
     required String categoryId,
     required String name,
@@ -125,37 +86,6 @@ class CategoriesRepository(final PowerSyncDatabase _powerSync) {
     await upsertCategory(existing.copyWith(name: trimmedName));
   }
 
-  Future<void> renameGroup({
-    required String groupId,
-    required String name,
-  }) async {
-    final trimmedName = name.trim();
-    if (trimmedName.isEmpty) {
-      throw ArgumentError('Group name is required.');
-    }
-    final existing = await _requireGroup(groupId);
-    await upsertGroup(
-      CategoryGroup(
-        id: existing.id,
-        name: trimmedName,
-        sortOrder: existing.sortOrder,
-      ),
-    );
-  }
-
-  Future<void> setCategoryGroup({
-    required String categoryId,
-    String? groupId,
-  }) async {
-    if (groupId != null) {
-      await _requireGroup(groupId);
-    }
-    final existing = await _requireCategory(categoryId);
-    await upsertCategory(
-      existing.copyWith(groupId: groupId, clearGroupId: groupId == null),
-    );
-  }
-
   Future<void> setConsciousSpendingArea({
     required String categoryId,
     ConsciousSpendingArea? area,
@@ -167,21 +97,6 @@ class CategoriesRepository(final PowerSyncDatabase _powerSync) {
         clearConsciousSpendingArea: area == null,
       ),
     );
-  }
-
-  /// Deletes the group and clears membership on its categories.
-  Future<void> deleteGroup(String groupId) async {
-    if (SpecialCategory.isIncomeGroupId(groupId)) {
-      throw StateError('The Income group cannot be deleted.');
-    }
-    await _requireGroup(groupId);
-    await _powerSync.execute(
-      'UPDATE categories SET group_id = NULL WHERE group_id = ?',
-      [groupId],
-    );
-    await _powerSync.execute('DELETE FROM category_groups WHERE id = ?', [
-      groupId,
-    ]);
   }
 
   /// Move all spend/rules from [fromCategoryId] into [intoCategoryId],
@@ -307,17 +222,6 @@ class CategoriesRepository(final PowerSyncDatabase _powerSync) {
     return _categoryFromRow(row);
   }
 
-  Future<CategoryGroup> _requireGroup(String groupId) async {
-    final row = await _powerSync.getOptional(
-      'SELECT * FROM category_groups WHERE id = ? LIMIT 1',
-      [groupId],
-    );
-    if (row == null) {
-      throw StateError('Group not found.');
-    }
-    return _groupFromRow(row);
-  }
-
   static SpendCategory _categoryFromRow(dynamic row) {
     final columns = (row as Map).cast<String, Object?>();
     return SpendCategory(
@@ -326,19 +230,9 @@ class CategoriesRepository(final PowerSyncDatabase _powerSync) {
       sortOrder: columns['sort_order'].asInt(),
       archived: columns['archived'].asInt() == 1,
       colorToken: columns['color_token'] as String?,
-      groupId: columns['group_id'] as String?,
       consciousSpendingArea: ConsciousSpendingArea.fromStorage(
         columns['conscious_spending_area'] as String?,
       ),
-    );
-  }
-
-  static CategoryGroup _groupFromRow(dynamic row) {
-    final columns = (row as Map).cast<String, Object?>();
-    return CategoryGroup(
-      id: columns['id'] as String,
-      name: columns['name'] as String,
-      sortOrder: columns['sort_order'].asInt(),
     );
   }
 
@@ -368,12 +262,6 @@ final categoriesListProvider = FutureProvider<List<SpendCategory>>((ref) async {
   ref.watch(spendDataChangedProvider);
   final repository = await ref.watch(categoriesRepositoryProvider.future);
   return repository.listActive();
-});
-
-final categoryGroupsProvider = FutureProvider<List<CategoryGroup>>((ref) async {
-  ref.watch(spendDataChangedProvider);
-  final repository = await ref.watch(categoriesRepositoryProvider.future);
-  return repository.listGroups();
 });
 
 final categorizationRulesProvider = FutureProvider<List<CategorizationRule>>((

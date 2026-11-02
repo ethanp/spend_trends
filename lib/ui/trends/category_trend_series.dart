@@ -24,8 +24,8 @@ class const CategoryTrendSeries({
   final String? legendGroup,
   final String? legendCaption,
 
-  /// Group rollup series this category belongs to, when this is a member line.
-  final String? memberOfGroupSeriesId,
+  /// Spending-area rollup series this category belongs to, when this is a member line.
+  final String? memberOfRollupSeriesId,
 }) {
   double get latestSmoothedCents =>
       points.isEmpty ? 0 : points.last.smoothedCents;
@@ -46,7 +46,7 @@ class const CategoryTrendSeries({
     return false;
   }
 
-  bool get isMemberOfGroup => memberOfGroupSeriesId != null;
+  bool get isMemberOfRollup => memberOfRollupSeriesId != null;
 
   bool get isAllSpend => id == TrendChartCatalog.allSpendSeriesId;
 

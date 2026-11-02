@@ -8,7 +8,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:spend_trends/domain/accounts/account.dart';
 import 'package:spend_trends/domain/accounts/account_kind.dart';
 import 'package:spend_trends/domain/categories/category.dart';
-import 'package:spend_trends/domain/categories/category_group.dart';
 import 'package:spend_trends/domain/categories/conscious_spending_area.dart';
 import 'package:spend_trends/domain/projection/life_event.dart';
 import 'package:spend_trends/domain/accounts/owned_asset.dart';
@@ -51,7 +50,6 @@ void main() {
             categoriesListProvider.overrideWith(
               (ref) async => fixtures.categories,
             ),
-            categoryGroupsProvider.overrideWith((ref) async => fixtures.groups),
             accountsMapProvider.overrideWith((ref) async => fixtures.accounts),
             accountBalanceSnapshotsProvider.overrideWith(
               (ref) async => const [],
@@ -122,7 +120,6 @@ class _OverviewSpend() {
     name: 'Coffee',
     sortOrder: 1,
     archived: false,
-    groupId: 'grp_everyday',
     consciousSpendingArea: ConsciousSpendingArea.guiltFree,
   );
   static const grocery = SpendCategory(
@@ -130,7 +127,6 @@ class _OverviewSpend() {
     name: 'Grocery',
     sortOrder: 2,
     archived: false,
-    groupId: 'grp_everyday',
     consciousSpendingArea: ConsciousSpendingArea.fixedCosts,
   );
   static final housingCategory = SpendCategory(
@@ -145,7 +141,6 @@ class _OverviewSpend() {
     name: 'Income',
     sortOrder: 1000,
     archived: false,
-    groupId: SpecialCategory.incomeGroupId,
   );
 
   List<SpendCategory> get categories => [
@@ -154,10 +149,6 @@ class _OverviewSpend() {
     housingCategory,
     incomeCategory,
     SpecialCategory.investments.asSpendCategory(),
-  ];
-  final groups = [
-    const CategoryGroup(id: 'grp_everyday', name: 'Everyday', sortOrder: 1),
-    SpecialCategory.incomeGroup,
   ];
 
   final accounts = <String, Account>{

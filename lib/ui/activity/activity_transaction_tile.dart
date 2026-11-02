@@ -37,7 +37,6 @@ class const ActivityTransactionTile({
     final categoryColor = CategoryColor.forCategoryId(
       category?.id,
       categoryName: category?.name,
-      groupId: category?.groupId,
     );
     final merchantName = transaction.rawDescription.isEmpty
         ? transaction.normalizedMerchant

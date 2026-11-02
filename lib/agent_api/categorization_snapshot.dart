@@ -2,7 +2,6 @@ import 'package:ethan_utils/ethan_utils.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:spend_trends/domain/accounts/account.dart';
 import 'package:spend_trends/domain/categories/category.dart';
-import 'package:spend_trends/domain/categories/category_group.dart';
 import 'package:spend_trends/domain/categories/special_category.dart';
 import 'package:spend_trends/domain/transactions/transaction.dart';
 import 'package:spend_trends/data/repositories/accounts_repository.dart';
@@ -15,16 +14,12 @@ import 'package:spend_trends/data/repositories/transactions_repository.dart';
 /// transaction note.
 class CategorizationSnapshot({
   required final List<SpendCategory> categories,
-  required final List<CategoryGroup> groups,
   required final List<Account> accounts,
   required final List<CategorizationRule> rules,
   required final List<BankTransaction> transactions,
 }) {
   late final Map<String, SpendCategory> categoriesById = {
     for (final category in categories) category.id: category,
-  };
-  late final Map<String, CategoryGroup> groupsById = {
-    for (final group in groups) group.id: group,
   };
   late final Map<String, Account> accountsById = {
     for (final account in accounts) account.id: account,
@@ -47,7 +42,6 @@ class CategorizationSnapshot({
     );
     return CategorizationSnapshot(
       categories: await categoriesRepository.listAll(),
-      groups: await categoriesRepository.listGroups(),
       accounts: await accountsRepository.listAccounts(),
       rules: await categoriesRepository.listRules(),
       transactions: await transactionsRepository.listAll(),
@@ -82,9 +76,6 @@ class CategorizationSnapshot({
   }
 
   Map<String, Object?> categoryJson(SpendCategory category) {
-    final group = category.groupId == null
-        ? null
-        : groupsById[category.groupId];
     return {
       'id': category.id,
       'name': category.name,
@@ -92,7 +83,6 @@ class CategorizationSnapshot({
       'archived': category.archived,
       'builtIn': SpecialCategory.isSpecialId(category.id),
       'locked': category.lockedCaption != null,
-      'group': group == null ? null : {'id': group.id, 'name': group.name},
       'consciousSpendingArea': category.consciousSpendingArea?.name,
       'transactionCount': _transactionCountByCategoryId[category.id] ?? 0,
       'trailingYearOutflowCents':

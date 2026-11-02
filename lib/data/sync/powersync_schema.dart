@@ -19,13 +19,11 @@ const Schema spendTrendsSchema = Schema([
     Column.text('belongs_to_account_id'),
     Column.text('tax_treatment'),
   ]),
-  Table('category_groups', [Column.text('name'), Column.integer('sort_order')]),
   Table('categories', [
     Column.text('name'),
     Column.integer('sort_order'),
     Column.integer('archived'),
     Column.text('color_token'),
-    Column.text('group_id'),
     Column.text('conscious_spending_area'),
   ]),
   Table('transactions', [

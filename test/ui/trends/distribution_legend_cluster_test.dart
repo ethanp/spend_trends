@@ -13,12 +13,12 @@ void main() {
       final dining = _series(
         id: 'cat_dining',
         name: 'Dining',
-        memberOfGroupSeriesId: 'group:wants',
+        memberOfRollupSeriesId: 'group:wants',
       );
       final travel = _series(
         id: 'cat_travel',
         name: 'Travel',
-        memberOfGroupSeriesId: 'group:wants',
+        memberOfRollupSeriesId: 'group:wants',
       );
       final housing = _series(id: 'cat_housing', name: 'Housing');
 
@@ -71,13 +71,13 @@ void main() {
 CategoryTrendSeries _series({
   required String id,
   required String name,
-  String? memberOfGroupSeriesId,
+  String? memberOfRollupSeriesId,
 }) {
   return CategoryTrendSeries(
     id: id,
     name: name,
     lineColor: const Color(0xFF00AA00),
-    memberOfGroupSeriesId: memberOfGroupSeriesId,
+    memberOfRollupSeriesId: memberOfRollupSeriesId,
     points: [
       CategoryTrendPoint(
         date: DateTime(2024, 1, 1),

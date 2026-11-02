@@ -16,12 +16,15 @@ class TrendChartCatalog._() {
   static const assetSalesSeriesId = '__asset_sales__';
   static const housingAffordabilitySeriesId = '__housing_30__';
   static const fireSavingsGuideSeriesId = '__savings_25__';
-  static const groupSeriesIdPrefix = 'group:';
+  static const areaSpendSeriesIdPrefix = 'area_spend:';
   static const consciousSpendingAreaSeriesIdPrefix = 'area:';
   static const accountSeriesIdPrefix = 'account:';
   static const ownedAssetSeriesIdPrefix = 'owned_asset:';
 
-  static String groupSeriesId(String groupId) => '$groupSeriesIdPrefix$groupId';
+  /// The Spending chart's rollup of an area's categories. Not
+  /// [consciousSpendingAreaSeriesId], the Cash flow chart's area line.
+  static String areaSpendSeriesId(ConsciousSpendingArea area) =>
+      '$areaSpendSeriesIdPrefix${area.name}';
 
   static String consciousSpendingAreaSeriesId(ConsciousSpendingArea area) =>
       '$consciousSpendingAreaSeriesIdPrefix${area.name}';
