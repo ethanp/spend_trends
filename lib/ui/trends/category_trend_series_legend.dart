@@ -3,19 +3,17 @@ import 'package:ethan_utils/ethan_utils.dart';
 import 'package:flutter/material.dart';
 import 'package:spend_trends/domain/accounts/account_kind.dart';
 import 'package:spend_trends/domain/trends/trend_spend_rate.dart';
-import 'package:spend_trends/ui/trends/category_trend_distribution_legend.dart';
 import 'package:spend_trends/ui/trends/category_trend_series.dart';
 import 'package:spend_trends/ui/trends/net_worth_legend_table.dart';
 import 'package:spend_trends/ui/trends/trend_legend_swatch.dart';
 import 'package:spend_trends/ui/trends/trend_spend_rate_toggle.dart';
 
-/// Legend under a trends chart: meta chips, plus ranked chips or distribution.
+/// Legend under a trends chart: meta chips, plus ranked chips or net worth table.
 /// Pace legends lead with the yr/mo/day toggle their amounts are shown in.
 class const CategoryTrendSeriesLegend({
   required final List<CategoryTrendSeries> seriesList,
   required final Set<String> hiddenSeriesIds,
   required final TrendSpendRate spendRate,
-  required final bool useDistributionLegend,
   required final ValueChanged<String> onSeriesToggled,
   required final ValueChanged<String> onSeriesSoloed,
   final TrendValueKind valueKind = TrendValueKind.pace,
@@ -50,20 +48,9 @@ class const CategoryTrendSeriesLegend({
         if (!series.isMetaLegend) series,
     ];
 
-    final useNetWorthTable =
-        !useDistributionLegend && _rankedSeriesHasLegendGroups(rankedSeries);
-
     final rankedChild = rankedSeries.isEmpty
         ? null
-        : useDistributionLegend
-        ? CategoryTrendDistributionLegend(
-            seriesList: rankedSeries,
-            hiddenSeriesIds: hiddenSeriesIds,
-            spendRate: spendRate,
-            onSeriesToggled: onSeriesToggled,
-            onSeriesSoloed: onSeriesSoloed,
-          )
-        : useNetWorthTable
+        : _rankedSeriesHasLegendGroups(rankedSeries)
         ? NetWorthLegendTable(
             seriesList: rankedSeries,
             hiddenSeriesIds: hiddenSeriesIds,

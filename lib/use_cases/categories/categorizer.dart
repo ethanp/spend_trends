@@ -21,10 +21,15 @@ class Categorizer({
     Set<String> deletedRuleIds = const {},
   }) async {
     final rulesBefore = await _categoriesRepository.listRules();
+    // A rule this change deletes is not one a draft can update: a draft with
+    // its pattern becomes a new rule, so the delete does not take it away.
+    final keptRules = rulesBefore.whereL(
+      (rule) => !deletedRuleIds.contains(rule.id),
+    );
     return RuleChangePlan(
       rulesBefore: rulesBefore,
       transactions: await _transactionsRepository.listAll(),
-      upserts: _rulesFor(drafts, rulesBefore),
+      upserts: _rulesFor(drafts, keptRules),
       deletedRuleIds: deletedRuleIds,
     );
   }

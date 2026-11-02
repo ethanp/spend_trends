@@ -23,9 +23,6 @@ class const CategoryTrendSeries({
   /// Optional legend section header (e.g. bank institution for net worth).
   final String? legendGroup,
   final String? legendCaption,
-
-  /// Spending-area rollup series this category belongs to, when this is a member line.
-  final String? memberOfRollupSeriesId,
 }) {
   double get latestSmoothedCents =>
       points.isEmpty ? 0 : points.last.smoothedCents;
@@ -45,8 +42,6 @@ class const CategoryTrendSeries({
     }
     return false;
   }
-
-  bool get isMemberOfRollup => memberOfRollupSeriesId != null;
 
   bool get isAllSpend => id == TrendChartCatalog.allSpendSeriesId;
 

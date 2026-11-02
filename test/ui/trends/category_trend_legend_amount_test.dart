@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:spend_trends/domain/accounts/account_kind.dart';
 import 'package:spend_trends/domain/trends/trend_spend_rate.dart';
-import 'package:spend_trends/domain/trends/category_trend_distribution.dart';
 import 'package:spend_trends/domain/trends/category_trend_point.dart';
 import 'package:spend_trends/ui/trends/category_trend_series.dart';
 import 'package:spend_trends/ui/trends/category_trend_series_legend.dart';
@@ -109,14 +108,5 @@ void main() {
       ).cents,
       -400000,
     );
-  });
-
-  test('distribution now follows withCurrentCents', () {
-    final pair = distributionPairForSmoothed(checking.points);
-    expect(pair.allTime!.currentCents, 1970000);
-    final inspected = pair.withCurrentCents(1800000);
-    expect(inspected.allTime!.currentCents, 1800000);
-    expect(inspected.pastYear!.currentCents, 1800000);
-    expect(inspected.allTime!.maxCents, pair.allTime!.maxCents);
   });
 }

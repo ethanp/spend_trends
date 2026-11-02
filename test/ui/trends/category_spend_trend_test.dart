@@ -83,10 +83,6 @@ void main() {
       (series) => series.id == 'cat_dining',
     );
     expect(dining.name, 'Dining');
-    expect(
-      dining.memberOfRollupSeriesId,
-      TrendChartCatalog.areaSpendSeriesId(ConsciousSpendingArea.guiltFree),
-    );
     // The area rollup is listed before its member lines.
     expect(
       seriesIds.indexOf(

@@ -166,7 +166,6 @@ class const TrendsScreen() extends ConsumerWidget {
       categories: chartContext.categories,
       accounts: chartContext.accounts,
       lifeEvents: chartContext.lifeEvents,
-      useDistributionLegend: true,
     );
   }
 

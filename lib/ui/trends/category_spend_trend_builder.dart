@@ -174,7 +174,6 @@ class const CategorySpendTrendBuilder({
               ? CategoryColor.housing
               : CategoryColor.forCategory(member),
           dailyCents: memberDaily,
-          memberOfRollupSeriesId: TrendChartCatalog.areaSpendSeriesId(area),
         );
         if (!builtMember.hasMeaningfulTrend) {
           continue;
@@ -244,7 +243,6 @@ class const CategorySpendTrendBuilder({
     required Map<CalendarDay, double> dailyCents,
     bool dotted = false,
     bool guide = false,
-    String? memberOfRollupSeriesId,
   }) {
     return AnnualPaceSmoother.standard.seriesFromDailyMap(
       id: id,
@@ -255,7 +253,6 @@ class const CategorySpendTrendBuilder({
       dailyCents: dailyCents,
       chartDates: chartDates,
       historyFloor: historyFloor,
-      memberOfRollupSeriesId: memberOfRollupSeriesId,
     );
   }
 

@@ -13,9 +13,6 @@ class const TrendValueScale({
 
   double fractionFromBottom(double cents) => (cents / maxCents).clamp(0.0, 1.0);
 
-  double yFromWhiskerBandTop(double cents, double height) =>
-      height * (1 - fractionFromBottom(cents));
-
   double yForCents(double cents, EChartPlot plot) {
     return plot.bottom - fractionFromBottom(cents) * plot.height;
   }

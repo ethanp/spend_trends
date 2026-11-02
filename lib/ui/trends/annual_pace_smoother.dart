@@ -48,7 +48,6 @@ class AnnualPaceSmoother({required final HannAnnualPaceKernel kernel}) {
     bool guide = false,
     bool percentileAreaFill = false,
     String? legendCaption,
-    String? memberOfRollupSeriesId,
   }) {
     return CategoryTrendSeries(
       id: id,
@@ -58,7 +57,6 @@ class AnnualPaceSmoother({required final HannAnnualPaceKernel kernel}) {
       guide: guide,
       percentileAreaFill: percentileAreaFill,
       legendCaption: legendCaption,
-      memberOfRollupSeriesId: memberOfRollupSeriesId,
       points: pointsFromDailyMap(
         chartDates: chartDates,
         dailyCents: dailyCents,

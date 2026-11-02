@@ -40,9 +40,6 @@ class const CategoryTrendChart({
       'tap legend to show/hide · double-tap to solo',
   final String? titleHelp,
   final Set<String> initiallyHiddenSeriesIds = const {},
-
-  /// Shared-scale min/med/avg/max/now whiskers for ranked area/category series.
-  final bool useDistributionLegend = false,
   final TrendValueKind valueKind = TrendValueKind.pace,
 
   /// Tap-to-open top contributors (disabled for level charts like net worth).
@@ -143,7 +140,6 @@ class _CategoryTrendChartState() extends ConsumerState<CategoryTrendChart> {
               hiddenSeriesIds: _hiddenSeriesIds,
               spendRate: spendRate,
               valueKind: widget.valueKind,
-              useDistributionLegend: widget.useDistributionLegend,
               inspectDate: inspect?.date,
               onSeriesToggled: _toggleSeries,
               onSeriesSoloed: _soloSeries,
