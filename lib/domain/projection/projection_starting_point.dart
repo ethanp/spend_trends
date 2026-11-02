@@ -1,13 +1,13 @@
 import 'package:ethan_utils/ethan_utils.dart';
-import 'package:spend_trends/domain/account.dart';
-import 'package:spend_trends/domain/account_kind.dart';
-import 'package:spend_trends/domain/cash_flow_breakdown.dart';
-import 'package:spend_trends/domain/category.dart';
-import 'package:spend_trends/domain/owned_asset.dart';
-import 'package:spend_trends/domain/owned_asset_kind.dart';
-import 'package:spend_trends/domain/account_tax_treatment.dart';
-import 'package:spend_trends/domain/special_category.dart';
-import 'package:spend_trends/domain/transaction.dart';
+import 'package:spend_trends/domain/accounts/account.dart';
+import 'package:spend_trends/domain/accounts/account_kind.dart';
+import 'package:spend_trends/domain/categories/cash_flow_breakdown.dart';
+import 'package:spend_trends/domain/categories/category.dart';
+import 'package:spend_trends/domain/accounts/owned_asset.dart';
+import 'package:spend_trends/domain/accounts/owned_asset_kind.dart';
+import 'package:spend_trends/domain/accounts/account_tax_treatment.dart';
+import 'package:spend_trends/domain/categories/special_category.dart';
+import 'package:spend_trends/domain/transactions/transaction.dart';
 
 /// Where the projection starts, read from live data (dollars, today).
 ///

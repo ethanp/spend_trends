@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'dart:math' as math;
 
 import 'package:ethan_utils/ethan_utils.dart';
-import 'package:spend_trends/domain/life_event.dart';
+import 'package:spend_trends/domain/projection/life_event.dart';
 
 /// What the retirement projection assumes about the future. Everything is in
 /// today's dollars (real), so returns are real returns.

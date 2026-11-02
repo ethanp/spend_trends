@@ -4,12 +4,11 @@ import 'package:shelf_router/shelf_router.dart';
 import 'package:spend_trends/agent_api/agent_api_json.dart';
 import 'package:spend_trends/agent_api/categorization_snapshot.dart';
 import 'package:spend_trends/agent_api/rule_change_request.dart';
-import 'package:spend_trends/domain/rule_change_plan.dart';
-import 'package:spend_trends/domain/categorizer.dart';
-import 'package:spend_trends/domain/conscious_spending_area.dart';
-import 'package:spend_trends/features/categories/categories_providers.dart';
-import 'package:spend_trends/providers/spend_data_changed.dart';
-import 'package:spend_trends/services/sqlite/categories_repository.dart';
+import 'package:spend_trends/domain/categories/rule_change_plan.dart';
+import 'package:spend_trends/use_cases/categories/categorizer.dart';
+import 'package:spend_trends/domain/categories/conscious_spending_area.dart';
+import 'package:spend_trends/data/sync/spend_data_changed.dart';
+import 'package:spend_trends/data/repositories/categories_repository.dart';
 
 /// Categorization writes, each through the same repository / [Categorizer]
 /// call the UI makes, then one spend-data refresh for open screens. Categories

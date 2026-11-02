@@ -7,13 +7,12 @@ import 'package:spend_trends/agent_api/categorization_snapshot.dart';
 import 'package:spend_trends/agent_api/live_retirement_projection.dart';
 import 'package:spend_trends/agent_api/rule_change_request.dart';
 import 'package:spend_trends/agent_api/transaction_query.dart';
-import 'package:spend_trends/domain/categorizer.dart';
-import 'package:spend_trends/domain/conscious_spending_area.dart';
-import 'package:spend_trends/features/trends/conscious_spending_numbers.dart';
-import 'package:spend_trends/domain/transaction.dart';
-import 'package:spend_trends/features/categories/categories_providers.dart';
-import 'package:spend_trends/services/sqlite/account_balance_snapshots_repository.dart';
-import 'package:spend_trends/services/sqlite/life_events_repository.dart';
+import 'package:spend_trends/use_cases/categories/categorizer.dart';
+import 'package:spend_trends/domain/categories/conscious_spending_area.dart';
+import 'package:spend_trends/domain/categories/conscious_spending_numbers.dart';
+import 'package:spend_trends/domain/transactions/transaction.dart';
+import 'package:spend_trends/data/repositories/account_balance_snapshots_repository.dart';
+import 'package:spend_trends/data/repositories/life_events_repository.dart';
 
 /// Read-only audit routes: overview, categories, accounts, rules,
 /// transactions, per-merchant rollups, and rule dry runs.

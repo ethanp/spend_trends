@@ -3,11 +3,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shelf/shelf.dart';
 import 'package:shelf_router/shelf_router.dart';
 import 'package:spend_trends/agent_api/agent_api_json.dart';
-import 'package:spend_trends/domain/life_event.dart';
-import 'package:spend_trends/domain/owned_asset.dart';
-import 'package:spend_trends/providers/spend_data_changed.dart';
-import 'package:spend_trends/services/sqlite/life_events_repository.dart';
-import 'package:spend_trends/services/sqlite/owned_assets_repository.dart';
+import 'package:spend_trends/domain/projection/life_event.dart';
+import 'package:spend_trends/domain/accounts/owned_asset.dart';
+import 'package:spend_trends/data/sync/spend_data_changed.dart';
+import 'package:spend_trends/data/repositories/life_events_repository.dart';
+import 'package:spend_trends/data/repositories/owned_assets_repository.dart';
 
 /// Life events (jobs, homes, children) the projection plans with, and the
 /// owned assets (homes) net worth tracks: the same data the Projections and

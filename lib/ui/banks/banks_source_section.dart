@@ -1,0 +1,226 @@
+import 'package:ethan_ui/ethan_ui.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
+import 'package:spend_trends/ui/banks/bank_accounts_list.dart';
+import 'package:spend_trends/ui/owned_assets/owned_assets_section.dart';
+import 'package:spend_trends/ui/banks/banks_controller.dart';
+import 'package:spend_trends/ui/banks/banks_pull_live_session.dart';
+import 'package:spend_trends/ui/banks/manual_account_form_sheet.dart';
+import 'package:spend_trends/data/simplefin/simplefin_access_store.dart';
+import 'package:spend_trends/use_cases/simplefin_pull/simplefin_pull_windows.dart';
+import 'package:spend_trends/ui/theme/finance_colors.dart';
+import 'package:spend_trends/ui/widgets/app_primary_button.dart';
+import 'package:spend_trends/ui/widgets/help_tooltip.dart';
+
+import 'connection_status.dart';
+
+/// Everyday bank UI: connect, accounts, pull bank transactions.
+class const BanksSourceSection({
+  final String? selectedAccountId,
+  final void Function(String accountId)? onAccountSelected,
+  final String? selectedOwnedAssetId,
+  final void Function(String ownedAssetId)? onOwnedAssetSelected,
+}) extends ConsumerStatefulWidget {
+  @override
+  ConsumerState<BanksSourceSection> createState() => _BanksSourceSectionState();
+}
+
+class _BanksSourceSectionState() extends ConsumerState<BanksSourceSection> {
+  final TextEditingController _tokenController = TextEditingController();
+
+  @override
+  void dispose() {
+    _tokenController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final connectionAsync = ref.watch(connectionStatusProvider);
+    final actionState = ref.watch(banksControllerProvider);
+
+    return connectionAsync.when(
+      skipLoadingOnReload: true,
+      loading: () => const CircularProgressIndicator(),
+      error: (error, _) => SelectableText(
+        '$error',
+        style: EText.body.medium.copyWith(color: EColors.danger),
+      ),
+      data: (status) {
+        if (!status.isConnected) return _disconnectedBody(actionState);
+        return _connectedBody(status, actionState);
+      },
+    );
+  }
+
+  Widget _disconnectedBody(BanksActionState actionState) {
+    final busy = actionState.busy;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Paste a Setup Token from SimpleFIN, or set '
+          '${SimpleFinAccessStore.envAccessUrlKey} in .env.',
+          style: EText.caption,
+        ),
+        const SizedBox(height: ELayout.spaceMd),
+        AppPrimaryButton(
+          busy: busy,
+          onPressed: () =>
+              ref.read(banksControllerProvider.notifier).openSimpleFin(),
+          child: const Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.open_in_new, size: 18),
+              SizedBox(width: ELayout.spaceSm),
+              Text('Open SimpleFIN'),
+            ],
+          ),
+        ),
+        const SizedBox(height: ELayout.spaceMd),
+        TextField(
+          controller: _tokenController,
+          maxLines: 4,
+          minLines: 3,
+          style: EText.body.medium.copyWith(color: EColors.textPrimary),
+          decoration: EInput.filled(
+            hintText: 'Paste Setup Token',
+            hintStyle: EText.body.medium.copyWith(color: EColors.textMuted),
+            fillColor: EColors.surfaceInset,
+            focusedBorder: EInput.outlineSm.copyWith(
+              borderSide: const BorderSide(color: FinanceColors.accentPrimary),
+            ),
+          ),
+        ),
+        if (actionState.actionError != null) ...[
+          const SizedBox(height: ELayout.spaceSm),
+          SelectableText(
+            actionState.actionError!,
+            style: EText.caption.copyWith(color: EColors.danger),
+          ),
+        ],
+        const SizedBox(height: ELayout.spaceMd),
+        AppPrimaryButton(
+          busy: busy,
+          onPressed: _connect,
+          child: const Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.link, size: 18),
+              SizedBox(width: ELayout.spaceSm),
+              Text('Connect'),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _connectedBody(ConnectionStatus status, BanksActionState actionState) {
+    final busy = actionState.busy;
+    final controller = ref.read(banksControllerProvider.notifier);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        BankAccountsList(
+          status: status,
+          actionError: actionState.actionError,
+          selectedAccountId: widget.selectedAccountId,
+          onAccountSelected: widget.onAccountSelected,
+        ),
+        const SizedBox(height: ELayout.spaceSm),
+        Row(
+          children: [
+            TextButton.icon(
+              onPressed: () => ManualAccountFormSheet.show(context),
+              icon: const Icon(Icons.add, size: 16),
+              label: const Text('Add manual account'),
+            ),
+            const HelpTooltip(
+              message:
+                  'For institutions SimpleFIN can’t reach. Update its balance '
+                  'by hand; each update is a dated point in net worth.',
+            ),
+          ],
+        ),
+        const SizedBox(height: ELayout.spaceXl),
+        OwnedAssetsSection(
+          selectedOwnedAssetId: widget.selectedOwnedAssetId,
+          onOwnedAssetSelected: widget.onOwnedAssetSelected,
+        ),
+        const SizedBox(height: ELayout.spaceMd),
+        Row(
+          children: [
+            AppPrimaryButton(
+              busy: busy,
+              onPressed: () => ref
+                  .read(banksPullLiveSessionProvider.notifier)
+                  .runPull(
+                    (onProgress) =>
+                        controller.syncLatest(onProgress: onProgress),
+                  ),
+              child: _pullButtonLabel(status.lastSyncedAt),
+            ),
+            const SizedBox(width: ELayout.spaceSm),
+            HelpTooltip(message: _pullHelp(status.lastSyncedAt)),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _pullButtonLabel(DateTime? lastSuccessfulPull) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        const Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.sync, size: 18),
+            SizedBox(width: ELayout.spaceSm),
+            Text('Pull bank transactions'),
+          ],
+        ),
+        Text(
+          _pullSinceLine(lastSuccessfulPull),
+          style: const TextStyle(fontSize: 11, height: 1.2),
+        ),
+      ],
+    );
+  }
+
+  /// One start for every bank: 2 days before the last successful pull, or the
+  /// past 2 years when nothing has been pulled yet.
+  String _pullSinceLine(DateTime? lastSuccessfulPull) {
+    if (lastSuccessfulPull == null) {
+      return 'Past 2 years · same for every bank';
+    }
+    final since = SimpleFinPullWindows.sinceLastPull(
+      lastPull: lastSuccessfulPull,
+      now: DateTime.now().toUtc(),
+    ).start.toLocal();
+    return 'Since ${DateFormat.yMMMd().format(since)} · same for every bank';
+  }
+
+  String _pullHelp(DateTime? lastSuccessfulPull) {
+    if (lastSuccessfulPull == null) {
+      return 'Nothing has been pulled yet, so this loads about 2 years. '
+          'Every bank uses that same window.';
+    }
+    return 'Starts 2 days before the last successful pull so late posts '
+        'aren’t missed. Every bank uses that same start. '
+        'Already-saved rows are updated, not duplicated.';
+  }
+
+  Future<void> _connect() async {
+    final controller = ref.read(banksControllerProvider.notifier);
+    final accessUrl = await controller.connect(_tokenController.text);
+    if (ref.read(banksControllerProvider).actionError != null) return;
+    _tokenController.clear();
+    if (accessUrl != null && mounted) {
+      await promptPersistAccessUrl(context, accessUrl);
+    }
+  }
+}

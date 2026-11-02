@@ -1,0 +1,144 @@
+import 'package:ethan_ui/ethan_ui.dart';
+import 'package:ethan_utils/ethan_utils.dart';
+import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
+import 'package:spend_trends/domain/accounts/account.dart';
+import 'package:spend_trends/domain/categories/category.dart';
+import 'package:spend_trends/domain/categories/rule_match_index.dart';
+import 'package:spend_trends/domain/transactions/transaction.dart';
+import 'package:spend_trends/ui/activity/activity_column_widths.dart';
+import 'package:spend_trends/ui/activity/activity_transaction_tile.dart';
+
+/// Day-grouped Activity transaction list (sliver).
+class const ActivityDayListSliver({
+  required final List<BankTransaction> transactions,
+  required final Map<String, Account> accounts,
+  required final Map<String, SpendCategory> categories,
+  required final RuleMatchIndex ruleMatchIndex,
+  required final String? selectedTransactionId,
+  required final ActivityColumnWidths columnWidths,
+  required final void Function(BankTransaction transaction)
+  onTransactionSelected,
+  required final void Function(CategorizationRule rule) onRuleSelected,
+}) extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    final listItems = ActivityDayGrouping.items(transactions);
+    return SliverPadding(
+      padding: ETabBarOverlay.paddingOf(
+        context,
+        contentPadding: const EdgeInsets.fromLTRB(
+          ELayout.spaceLg,
+          0,
+          ELayout.spaceLg,
+          ELayout.spaceLg,
+        ),
+      ),
+      sliver: SliverList(
+        delegate: SliverChildBuilderDelegate((context, index) {
+          final listItem = listItems[index];
+          if (listItem is ActivityDayHeader) {
+            return _ActivityDayHeaderTile(
+              label: listItem.label,
+              isFirst: index == 0,
+            );
+          }
+          final transaction =
+              (listItem as ActivityDayTransactionItem).transaction;
+          final account = accounts[transaction.accountId];
+          final category = categories[transaction.categoryId];
+          final CategorizationRule? categorizingRule =
+              ruleMatchIndex.rulesById[transaction.categoryRuleId];
+          return Padding(
+            padding: const EdgeInsets.only(bottom: ELayout.spaceSm),
+            child: ActivityTransactionTile(
+              transaction: transaction,
+              account: account,
+              category: category,
+              selected: selectedTransactionId == transaction.id,
+              columnWidths: columnWidths,
+              onActivated: () => onTransactionSelected(transaction),
+              onRuleSelected: categorizingRule == null
+                  ? null
+                  : () => onRuleSelected(categorizingRule),
+            ),
+          );
+        }, childCount: listItems.length),
+      ),
+    );
+  }
+}
+
+/// Groups transactions under Today / Yesterday / weekday headers.
+class ActivityDayGrouping._() {
+  static List<ActivityDayListItem> items(List<BankTransaction> transactions) {
+    final today = CalendarDay.today();
+    final yesterday = today.plusDays(-1);
+    final listItems = <ActivityDayListItem>[];
+    CalendarDay? currentDay;
+
+    for (final transaction in transactions) {
+      final CalendarDay day = transaction.postedDay;
+      if (currentDay != day) {
+        currentDay = day;
+        listItems.add(
+          ActivityDayHeader(label: _dayHeaderLabel(day, today, yesterday)),
+        );
+      }
+      listItems.add(ActivityDayTransactionItem(transaction: transaction));
+    }
+    return listItems;
+  }
+
+  static String _dayHeaderLabel(
+    CalendarDay day,
+    CalendarDay today,
+    CalendarDay yesterday,
+  ) {
+    if (day == today) return 'Today';
+    if (day == yesterday) return 'Yesterday';
+    final DateTime midnight = day.localMidnight;
+    if (day.year == today.year) {
+      return DateFormat('EEEE, MMM d').format(midnight);
+    }
+    return DateFormat('EEEE, MMM d, y').format(midnight);
+  }
+}
+
+sealed class const ActivityDayListItem();
+
+class const ActivityDayHeader({required final String label})
+    extends ActivityDayListItem;
+
+class const ActivityDayTransactionItem({
+  required final BankTransaction transaction,
+}) extends ActivityDayListItem;
+
+class const _ActivityDayHeaderTile({
+  required final String label,
+  required final bool isFirst,
+}) extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: EdgeInsets.only(
+        top: isFirst ? ELayout.spaceXs : ELayout.spaceLg,
+        bottom: ELayout.spaceSm,
+      ),
+      child: Row(
+        children: [
+          Text(
+            label,
+            style: EText.body.medium.copyWith(
+              fontWeight: FontWeight.w600,
+              color: EColors.textSecondary,
+              letterSpacing: 0.2,
+            ),
+          ),
+          const SizedBox(width: ELayout.spaceMd),
+          Expanded(child: Container(height: 1, color: EColors.border)),
+        ],
+      ),
+    );
+  }
+}

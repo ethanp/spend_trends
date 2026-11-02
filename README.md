@@ -45,17 +45,19 @@ SimpleFIN Bridge ──HTTP──► App (claim + /accounts)
 
 ## Code layout
 
+Four layers, each grouped by subject inside (`accounts/`, `categories/`, …):
+
 | Dir | Role |
 |-----|------|
-| `features/shell/` | `MaterialApp` + tab shell |
-| `features/trends/` | Smoothed category trend charts (primary tab) |
-| `features/*/` | Activity, Categories, Settings UI |
-| `domain/` | Models + use cases (ingest, categorize, spend rollups) |
-| `services/` | SimpleFIN, PowerSync repos, CSV, LLM, ethan_sync config |
-| `providers/` | Riverpod wiring |
-| `agent_api/` | Loopback HTTP API for agent categorization audits (macOS) |
-| `theme/` | Finance accent overlay (`FinanceColors`); chrome via `ethan_ui` |
-| `widgets/`, `util/` | Shared UI/helpers |
+| `domain/` | Plain Dart models and rules: transactions, categories, accounts, trend math, projection. No Flutter, Riverpod, or database. |
+| `use_cases/` | Operations that change data: categorize, SimpleFIN pull, CSV import, manual balances, projection assumptions. |
+| `data/` | PowerSync repositories + their read providers, SimpleFIN client, Copilot CSV / Empower parsers, LLM prompt. |
+| `ui/` | One folder per tab (`activity/`, `banks/`, `trends/`, …) plus `widgets/` and `theme/`. |
+| `agent_api/` | Loopback HTTP API for agent categorization audits (macOS). |
+
+Dependencies point one way: `ui` and `agent_api` → `use_cases` → `domain`;
+anything but `domain` may use `data`. `test/layer_dependencies_test.dart`
+fails on an import that breaks this. `test/` mirrors `lib/`.
 
 ## Setup
 

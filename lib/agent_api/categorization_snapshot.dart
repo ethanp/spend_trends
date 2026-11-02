@@ -1,13 +1,13 @@
 import 'package:ethan_utils/ethan_utils.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:spend_trends/domain/account.dart';
-import 'package:spend_trends/domain/category.dart';
-import 'package:spend_trends/domain/category_group.dart';
-import 'package:spend_trends/domain/special_category.dart';
-import 'package:spend_trends/domain/transaction.dart';
-import 'package:spend_trends/services/sqlite/accounts_repository.dart';
-import 'package:spend_trends/services/sqlite/categories_repository.dart';
-import 'package:spend_trends/services/sqlite/transactions_repository.dart';
+import 'package:spend_trends/domain/accounts/account.dart';
+import 'package:spend_trends/domain/categories/category.dart';
+import 'package:spend_trends/domain/categories/category_group.dart';
+import 'package:spend_trends/domain/categories/special_category.dart';
+import 'package:spend_trends/domain/transactions/transaction.dart';
+import 'package:spend_trends/data/repositories/accounts_repository.dart';
+import 'package:spend_trends/data/repositories/categories_repository.dart';
+import 'package:spend_trends/data/repositories/transactions_repository.dart';
 
 /// One consistent read of categories, rules, accounts, and transactions,
 /// rendered as JSON with the context an agent needs to judge a category:

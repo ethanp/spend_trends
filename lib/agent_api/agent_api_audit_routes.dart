@@ -6,19 +6,17 @@ import 'package:spend_trends/agent_api/agent_api_json.dart';
 import 'package:spend_trends/agent_api/categorization_snapshot.dart';
 import 'package:spend_trends/agent_api/rule_change_request.dart';
 import 'package:spend_trends/agent_api/transaction_query.dart';
-import 'package:spend_trends/domain/account.dart';
-import 'package:spend_trends/domain/account_balance_snapshot.dart';
-import 'package:spend_trends/domain/account_kind.dart';
-import 'package:spend_trends/domain/cash_flow_breakdown.dart';
-import 'package:spend_trends/domain/categorizer.dart';
-import 'package:spend_trends/domain/conscious_spending_area.dart';
-import 'package:spend_trends/domain/remove_copilot_duplicates.dart';
-import 'package:spend_trends/domain/transaction.dart';
-import 'package:spend_trends/features/categories/categories_providers.dart';
-import 'package:spend_trends/features/settings/remove_copilot_duplicates_provider.dart';
-import 'package:spend_trends/providers/spend_data_changed.dart';
-import 'package:spend_trends/services/sqlite/account_balance_snapshots_repository.dart';
-import 'package:spend_trends/services/sqlite/transactions_repository.dart';
+import 'package:spend_trends/domain/accounts/account.dart';
+import 'package:spend_trends/domain/accounts/account_balance_snapshot.dart';
+import 'package:spend_trends/domain/accounts/account_kind.dart';
+import 'package:spend_trends/domain/categories/cash_flow_breakdown.dart';
+import 'package:spend_trends/use_cases/categories/categorizer.dart';
+import 'package:spend_trends/domain/categories/conscious_spending_area.dart';
+import 'package:spend_trends/use_cases/csv_import/remove_copilot_duplicates.dart';
+import 'package:spend_trends/domain/transactions/transaction.dart';
+import 'package:spend_trends/data/sync/spend_data_changed.dart';
+import 'package:spend_trends/data/repositories/account_balance_snapshots_repository.dart';
+import 'package:spend_trends/data/repositories/transactions_repository.dart';
 
 /// Auditing where money went without scripting over raw rows: totals by any
 /// grouping, a window's cash flow decomposed, notes on many rows at once,

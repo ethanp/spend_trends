@@ -1,8 +1,8 @@
 import 'package:ethan_utils/ethan_utils.dart';
 import 'package:spend_trends/agent_api/agent_api_json.dart';
 import 'package:spend_trends/agent_api/categorization_snapshot.dart';
-import 'package:spend_trends/domain/category.dart';
-import 'package:spend_trends/domain/rule_change_plan.dart';
+import 'package:spend_trends/domain/categories/category.dart';
+import 'package:spend_trends/domain/categories/rule_change_plan.dart';
 
 /// Rule upserts and deletions from a request body, validated against the
 /// current categories and accounts.

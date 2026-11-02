@@ -1,0 +1,30 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:spend_trends/domain/transactions/transaction.dart';
+import 'package:spend_trends/data/sync/spend_data_changed.dart';
+import 'package:spend_trends/data/repositories/transactions_repository.dart';
+
+/// Time window for transactions first imported during one SimpleFIN pull.
+class const PullImportWindow({
+  required final DateTime startedAt,
+  final DateTime? finishedAt,
+}) {
+  @override
+  bool operator ==(Object other) =>
+      other is PullImportWindow &&
+      other.startedAt == startedAt &&
+      other.finishedAt == finishedAt;
+
+  @override
+  int get hashCode => Object.hash(startedAt, finishedAt);
+}
+
+final pullImportedTransactionsProvider =
+    FutureProvider.family<List<BankTransaction>, PullImportWindow>((
+      ref,
+      window,
+    ) async {
+      ref.watch(spendDataChangedProvider);
+      final repository = await ref.watch(transactionsRepositoryProvider.future);
+      final end = window.finishedAt ?? DateTime.now().toUtc();
+      return repository.listImportedBetween(window.startedAt, end);
+    });

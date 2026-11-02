@@ -1,9 +1,9 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:spend_trends/agent_api/categorization_snapshot.dart';
 import 'package:spend_trends/domain/projection/retirement_projection.dart';
-import 'package:spend_trends/services/sqlite/life_events_repository.dart';
-import 'package:spend_trends/services/sqlite/owned_assets_repository.dart';
-import 'package:spend_trends/services/sqlite/projection_settings_repository.dart';
+import 'package:spend_trends/data/repositories/life_events_repository.dart';
+import 'package:spend_trends/data/repositories/owned_assets_repository.dart';
+import 'package:spend_trends/data/repositories/projection_settings_repository.dart';
 
 /// The retirement projection read straight from the repositories. Screen
 /// providers pause while their tab is hidden, so the API never reads them.

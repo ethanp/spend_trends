@@ -4,15 +4,14 @@ import 'package:shelf_router/shelf_router.dart';
 import 'package:spend_trends/agent_api/agent_api_json.dart';
 import 'package:spend_trends/agent_api/categorization_snapshot.dart';
 import 'package:spend_trends/agent_api/rule_change_request.dart';
-import 'package:spend_trends/domain/account.dart';
-import 'package:spend_trends/domain/account_kind.dart';
-import 'package:spend_trends/domain/categorizer.dart';
-import 'package:spend_trends/domain/transaction.dart';
-import 'package:spend_trends/features/categories/categories_providers.dart';
-import 'package:spend_trends/providers/spend_data_changed.dart';
-import 'package:spend_trends/services/sqlite/accounts_repository.dart';
-import 'package:spend_trends/services/sqlite/transactions_repository.dart';
-import 'package:spend_trends/util/merchant_normalize.dart';
+import 'package:spend_trends/domain/accounts/account.dart';
+import 'package:spend_trends/domain/accounts/account_kind.dart';
+import 'package:spend_trends/use_cases/categories/categorizer.dart';
+import 'package:spend_trends/domain/transactions/transaction.dart';
+import 'package:spend_trends/data/sync/spend_data_changed.dart';
+import 'package:spend_trends/data/repositories/accounts_repository.dart';
+import 'package:spend_trends/data/repositories/transactions_repository.dart';
+import 'package:spend_trends/domain/transactions/merchant_normalize.dart';
 import 'package:uuid/uuid.dart';
 
 /// History backfill from aggregator exports (Empower, …): history-only

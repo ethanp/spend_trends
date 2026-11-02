@@ -1,0 +1,162 @@
+import 'package:ethan_ui/ethan_ui.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
+import 'package:spend_trends/domain/accounts/account.dart';
+import 'package:spend_trends/domain/accounts/account_balance_snapshot.dart';
+import 'package:spend_trends/domain/categories/category.dart';
+import 'package:spend_trends/domain/categories/category_group.dart';
+import 'package:spend_trends/domain/transactions/transaction.dart';
+import 'package:spend_trends/domain/trends/trend_spend_rate.dart';
+import 'package:spend_trends/data/repositories/transactions_repository.dart';
+import 'package:spend_trends/ui/trends/category_trend_chart.dart';
+import 'package:spend_trends/ui/trends/category_trend_series.dart';
+import 'package:spend_trends/ui/trends/net_worth_trend.dart';
+
+import 'bank_account_options.dart';
+
+import 'package:spend_trends/data/repositories/accounts_repository.dart';
+import 'package:spend_trends/data/repositories/account_balance_snapshots_repository.dart';
+
+import 'manual_account_balances.dart';
+
+class const BankAccountDetailPane({required final Account account})
+    extends ConsumerWidget {
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final AsyncValue<List<BankTransaction>> transactionsAsync = ref.watch(
+      transactionsListProvider,
+    );
+    final AsyncValue<Map<String, Account>> accountsAsync = ref.watch(
+      accountsMapProvider,
+    );
+    final List<AccountBalanceSnapshot> balanceSnapshots =
+        ref.watch(accountBalanceSnapshotsProvider).asData?.value ?? const [];
+    return ListView(
+      padding: ETabBarOverlay.paddingOf(context),
+      children: [
+        _accountSummary(),
+        const SizedBox(height: ELayout.spaceLg),
+        _balanceHistorySection(
+          transactionsAsync: transactionsAsync,
+          accountsAsync: accountsAsync,
+          balanceSnapshots: balanceSnapshots,
+        ),
+        if (account.isManual) ...[
+          const SizedBox(height: ELayout.spaceLg),
+          ManualAccountBalances(
+            account: account,
+            balanceSnapshots: balanceSnapshots,
+          ),
+        ],
+      ],
+    );
+  }
+
+  Widget _accountSummary() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(account.displayName, style: EText.section),
+        const SizedBox(height: ELayout.spaceXs),
+        Text(account.institutionDisplayName, style: EText.body.medium),
+        if (account.isCopilot) ...[
+          const SizedBox(height: ELayout.spaceXs),
+          Text('Copilot import', style: EText.caption),
+        ],
+        if (account.isManual) ...[
+          const SizedBox(height: ELayout.spaceXs),
+          Text(
+            account.balanceAsOf == null
+                ? 'Manual · no balance recorded'
+                : 'Manual · balance as of '
+                      '${DateFormat.yMMMd().format(account.balanceAsOf!)}',
+            style: EText.caption.copyWith(
+              color: account.isManualBalanceStale(DateTime.now())
+                  ? EColors.warning
+                  : null,
+            ),
+          ),
+        ],
+        const SizedBox(height: ELayout.spaceLg),
+        Text(
+          'Balance',
+          style: EText.caption.copyWith(fontWeight: FontWeight.w600),
+        ),
+        const SizedBox(height: ELayout.spaceXs),
+        Text(account.balanceCaption, style: EText.title),
+        const SizedBox(height: ELayout.spaceLg),
+        BankAccountOptions(account: account),
+      ],
+    );
+  }
+
+  Widget _balanceHistorySection({
+    required AsyncValue<List<BankTransaction>> transactionsAsync,
+    required AsyncValue<Map<String, Account>> accountsAsync,
+    required List<AccountBalanceSnapshot> balanceSnapshots,
+  }) {
+    if (transactionsAsync.hasError) {
+      return Text(
+        '${transactionsAsync.error}',
+        style: EText.body.medium.copyWith(color: EColors.danger),
+      );
+    }
+    if (accountsAsync.hasError) {
+      return Text(
+        '${accountsAsync.error}',
+        style: EText.body.medium.copyWith(color: EColors.danger),
+      );
+    }
+    final transactions = transactionsAsync.asData?.value;
+    final accounts = accountsAsync.asData?.value;
+    if (transactions == null || accounts == null) {
+      return const SizedBox(
+        height: 420,
+        child: Center(child: CircularProgressIndicator()),
+      );
+    }
+    return _balanceHistory(
+      transactions: transactions,
+      accounts: accounts.values.toList(),
+      balanceSnapshots: balanceSnapshots,
+    );
+  }
+
+  Widget _balanceHistory({
+    required List<BankTransaction> transactions,
+    required List<Account> accounts,
+    required List<AccountBalanceSnapshot> balanceSnapshots,
+  }) {
+    final CategoryTrendSeries? accountSeries =
+        NetWorthTrend.balanceHistorySeries(
+          account: account,
+          accounts: accounts,
+          transactions: transactions,
+          balanceSnapshots: balanceSnapshots,
+        );
+    if (accountSeries == null || !accountSeries.canPlot) {
+      return Text(
+        'Not enough posted history to reconstruct a trend. '
+        'The amount above is the current snapshot.',
+        style: EText.caption,
+      );
+    }
+    return CategoryTrendChart(
+      title: 'Balance history',
+      titleHelp: account.isManual
+          ? 'Each recorded balance holds until the next one. '
+                'Hover the chart to inspect a date.'
+          : 'Daily balance reconstructed from the current balance and posted '
+                'transactions. Hover the chart to inspect a date.',
+      subtitle: null,
+      seriesList: [accountSeries],
+      transactions: const <BankTransaction>[],
+      categories: const <SpendCategory>[],
+      groups: const <CategoryGroup>[],
+      valueKind: TrendValueKind.level,
+      enableContributors: false,
+      maxChartHeight: 420,
+    );
+  }
+}

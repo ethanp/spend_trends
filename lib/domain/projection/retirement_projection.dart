@@ -1,15 +1,15 @@
 import 'dart:math' as math;
 
-import 'package:spend_trends/domain/account.dart';
-import 'package:spend_trends/domain/category.dart';
-import 'package:spend_trends/domain/life_event.dart';
-import 'package:spend_trends/domain/owned_asset.dart';
+import 'package:spend_trends/domain/accounts/account.dart';
+import 'package:spend_trends/domain/categories/category.dart';
+import 'package:spend_trends/domain/projection/life_event.dart';
+import 'package:spend_trends/domain/accounts/owned_asset.dart';
 import 'package:spend_trends/domain/projection/life_plan.dart';
 import 'package:spend_trends/domain/projection/projection_assumptions.dart';
 import 'package:spend_trends/domain/projection/projection_starting_point.dart';
 import 'package:spend_trends/domain/projection/savings_balances.dart';
-import 'package:spend_trends/domain/account_tax_treatment.dart';
-import 'package:spend_trends/domain/transaction.dart';
+import 'package:spend_trends/domain/accounts/account_tax_treatment.dart';
+import 'package:spend_trends/domain/transactions/transaction.dart';
 
 /// One simulated year, valued at the end of the year you turn [age], in
 /// today's dollars.

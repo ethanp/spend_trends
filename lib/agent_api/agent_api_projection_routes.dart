@@ -3,8 +3,8 @@ import 'package:shelf/shelf.dart';
 import 'package:shelf_router/shelf_router.dart';
 import 'package:spend_trends/agent_api/agent_api_json.dart';
 import 'package:spend_trends/agent_api/live_retirement_projection.dart';
-import 'package:spend_trends/domain/account_tax_treatment.dart';
-import 'package:spend_trends/features/projections/projections_providers.dart';
+import 'package:spend_trends/domain/accounts/account_tax_treatment.dart';
+import 'package:spend_trends/use_cases/projection/projection_assumptions_editor.dart';
 
 /// The Projections tab's retirement projection, and its assumptions.
 class const AgentApiProjectionRoutes({

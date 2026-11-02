@@ -1,4 +1,4 @@
-import 'package:spend_trends/domain/life_event.dart';
+import 'package:spend_trends/domain/projection/life_event.dart';
 
 /// The life events the projection reads: which job and home apply on a day
 /// (the latest-started one wins), and every child.

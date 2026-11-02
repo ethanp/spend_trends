@@ -1,6 +1,6 @@
 import 'package:spend_trends/agent_api/categorization_snapshot.dart';
-import 'package:spend_trends/domain/account_kind.dart';
-import 'package:spend_trends/domain/transaction.dart';
+import 'package:spend_trends/domain/accounts/account_kind.dart';
+import 'package:spend_trends/domain/transactions/transaction.dart';
 
 /// Filter shared by `/transactions`, `/transactions/totals`, `/merchants`,
 /// and the `query` of `POST /transactions/notes`.

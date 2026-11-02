@@ -5,14 +5,13 @@ import 'package:shelf_router/shelf_router.dart';
 import 'package:spend_trends/agent_api/agent_api_json.dart';
 import 'package:spend_trends/agent_api/categorization_snapshot.dart';
 import 'package:spend_trends/agent_api/rule_change_request.dart';
-import 'package:spend_trends/domain/account.dart';
-import 'package:spend_trends/domain/account_kind.dart';
-import 'package:spend_trends/domain/account_tax_treatment.dart';
-import 'package:spend_trends/domain/manual_accounts.dart';
-import 'package:spend_trends/domain/pull_simplefin_transactions.dart';
-import 'package:spend_trends/features/banks/banks_providers.dart';
-import 'package:spend_trends/providers/spend_data_changed.dart';
-import 'package:spend_trends/services/sqlite/accounts_repository.dart';
+import 'package:spend_trends/domain/accounts/account.dart';
+import 'package:spend_trends/domain/accounts/account_kind.dart';
+import 'package:spend_trends/domain/accounts/account_tax_treatment.dart';
+import 'package:spend_trends/use_cases/accounts/manual_accounts.dart';
+import 'package:spend_trends/use_cases/simplefin_pull/pull_simplefin_transactions.dart';
+import 'package:spend_trends/data/sync/spend_data_changed.dart';
+import 'package:spend_trends/data/repositories/accounts_repository.dart';
 
 /// Bank pulls and account fixes, the same calls the Banks tab makes.
 class const AgentApiBankRoutes({required final ProviderContainer container}) {

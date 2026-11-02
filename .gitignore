@@ -58,7 +58,7 @@ app.*.map.json
 /android/app/release
 
 # Golden comparison leftovers
-test/failures/
+**/failures/
 
 # Raw aggregator exports (Empower, Copilot) hold personal financial data.
 # The app keeps its copies in Application Support; never commit one.
