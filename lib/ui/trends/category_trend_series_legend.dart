@@ -223,9 +223,7 @@ class const _SeriesLegendEntries({
   required final ValueChanged<String> onSeriesToggled,
   required final ValueChanged<String> onSeriesSoloed,
 }) {
-  List<EChartLegendEntry> get entries => [
-    for (final series in seriesList) _entry(series),
-  ];
+  List<EChartLegendEntry> get entries => seriesList.mapL(_entry);
 
   EChartLegendEntry _entry(CategoryTrendSeries series) {
     final isHidden = hiddenSeriesIds.contains(series.id);

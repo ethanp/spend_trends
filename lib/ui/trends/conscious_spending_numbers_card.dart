@@ -115,10 +115,9 @@ class const _ConsciousSpendingNumbersGrid({
       children: [
         _gridRow(
           rowLabel: '',
-          windowCells: [
-            for (final window in _windows)
-              Text(window.label, style: _labelStyle),
-          ],
+          windowCells: _windows.mapL(
+            (window) => Text(window.label, style: _labelStyle),
+          ),
         ),
         for (final area in ConsciousSpendingArea.values)
           _numberBlock(
@@ -163,34 +162,31 @@ class const _ConsciousSpendingNumbersGrid({
           _blockHeading(name: name, color: color, guideline: guideline),
           _gridRow(
             rowLabel: 'of pay',
-            windowCells: [
-              for (final window in _windows)
-                _percentCell(
-                  percentOfPay(consciousSpendingNumbers?.totalsFor(window)),
-                  guideline,
-                ),
-            ],
+            windowCells: _windows.mapL(
+              (window) => _percentCell(
+                percentOfPay(consciousSpendingNumbers?.totalsFor(window)),
+                guideline,
+              ),
+            ),
           ),
           _gridRow(
             rowLabel: 'actual',
-            windowCells: [
-              for (final window in _windows)
-                _monthOverYearCell(
-                  annualCents(consciousSpendingNumbers?.totalsFor(window)),
-                  monthStyle: _valueStyle,
-                ),
-            ],
+            windowCells: _windows.mapL(
+              (window) => _monthOverYearCell(
+                annualCents(consciousSpendingNumbers?.totalsFor(window)),
+                monthStyle: _valueStyle,
+              ),
+            ),
           ),
           if (guideline != null)
             _gridRow(
               rowLabel: 'target',
-              windowCells: [
-                for (final window in _windows)
-                  _monthOverYearCell(
-                    _impliedTargetCents(guideline, window),
-                    monthStyle: _labelStyle,
-                  ),
-              ],
+              windowCells: _windows.mapL(
+                (window) => _monthOverYearCell(
+                  _impliedTargetCents(guideline, window),
+                  monthStyle: _labelStyle,
+                ),
+              ),
             ),
         ],
       ),

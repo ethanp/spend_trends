@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:ethan_utils/ethan_utils.dart';
 import 'package:spend_trends/domain/accounts/account.dart';
 import 'package:spend_trends/domain/accounts/account_kind.dart';
 import 'package:spend_trends/domain/categories/conscious_spending_area.dart';
@@ -370,9 +371,7 @@ void main() {
       step: 0.1,
       outcomeKind: SweepOutcomeKind.investingPercentNeeded,
     );
-    final investingPercents = [
-      for (final point in sweep.points) point.outcome!,
-    ];
+    final investingPercents = sweep.points.mapL((point) => point.outcome!);
     expect(sweep.points.first.value, 2);
     expect(sweep.points.last.value, 9);
     for (var index = 1; index < investingPercents.length; index++) {

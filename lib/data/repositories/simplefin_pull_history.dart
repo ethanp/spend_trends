@@ -1,5 +1,7 @@
 import 'dart:convert';
 
+import 'package:ethan_utils/ethan_utils.dart';
+
 import 'package:spend_trends/data/simplefin/simplefin_models.dart';
 import 'package:ethan_sync/ethan_sync.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -166,7 +168,7 @@ class SimpleFinPullHistory(final PowerSyncDatabase _powerSync) {
     );
     if (pullRows.isEmpty) return const [];
 
-    final pullIds = [for (final row in pullRows) row['id'] as String];
+    final pullIds = pullRows.mapL((row) => row['id'] as String);
     final placeholders = List.filled(pullIds.length, '?').join(', ');
     final accountRows = await _powerSync.getAll('''
       SELECT * FROM simplefin_pull_accounts
@@ -178,10 +180,10 @@ class SimpleFinPullHistory(final PowerSyncDatabase _powerSync) {
       accountsByPullId.putIfAbsent(record.pullId, () => []).add(record);
     }
 
-    return [
-      for (final row in pullRows)
-        _pullFromRow(row, accountsByPullId[row['id'] as String] ?? const []),
-    ];
+    return pullRows.mapL(
+      (row) =>
+          _pullFromRow(row, accountsByPullId[row['id'] as String] ?? const []),
+    );
   }
 
   Future<SimpleFinPullRecord?> latestFinished() async {
@@ -311,7 +313,7 @@ class SimpleFinPullHistory(final PowerSyncDatabase _powerSync) {
       'SELECT * FROM simplefin_pull_accounts WHERE pull_id = ?',
       [pullId],
     );
-    return [for (final row in rows) _accountFromRow(row)];
+    return rows.mapL(_accountFromRow);
   }
 
   SimpleFinPullRecord _pullFromRow(

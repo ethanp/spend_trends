@@ -1,4 +1,7 @@
 import 'dart:convert';
+
+import 'package:ethan_utils/ethan_utils.dart';
+
 import 'dart:io';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -43,14 +46,13 @@ class const AgentApiEmpowerRoutes({
     final directory = await _importsDirectory();
     return jsonOk({
       'folder': directory.path,
-      'exports': [
-        for (final file in _savedExports(directory))
-          {
-            'file': p.basename(file.path),
-            'bytes': file.lengthSync(),
-            'savedAt': file.lastModifiedSync().toIso8601String(),
-          },
-      ],
+      'exports': _savedExports(directory).mapL(
+        (file) => {
+          'file': p.basename(file.path),
+          'bytes': file.lengthSync(),
+          'savedAt': file.lastModifiedSync().toIso8601String(),
+        },
+      ),
       'accountMapping': {
         for (final entry in (await _accountMapping(directory)).entries)
           '${entry.key}': entry.value.toJson(),
@@ -94,10 +96,9 @@ class const AgentApiEmpowerRoutes({
 
     final exportJson =
         jsonDecode(export.readAsStringSync()) as Map<String, dynamic>;
-    final incoming = [
-      for (final row in (exportJson['spData']['transactions'] as List))
-        EmpowerTransaction.fromJson(row as Map<String, dynamic>),
-    ];
+    final incoming = (exportJson['spData']['transactions'] as List).mapL(
+      (row) => EmpowerTransaction.fromJson(row as Map<String, dynamic>),
+    );
     final importPlan =
         EmpowerTransactionsImport(
           mappingByEmpowerAccountId: mappingByEmpowerAccountId,
@@ -118,14 +119,12 @@ class const AgentApiEmpowerRoutes({
       'recordedByOtherSource': importPlan.recordedByOtherSource.length,
       'unmatchedEarlierImports': importPlan.unmatchedEarlierImports.length,
       'insertByAccount': _countAndCentsByAccount(importPlan.inserts, snapshot),
-      'insertSample': [
-        for (final transaction in importPlan.inserts.take(30))
-          _rowJson(transaction, snapshot),
-      ],
-      'unmatchedEarlierImportSample': [
-        for (final transaction in importPlan.unmatchedEarlierImports.take(30))
-          _rowJson(transaction, snapshot),
-      ],
+      'insertSample': importPlan.inserts
+          .take(30)
+          .mapL((transaction) => _rowJson(transaction, snapshot)),
+      'unmatchedEarlierImportSample': importPlan.unmatchedEarlierImports
+          .take(30)
+          .mapL((transaction) => _rowJson(transaction, snapshot)),
     };
     if (body['dryRun'] == true) return jsonOk(report);
 

@@ -76,10 +76,12 @@ void main() {
       DateTime(2024, 1, 4),
     ];
 
-    expect(
-      owned.dailyCents([for (final date in chartDates) date.calendarDay]),
-      [0.0, 10000000.0, 10000000.0, 12000000.0],
-    );
+    expect(owned.dailyCents(chartDates.mapL((date) => date.calendarDay)), [
+      0.0,
+      10000000.0,
+      10000000.0,
+      12000000.0,
+    ]);
   });
 
   test('value is 0 on and after the sold date', () {

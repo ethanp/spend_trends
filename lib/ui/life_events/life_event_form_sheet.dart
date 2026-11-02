@@ -154,17 +154,16 @@ class _LifeEventFormSheetState() extends ConsumerState<LifeEventFormSheet> {
     return Wrap(
       spacing: ELayout.spaceXs,
       runSpacing: ELayout.spaceXs,
-      children: [
-        for (final kind in LifeEventKind.values)
-          ChoiceChip(
-            label: Text(kind.label),
-            selected: kind == _kind,
-            showCheckmark: false,
-            visualDensity: VisualDensity.compact,
-            materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-            onSelected: (_) => _selectKind(kind),
-          ),
-      ],
+      children: LifeEventKind.values.mapL(
+        (kind) => ChoiceChip(
+          label: Text(kind.label),
+          selected: kind == _kind,
+          showCheckmark: false,
+          visualDensity: VisualDensity.compact,
+          materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+          onSelected: (_) => _selectKind(kind),
+        ),
+      ),
     );
   }
 

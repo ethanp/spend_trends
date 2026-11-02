@@ -1,7 +1,4 @@
-import 'dart:math' as math;
-
 import 'package:ethan_ui/ethan_ui.dart';
-import 'package:ethan_utils/ethan_utils.dart';
 import 'package:flutter/material.dart';
 import 'package:spend_trends/domain/categories/category.dart';
 import 'package:spend_trends/domain/categories/category_spend_pace.dart';
@@ -9,42 +6,18 @@ import 'package:spend_trends/domain/categories/special_category.dart';
 import 'package:spend_trends/ui/categories/category_list_sections.dart';
 import 'package:spend_trends/ui/categories/category_spend_windows_row.dart';
 import 'package:spend_trends/ui/theme/category_color.dart';
-import 'package:spend_trends/ui/widgets/app_compact_fact_row.dart';
+import 'package:spend_trends/ui/theme/finance_colors.dart';
 
-/// Shared title column width so every category card is the widest card.
-class const CategoryBrowseColumnWidths({required final double title}) {
-  static const titleMax = 260.0;
-  static const leadingWidth = 10.0;
-  static const trailingWidth = 16.0;
+abstract final class _TileLayout() {
+  static const dotSize = 10.0;
+  static const chevronSize = 18.0;
 
-  factory measure({required List<CategoryListSection> sections}) {
-    final titleStyle = EText.section.copyWith(fontWeight: FontWeight.w600);
-    final titles = <String>[];
-    final captions = <String>[];
-    for (final section in sections) {
-      titles.add(section.title);
-      for (final category in section.categories) {
-        titles.add(category.name);
-        captions.add(CategoryBrowseFactRow.captionFor(category));
-      }
-    }
-    return CategoryBrowseColumnWidths(
-      title: math.min(
-        titleMax,
-        math.max(
-          CategorySpendWindowsRow.width,
-          math.max(
-            titles.widestLaidOutWidth(titleStyle),
-            captions.widestLaidOutWidth(EText.caption),
-          ),
-        ),
-      ),
-    );
-  }
+  /// Spend strip and dividers start under the name, past the dot.
+  static const contentInset = dotSize + ELayout.spaceMd;
 }
 
-/// Left Categories browse list: grouped compact fact rows, each with its
-/// average monthly spend over 2y · 1y · 6mo · 3mo.
+/// Left Categories browse list: grouped list tiles, each with its average
+/// monthly spend over 2y · 1y · 6mo · 3mo.
 class const CategoryBrowseList({
   required final List<CategoryListSection> sections,
   required final Map<String, CategorySpendPace> pacesByCategoryId,
@@ -55,7 +28,6 @@ class const CategoryBrowseList({
 }) extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    final columnWidths = CategoryBrowseColumnWidths.measure(sections: sections);
     return ListView(
       padding: ETabBarOverlay.paddingOf(context),
       children: [
@@ -63,13 +35,12 @@ class const CategoryBrowseList({
           padding: const EdgeInsets.symmetric(horizontal: ELayout.spaceMd),
           child: Text('Average spend per month', style: EText.caption),
         ),
-        const SizedBox(height: ELayout.spaceMd),
+        const SizedBox(height: ELayout.spaceSm),
         for (var index = 0; index < sections.length; index++) ...[
           if (index > 0) const SizedBox(height: ELayout.spaceLg),
           CategoryBrowseSection(
             section: sections[index],
             pacesByCategoryId: pacesByCategoryId,
-            columnWidths: columnWidths,
             selectedCategoryId: selectedCategoryId,
             onGroupOpened: sections[index].group == null
                 ? null
@@ -86,7 +57,6 @@ class const CategoryBrowseList({
 class const CategoryBrowseSection({
   required final CategoryListSection section,
   required final Map<String, CategorySpendPace> pacesByCategoryId,
-  required final CategoryBrowseColumnWidths columnWidths,
   required final String? selectedCategoryId,
   required final VoidCallback? onGroupOpened,
   required final void Function(SpendCategory category) onCategorySelected,
@@ -99,25 +69,31 @@ class const CategoryBrowseSection({
   @override
   Widget build(BuildContext context) {
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         _sectionHeader(),
-        if (section.categories.isEmpty) ...[
-          const SizedBox(height: ELayout.spaceSm),
-          Text(
-            'No categories · tap to edit',
-            style: EText.caption.copyWith(color: EColors.textMuted),
+        if (section.categories.isEmpty)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(
+              ELayout.spaceMd,
+              0,
+              ELayout.spaceMd,
+              ELayout.spaceSm,
+            ),
+            child: Text(
+              'No categories · tap to edit',
+              style: EText.caption.copyWith(color: EColors.textMuted),
+            ),
           ),
-        ],
-        for (final category in section.categories) ...[
-          const SizedBox(height: ELayout.spaceSm),
-          CategoryBrowseFactRow(
-            category: category,
-            spendPace: pacesByCategoryId[category.id],
-            columnWidths: columnWidths,
-            selected: selectedCategoryId == category.id,
-            onCategorySelected: () => onCategorySelected(category),
-            onCategoryOpened: () => onCategoryOpened(category),
+        for (var index = 0; index < section.categories.length; index++) ...[
+          if (index > 0) _tileDivider(),
+          CategoryBrowseTile(
+            category: section.categories[index],
+            spendPace: pacesByCategoryId[section.categories[index].id],
+            selected: selectedCategoryId == section.categories[index].id,
+            onCategorySelected: () =>
+                onCategorySelected(section.categories[index]),
+            onCategoryOpened: () => onCategoryOpened(section.categories[index]),
           ),
         ],
       ],
@@ -125,71 +101,149 @@ class const CategoryBrowseSection({
   }
 
   Widget _sectionHeader() {
-    return AppCompactFactRow(
-      leading: const SizedBox(width: CategoryBrowseColumnWidths.leadingWidth),
-      title: section.title,
-      titleWidth: columnWidths.title,
-      detail: _hidesSpendTotal
-          ? null
-          : CategorySpendWindowsRow(
-              monthlyCents: section.monthlyCents,
-              emphasized: false,
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: onGroupOpened,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(
+          ELayout.spaceMd,
+          ELayout.spaceSm,
+          ELayout.spaceMd,
+          ELayout.spaceSm,
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    section.title.toUpperCase(),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: EText.caption.copyWith(
+                      color: EColors.textMuted,
+                      fontWeight: FontWeight.w600,
+                      letterSpacing: 0.8,
+                    ),
+                  ),
+                ),
+                if (onGroupOpened != null)
+                  const Icon(
+                    Icons.chevron_right,
+                    size: _TileLayout.chevronSize,
+                    color: EColors.textMuted,
+                  ),
+              ],
             ),
-      trailing: onGroupOpened == null
-          ? const SizedBox(width: CategoryBrowseColumnWidths.trailingWidth)
-          : const Icon(
-              Icons.chevron_right,
-              size: CategoryBrowseColumnWidths.trailingWidth,
-              color: EColors.textMuted,
-            ),
-      decorate: false,
-      padding: const EdgeInsets.symmetric(horizontal: ELayout.spaceMd),
-      onActivated: onGroupOpened,
+            if (!_hidesSpendTotal) ...[
+              const SizedBox(height: ELayout.spaceXs),
+              CategorySpendWindowsRow(
+                monthlyCents: section.monthlyCents,
+                emphasized: false,
+              ),
+            ],
+          ],
+        ),
+      ),
     );
   }
+
+  Widget _tileDivider() => const Divider(
+    height: 1,
+    thickness: 0.5,
+    indent: ELayout.spaceMd + _TileLayout.contentInset,
+    color: EColors.border,
+  );
 }
 
-class const CategoryBrowseFactRow({
+class const CategoryBrowseTile({
   required final SpendCategory category,
   required final CategorySpendPace? spendPace,
-  required final CategoryBrowseColumnWidths columnWidths,
   required final bool selected,
   required final VoidCallback onCategorySelected,
   required final VoidCallback onCategoryOpened,
 }) extends StatelessWidget {
-  static String captionFor(SpendCategory category) =>
-      category.builtInCaption ??
-      category.consciousSpendingArea?.displayName ??
-      'No spending area';
-
   @override
   Widget build(BuildContext context) {
-    final tint = CategoryColor.forCategory(category);
-    return AppCompactFactRow(
-      leading: Container(
-        width: CategoryBrowseColumnWidths.leadingWidth,
-        height: CategoryBrowseColumnWidths.leadingWidth,
-        decoration: BoxDecoration(color: tint, shape: BoxShape.circle),
-      ),
-      title: category.name,
-      caption: captionFor(category),
-      titleWidth: columnWidths.title,
-      detail: category.isFlow
-          ? null
-          : CategorySpendWindowsRow(
-              monthlyCents: (window) => spendPace?.monthlyCents(window) ?? 0,
-            ),
-      trailing: GestureDetector(
-        onTap: onCategoryOpened,
-        child: const Icon(
-          Icons.chevron_right,
-          size: CategoryBrowseColumnWidths.trailingWidth,
-          color: EColors.textMuted,
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: onCategorySelected,
+      child: ColoredBox(
+        color: selected
+            ? FinanceColors.accentPrimary.withValues(alpha: 0.14)
+            : Colors.transparent,
+        child: Padding(
+          padding: const EdgeInsets.all(ELayout.spaceMd),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              _identityLine(),
+              if (!category.isFlow) ...[
+                const SizedBox(height: ELayout.spaceSm),
+                Padding(
+                  padding: const EdgeInsets.only(
+                    left: _TileLayout.contentInset,
+                  ),
+                  child: CategorySpendWindowsRow(
+                    monthlyCents: (window) =>
+                        spendPace?.monthlyCents(window) ?? 0,
+                  ),
+                ),
+              ],
+            ],
+          ),
         ),
       ),
-      tintColor: tint,
-      selected: selected,
-      onActivated: onCategorySelected,
+    );
+  }
+
+  Widget _identityLine() {
+    return Row(
+      children: [
+        Container(
+          width: _TileLayout.dotSize,
+          height: _TileLayout.dotSize,
+          decoration: BoxDecoration(
+            color: CategoryColor.forCategory(category),
+            shape: BoxShape.circle,
+          ),
+        ),
+        const SizedBox(width: ELayout.spaceMd),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                category.name,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: EText.section.copyWith(fontWeight: FontWeight.w600),
+              ),
+              Text(
+                category.builtInCaption ??
+                    category.consciousSpendingArea?.displayName ??
+                    'No spending area',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: EText.caption.copyWith(color: EColors.textMuted),
+              ),
+            ],
+          ),
+        ),
+        GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: onCategoryOpened,
+          child: const Padding(
+            padding: EdgeInsets.all(ELayout.spaceXs),
+            child: Icon(
+              Icons.chevron_right,
+              size: _TileLayout.chevronSize,
+              color: EColors.textMuted,
+            ),
+          ),
+        ),
+      ],
     );
   }
 }

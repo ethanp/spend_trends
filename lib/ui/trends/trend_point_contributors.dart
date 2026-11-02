@@ -49,9 +49,7 @@ class TrendPointContributors._() {
 
     final historyFloor = BankTransaction.completeHistoryStart.startOfDay;
 
-    final chartDates = [
-      for (final point in series.points) point.date.startOfDay,
-    ];
+    final chartDates = series.points.mapL((point) => point.date.startOfDay);
     final dayIndexByDay = <CalendarDay, int>{
       for (var dayIndex = 0; dayIndex < chartDates.length; dayIndex++)
         chartDates[dayIndex].calendarDay: dayIndex,

@@ -1,4 +1,5 @@
 import 'package:ethan_ui/ethan_ui.dart';
+import 'package:ethan_utils/ethan_utils.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:spend_trends/domain/categories/category.dart';
@@ -42,13 +43,12 @@ class const ExistingRuleOverlaps({
                   Wrap(
                     spacing: ELayout.spaceSm,
                     runSpacing: ELayout.spaceSm,
-                    children: [
-                      for (final entry in overlaps)
-                        _OverlappingRuleChip(
-                          key: ValueKey(entry.rule.id),
-                          entry: entry,
-                        ),
-                    ],
+                    children: overlaps.mapL(
+                      (entry) => _OverlappingRuleChip(
+                        key: ValueKey(entry.rule.id),
+                        entry: entry,
+                      ),
+                    ),
                   ),
                 ],
               ),

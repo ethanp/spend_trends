@@ -1,4 +1,5 @@
 import 'package:ethan_ui/ethan_ui.dart';
+import 'package:ethan_utils/ethan_utils.dart';
 import 'package:flutter/material.dart';
 import 'package:spend_trends/domain/trends/category_trend_distribution.dart';
 import 'package:spend_trends/ui/trends/trend_value_scale.dart';
@@ -284,10 +285,9 @@ class const DistributionWhiskerSymbolKey() extends StatelessWidget {
           Wrap(
             spacing: ELayout.spaceMd,
             runSpacing: ELayout.spaceXs,
-            children: [
-              for (final entry in _entries)
-                _keyItem(glyph: entry.$1, label: entry.$2),
-            ],
+            children: _entries.mapL(
+              (entry) => _keyItem(glyph: entry.$1, label: entry.$2),
+            ),
           ),
           const SizedBox(height: 4),
           Text(

@@ -24,13 +24,12 @@ class BankAccountsByInstitution._() {
         final rightName = byKey[right]!.first.institutionDisplayName;
         return leftName.compareTo(rightName);
       });
-    return [
-      for (final key in sortedKeys)
-        BankInstitutionGroup(
-          displayName: byKey[key]!.first.institutionDisplayName,
-          accounts: [...byKey[key]!]..sort(_byAbsoluteBalanceDescending),
-        ),
-    ];
+    return sortedKeys.mapL(
+      (key) => BankInstitutionGroup(
+        displayName: byKey[key]!.first.institutionDisplayName,
+        accounts: [...byKey[key]!]..sort(_byAbsoluteBalanceDescending),
+      ),
+    );
   }
 
   static int _byAbsoluteBalanceDescending(Account left, Account right) {

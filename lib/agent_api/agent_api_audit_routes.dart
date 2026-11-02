@@ -74,7 +74,7 @@ class const AgentApiAuditRoutes({required final ProviderContainer container}) {
         (sum, transaction) => sum + transaction.amountCents,
       ),
       'groupCount': groups.length,
-      'groups': [for (final group in groups.take(query.limit)) group.toJson()],
+      'groups': groups.take(query.limit).mapL((group) => group.toJson()),
     });
   }
 
@@ -111,13 +111,14 @@ class const AgentApiAuditRoutes({required final ProviderContainer container}) {
     final preview = {
       'matched': matching.length,
       'notesChanged': changedNoteById.length,
-      'sample': [
-        for (final transaction in matching.take(20))
-          {
-            ...snapshot.transactionJson(transaction),
-            'noteAfter': noteByTransactionId[transaction.id],
-          },
-      ],
+      'sample': matching
+          .take(20)
+          .mapL(
+            (transaction) => {
+              ...snapshot.transactionJson(transaction),
+              'noteAfter': noteByTransactionId[transaction.id],
+            },
+          ),
     };
     if (body['dryRun'] == true) return jsonOk(preview);
     final Categorizer categorizer = await container.read(
@@ -218,14 +219,13 @@ class const AgentApiAuditRoutes({required final ProviderContainer container}) {
                 account.kind == AccountKind.savings))
           account,
     ];
-    final rows = [
-      for (final account in cashAccounts)
-        {
-          'account': account.displayNameWithInstitution,
-          'startCents': _balanceOn(balances, account, firstDay.plusDays(-1)),
-          'endCents': _balanceOn(balances, account, lastDay),
-        },
-    ];
+    final rows = cashAccounts.mapL(
+      (account) => {
+        'account': account.displayNameWithInstitution,
+        'startCents': _balanceOn(balances, account, firstDay.plusDays(-1)),
+        'endCents': _balanceOn(balances, account, lastDay),
+      },
+    );
     int sumOf(String key) =>
         rows.fold(0, (sum, row) => sum + ((row[key] as int?) ?? 0));
     return {
@@ -279,13 +279,12 @@ class const AgentApiAuditRoutes({required final ProviderContainer container}) {
     return jsonOk({
       'account': snapshot.accountJson(account),
       'every': everyDay ? 'day' : 'month',
-      'balances': [
-        for (final balance in balanceByPeriod.values)
-          {
-            'recordedOn': balance.recordedDay.isoDate,
-            'balanceCents': balance.balanceCents,
-          },
-      ],
+      'balances': balanceByPeriod.values.mapL(
+        (balance) => {
+          'recordedOn': balance.recordedDay.isoDate,
+          'balanceCents': balance.balanceCents,
+        },
+      ),
     });
   }
 
@@ -488,12 +487,10 @@ class _CashFlowWindowTotals() {
       0,
       (sum, cents) => sum + cents,
     );
-    List<Map<String, Object?>> largestFirst(Map<String, int> centsByName) => [
-      for (final entry
-          in centsByName.entries.toList()
-            ..sort((left, right) => right.value.compareTo(left.value)))
-        {'name': entry.key, 'cents': entry.value},
-    ];
+    List<Map<String, Object?>> largestFirst(Map<String, int> centsByName) =>
+        (centsByName.entries.toList()
+              ..sort((left, right) => right.value.compareTo(left.value)))
+            .mapL((entry) => {'name': entry.key, 'cents': entry.value});
     return {
       'payCents': payCents,
       'takeHomeCents': takeHomeCents,

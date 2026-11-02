@@ -88,7 +88,7 @@ class const ProjectionChartCard({
           const SizedBox(height: ELayout.spaceMd),
           SizedBox(height: _chartHeight, child: _chart(lines, points)),
           const SizedBox(height: ELayout.spaceMd),
-          EChartLegend(entries: [for (final line in lines) _legendEntry(line)]),
+          EChartLegend(entries: lines.mapL(_legendEntry)),
           const SizedBox(height: ELayout.spaceXs),
           Text(
             'Actual through today (restated at the inflation assumption), '
@@ -148,24 +148,23 @@ class const ProjectionChartCard({
       start: points.first.date,
       end: points.last.date,
       valueScale: EChartValueScale.nice(peakMillions, tickSuffix: 'M'),
-      series: [
-        for (final line in lines)
-          EChartSeries<int>.line(
-            id: line.id,
-            color: line.color,
-            dash: line.dash,
-            strokeWidth: line.id == 'liquid' ? 2 : 1.2,
-            hits: EChartPointHits.ignore,
-            points: [
-              for (final point in points)
-                EChartPoint<int>(
-                  date: point.date,
-                  value: math.max(0, line.valueOf(point.savings)) / 1e6,
-                  id: point.date.millisecondsSinceEpoch,
-                ),
-            ],
-          ),
-      ],
+      series: lines.mapL(
+        (line) => EChartSeries<int>.line(
+          id: line.id,
+          color: line.color,
+          dash: line.dash,
+          strokeWidth: line.id == 'liquid' ? 2 : 1.2,
+          hits: EChartPointHits.ignore,
+          points: [
+            for (final point in points)
+              EChartPoint<int>(
+                date: point.date,
+                value: math.max(0, line.valueOf(point.savings)) / 1e6,
+                id: point.date.millisecondsSinceEpoch,
+              ),
+          ],
+        ),
+      ),
       annotations: [
         _YearMarker(date: projection.start.today, color: _todayColor),
         _YearMarker(

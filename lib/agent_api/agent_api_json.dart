@@ -1,5 +1,7 @@
 import 'dart:convert';
 
+import 'package:ethan_utils/ethan_utils.dart';
+
 import 'package:shelf/shelf.dart';
 
 const _jsonHeaders = {'Content-Type': 'application/json'};
@@ -39,6 +41,6 @@ extension AgentApiJsonFields on Map<String, dynamic> {
     if (value is! List || value.isEmpty) {
       throw ArgumentError('"$key" must be a non-empty list of ids.');
     }
-    return [for (final element in value) element as String];
+    return value.mapL((element) => element as String);
   }
 }

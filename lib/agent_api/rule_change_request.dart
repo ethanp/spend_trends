@@ -34,7 +34,7 @@ class const RuleChangeRequest({
       }
     }
     return RuleChangeRequest(
-      drafts: [for (final rule in ruleObjects) _draftFrom(rule, snapshot)],
+      drafts: ruleObjects.mapL((rule) => _draftFrom(rule, snapshot)),
       deletedRuleIds: deletedRuleIds,
     );
   }
@@ -93,33 +93,31 @@ class const RuleChangeReport({
       );
     }
     return {
-      'rules': [
-        for (final rule in plan.upserts)
-          {
-            'id': rule.id,
-            'isNew': !ruleIdsBefore.contains(rule.id),
-            'pattern': rule.pattern,
-            'matchType': rule.matchType.storageValue,
-            'accountId': rule.accountId,
-            'category': snapshot.categoriesById[rule.categoryId]?.name,
-            'excludesFromLifestyleCosts': rule.excludesFromLifestyleCosts,
-            'note': rule.note,
-            'takes': takenCountByRuleId[rule.id] ?? 0,
-          },
-      ],
+      'rules': plan.upserts.mapL(
+        (rule) => {
+          'id': rule.id,
+          'isNew': !ruleIdsBefore.contains(rule.id),
+          'pattern': rule.pattern,
+          'matchType': rule.matchType.storageValue,
+          'accountId': rule.accountId,
+          'category': snapshot.categoriesById[rule.categoryId]?.name,
+          'excludesFromLifestyleCosts': rule.excludesFromLifestyleCosts,
+          'note': rule.note,
+          'takes': takenCountByRuleId[rule.id] ?? 0,
+        },
+      ),
       'deletedRuleIds': plan.deletedRuleIds.toList(),
       'transactionsMoved': plan.recategorized.length,
       'categoryChanges': plan.categoryChanges.length,
       'byCategoryChange': _byCategoryChange(),
       if (includeAllTransactions)
-        'transactions': [
-          for (final move in plan.recategorized)
-            {
-              ...snapshot.transactionJson(move.transaction),
-              'newCategory': snapshot.categoriesById[move.categoryId]?.name,
-              'newRuleId': move.rule?.id,
-            },
-        ],
+        'transactions': plan.recategorized.mapL(
+          (move) => {
+            ...snapshot.transactionJson(move.transaction),
+            'newCategory': snapshot.categoriesById[move.categoryId]?.name,
+            'newRuleId': move.rule?.id,
+          },
+        ),
     };
   }
 
@@ -133,25 +131,24 @@ class const RuleChangeReport({
           )
           .add(move);
     }
-    final changes = [
-      for (final moves in movesByChange.values)
-        {
-          'from':
-              snapshot.categoriesById[moves.first.transaction.categoryId]?.name,
-          'to': snapshot.categoriesById[moves.first.categoryId]?.name,
-          'count': moves.length,
-          'samples': [
-            for (final move in moves.take(samplesPerChange))
-              {
-                'id': move.transaction.id,
-                'postedOn': move.transaction.postedDay.isoDate,
-                'amount': formatCents(move.transaction.amountCents),
-                'description': move.transaction.rawDescription,
-                'rulePattern': move.rule?.pattern,
-              },
-          ],
-        },
-    ];
+    final changes = movesByChange.values.mapL(
+      (moves) => {
+        'from':
+            snapshot.categoriesById[moves.first.transaction.categoryId]?.name,
+        'to': snapshot.categoriesById[moves.first.categoryId]?.name,
+        'count': moves.length,
+        'samples': [
+          for (final move in moves.take(samplesPerChange))
+            {
+              'id': move.transaction.id,
+              'postedOn': move.transaction.postedDay.isoDate,
+              'amount': formatCents(move.transaction.amountCents),
+              'description': move.transaction.rawDescription,
+              'rulePattern': move.rule?.pattern,
+            },
+        ],
+      },
+    );
     changes.sort(
       (left, right) => (right['count'] as int).compareTo(left['count'] as int),
     );

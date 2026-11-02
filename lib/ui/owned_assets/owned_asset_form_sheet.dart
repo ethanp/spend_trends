@@ -143,10 +143,9 @@ class _OwnedAssetFormSheetState() extends ConsumerState<OwnedAssetFormSheet> {
 
   Widget _kindControl() {
     return SegmentedButton<OwnedAssetKind>(
-      segments: [
-        for (final kind in OwnedAssetKind.values)
-          ButtonSegment(value: kind, label: Text(kind.legendLabel)),
-      ],
+      segments: OwnedAssetKind.values.mapL(
+        (kind) => ButtonSegment(value: kind, label: Text(kind.legendLabel)),
+      ),
       selected: {_kind},
       onSelectionChanged: (selection) {
         setState(() => _kind = selection.first);

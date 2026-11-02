@@ -96,12 +96,11 @@ class SuggestMerchantCategories({
           .putIfAbsent(transaction.normalizedMerchant, () => [])
           .add(transaction.amountCents);
     }
-    return [
-      for (final suggestion in suggestions)
-        suggestion.withTransactionAmounts(
-          amountsByMerchant[suggestion.merchant] ?? const [],
-        ),
-    ];
+    return suggestions.mapL(
+      (suggestion) => suggestion.withTransactionAmounts(
+        amountsByMerchant[suggestion.merchant] ?? const [],
+      ),
+    );
   }
 
   /// Creates any new categories, returning suggestions with concrete ids.

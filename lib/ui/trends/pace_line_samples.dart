@@ -1,5 +1,7 @@
 import 'dart:ui';
 
+import 'package:ethan_utils/ethan_utils.dart';
+
 import 'package:spend_trends/ui/trends/category_trend_plot.dart';
 import 'package:spend_trends/domain/trends/category_trend_point.dart';
 import 'package:spend_trends/ui/trends/category_trend_series.dart';
@@ -22,7 +24,7 @@ class PaceLineSamples._({
     final offsets = <Offset>[];
     final percentileRanks = <double>[];
     final sortedValues = series.percentileAreaFill
-        ? ([for (final point in points) point.smoothedCents]..sort())
+        ? (points.mapL((point) => point.smoothedCents)..sort())
         : const <double>[];
 
     var pointIndex = 0;

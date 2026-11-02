@@ -1,4 +1,5 @@
 import 'package:spend_trends/domain/categories/category.dart';
+import 'package:ethan_utils/ethan_utils.dart';
 import 'package:spend_trends/domain/transactions/transaction.dart';
 import 'package:spend_trends/ui/trends/build_trends_charts.dart';
 import 'package:spend_trends/ui/trends/trend_point_contributors.dart';
@@ -74,10 +75,9 @@ void main() {
 
       expect(topContributors, hasLength(5));
       expect(
-        [
-          for (final contributor in topContributors)
-            contributor.transaction.normalizedMerchant,
-        ],
+        topContributors.mapL(
+          (contributor) => contributor.transaction.normalizedMerchant,
+        ),
         ['BIG', 'MID', 'MED', 'SMALL', 'TINY'],
       );
       expect(topContributors.first.rawAmountCents, -10000);

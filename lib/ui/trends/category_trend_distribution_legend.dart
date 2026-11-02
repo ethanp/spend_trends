@@ -287,19 +287,18 @@ class const _DistributionAxisLabels({
       width: double.infinity,
       child: Stack(
         clipBehavior: Clip.none,
-        children: [
-          for (final tickCents in scale.tickCents)
-            Positioned(
-              top: scale.yFromWhiskerBandTop(tickCents, whiskerHeight) - 7,
-              right: 0,
-              child: Text(
-                formatTick(tickCents.round()),
-                style: tickStyle,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
+        children: scale.tickCents.mapL(
+          (tickCents) => Positioned(
+            top: scale.yFromWhiskerBandTop(tickCents, whiskerHeight) - 7,
+            right: 0,
+            child: Text(
+              formatTick(tickCents.round()),
+              style: tickStyle,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
-        ],
+          ),
+        ),
       ),
     );
   }

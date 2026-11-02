@@ -732,17 +732,16 @@ class NetWorthTrend._() {
       ..sort(
         (left, right) => left.legendSortOrder.compareTo(right.legendSortOrder),
       );
-    return [
-      for (final kind in sortedKinds)
-        _KindAccountGroup(
-          kind: kind,
-          accounts: [...byKind[kind]!]
-            ..sort(
-              (left, right) =>
-                  right.balanceCents.abs().compareTo(left.balanceCents.abs()),
-            ),
-        ),
-    ];
+    return sortedKinds.mapL(
+      (kind) => _KindAccountGroup(
+        kind: kind,
+        accounts: [...byKind[kind]!]
+          ..sort(
+            (left, right) =>
+                right.balanceCents.abs().compareTo(left.balanceCents.abs()),
+          ),
+      ),
+    );
   }
 }
 
@@ -793,7 +792,7 @@ class const _PostedDayAmounts({
 /// The chart's consecutive days: local midnights for the plotted points and
 /// their [CalendarDay]s for every lookup and comparison.
 class _ChartDays(final List<DateTime> dates) {
-  final List<CalendarDay> days = [for (final date in dates) date.calendarDay];
+  final List<CalendarDay> days = dates.mapL((date) => date.calendarDay);
 
   int get length => dates.length;
   bool get isEmpty => dates.isEmpty;

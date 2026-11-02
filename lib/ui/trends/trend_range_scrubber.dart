@@ -1,4 +1,5 @@
 import 'package:ethan_ui/ethan_ui.dart';
+import 'package:ethan_utils/ethan_utils.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:spend_trends/ui/trends/category_trend_series.dart';
@@ -24,13 +25,12 @@ class const TrendRangeScrubber({
           series.id != TrendChartCatalog.transferSeriesId)
         EChartAllTimeRangeLine(
           color: series.lineColor,
-          samples: [
-            for (final point in series.points)
-              EChartAllTimeRangeSample(
-                date: point.date,
-                value: point.smoothedCents,
-              ),
-          ],
+          samples: series.points.mapL(
+            (point) => EChartAllTimeRangeSample(
+              date: point.date,
+              value: point.smoothedCents,
+            ),
+          ),
         ),
   ];
 

@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:ethan_utils/ethan_utils.dart';
 import 'package:shelf/shelf.dart';
 import 'package:shelf_router/shelf_router.dart';
 import 'package:spend_trends/agent_api/agent_api_json.dart';
@@ -73,10 +74,9 @@ class const AgentApiImportRoutes({required final ProviderContainer container}) {
     final TransactionsRepository transactionsRepository = await container.read(
       transactionsRepositoryProvider.future,
     );
-    final rows = [
-      for (final row in body['transactions'] as List)
-        _transactionFrom(row as Map<String, dynamic>, snapshot),
-    ];
+    final rows = (body['transactions'] as List).mapL(
+      (row) => _transactionFrom(row as Map<String, dynamic>, snapshot),
+    );
     final importedExternalIds = {for (final row in rows) row.externalId};
     final otherSourceByAccountId = <String, List<BankTransaction>>{};
     final existingExternalIds = <String>{};

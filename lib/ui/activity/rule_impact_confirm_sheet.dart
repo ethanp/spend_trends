@@ -1,4 +1,5 @@
 import 'package:ethan_ui/ethan_ui.dart';
+import 'package:ethan_utils/ethan_utils.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:spend_trends/domain/categories/category.dart';
@@ -93,10 +94,10 @@ class _RuleImpactConfirmSheetState()
   void initState() {
     super.initState();
     _groups = List<RuleImpactGroup>.from(widget.groups);
-    _patternControllers = [
-      for (final group in _groups) TextEditingController(text: group.pattern),
-    ];
-    _patternFocusNodes = [for (final _ in _groups) FocusNode()];
+    _patternControllers = _groups.mapL(
+      (group) => TextEditingController(text: group.pattern),
+    );
+    _patternFocusNodes = _groups.mapL((_) => FocusNode());
     _rematches = [
       for (var groupIndex = 0; groupIndex < _groups.length; groupIndex++)
         ContainsPatternRematch(

@@ -122,14 +122,13 @@ restored), and the pair nets to the interest.''';
     final transactions = snapshot.transactions;
     return jsonOk({
       'guide': _categorizationGuide,
-      'consciousSpendingAreas': [
-        for (final area in ConsciousSpendingArea.values)
-          {
-            'id': area.name,
-            'name': area.displayName,
-            'ramitShareOfTakeHome': area.ramitGuideline.targetLabel,
-          },
-      ],
+      'consciousSpendingAreas': ConsciousSpendingArea.values.mapL(
+        (area) => {
+          'id': area.name,
+          'name': area.displayName,
+          'ramitShareOfTakeHome': area.ramitGuideline.targetLabel,
+        },
+      ),
       'counts': {
         'transactions': transactions.length,
         'uncategorized': transactions
@@ -143,10 +142,9 @@ restored), and the pair nets to the interest.''';
             .length,
         'rules': snapshot.rules.length,
       },
-      'groups': [
-        for (final group in snapshot.groups)
-          {'id': group.id, 'name': group.name},
-      ],
+      'groups': snapshot.groups.mapL(
+        (group) => {'id': group.id, 'name': group.name},
+      ),
       'categories': snapshot.categories.map(snapshot.categoryJson).toList(),
       'accounts': snapshot.accounts.map(snapshot.accountJson).toList(),
       'endpoints': _endpointIndex,
@@ -301,13 +299,12 @@ restored), and the pair nets to the interest.''';
             'reason': entry.value.reason ?? 'Ramit Sethi',
           },
       },
-      'windows': [
-        for (final window in ConsciousSpendingWindow.values)
-          _windowJson(
-            consciousSpendingNumbers.totalsFor(window),
-            guidelineByArea,
-          ),
-      ],
+      'windows': ConsciousSpendingWindow.values.mapL(
+        (window) => _windowJson(
+          consciousSpendingNumbers.totalsFor(window),
+          guidelineByArea,
+        ),
+      ),
     });
   }
 
@@ -322,24 +319,23 @@ restored), and the pair nets to the interest.''';
       'takeHomeCents': totals.takeHomeCents,
       'payrollContributionCents': totals.payrollContributionCents,
       'annualPayCents': totals.annualPayCents,
-      'rows': [
-        for (final area in ConsciousSpendingArea.values)
-          {
-            'area': area.name,
-            'name': area.displayName,
-            'guideline': guidelineByArea[area]!.targetLabel,
-            'percentOfPay': totals.percentOfPay(area),
-            'offGuideline': switch (totals.percentOfPay(area)) {
-              null => false,
-              final percent => !guidelineByArea[area]!.isMetBy(percent),
-            },
-            'cents': totals.centsByArea[area],
-            'annualCents': totals.annualCents(area),
-            'targetAnnualCents': guidelineByArea[area]!.impliedCents(
-              totals.annualPayCents,
-            ),
+      'rows': ConsciousSpendingArea.values.mapL(
+        (area) => {
+          'area': area.name,
+          'name': area.displayName,
+          'guideline': guidelineByArea[area]!.targetLabel,
+          'percentOfPay': totals.percentOfPay(area),
+          'offGuideline': switch (totals.percentOfPay(area)) {
+            null => false,
+            final percent => !guidelineByArea[area]!.isMetBy(percent),
           },
-      ],
+          'cents': totals.centsByArea[area],
+          'annualCents': totals.annualCents(area),
+          'targetAnnualCents': guidelineByArea[area]!.impliedCents(
+            totals.annualPayCents,
+          ),
+        },
+      ),
       'mortgagePrincipal': {
         'cents': totals.mortgagePrincipalCents,
         'annualCents': totals.annualMortgagePrincipalCents,
@@ -447,10 +443,9 @@ restored), and the pair nets to the interest.''';
           .add(transaction);
     }
     final merchantRows =
-        [
-          for (final entry in transactionsByMerchant.entries)
-            _merchantJson(snapshot, entry.key, entry.value),
-        ]..sort(
+        transactionsByMerchant.entries.mapL(
+          (entry) => _merchantJson(snapshot, entry.key, entry.value),
+        )..sort(
           (left, right) =>
               (right['count'] as int).compareTo(left['count'] as int),
         );
@@ -481,21 +476,20 @@ restored), and the pair nets to the interest.''';
       'netCents': netCents,
       'firstPostedOn': newestFirst.last.postedDay.isoDate,
       'lastPostedOn': newestFirst.first.postedDay.isoDate,
-      'categories': [
-        for (final entry in countByCategoryId.entries)
-          {
-            'id': entry.key,
-            'name': snapshot.categoriesById[entry.key]?.name,
-            'count': entry.value,
-          },
-      ],
+      'categories': countByCategoryId.entries.mapL(
+        (entry) => {
+          'id': entry.key,
+          'name': snapshot.categoriesById[entry.key]?.name,
+          'count': entry.value,
+        },
+      ),
       'sampleDescriptions': {
         for (final transaction in newestFirst.take(10))
           transaction.rawDescription,
       }.take(3).toList(),
-      'sampleTransactionIds': [
-        for (final transaction in newestFirst.take(3)) transaction.id,
-      ],
+      'sampleTransactionIds': newestFirst
+          .take(3)
+          .mapL((transaction) => transaction.id),
     };
   }
 

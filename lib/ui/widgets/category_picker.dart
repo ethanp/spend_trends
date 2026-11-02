@@ -1,4 +1,5 @@
 import 'package:spend_trends/domain/categories/category.dart';
+import 'package:ethan_utils/ethan_utils.dart';
 import 'package:spend_trends/domain/categories/category_group.dart';
 import 'package:spend_trends/ui/theme/finance_colors.dart';
 import 'package:spend_trends/ui/theme/category_color.dart';
@@ -104,15 +105,14 @@ class const _CategoryPickerSectionBlock({
         Wrap(
           spacing: ELayout.spaceSm,
           runSpacing: ELayout.spaceSm,
-          children: [
-            for (final category in section.categories)
-              EFilterChip(
-                label: category.name,
-                color: CategoryColor.forCategory(category),
-                selected: category.id == selectedId,
-                onActivated: () => onCategorySelected(category),
-              ),
-          ],
+          children: section.categories.mapL(
+            (category) => EFilterChip(
+              label: category.name,
+              color: CategoryColor.forCategory(category),
+              selected: category.id == selectedId,
+              onActivated: () => onCategorySelected(category),
+            ),
+          ),
         ),
       ],
     );

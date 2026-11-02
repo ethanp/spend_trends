@@ -27,13 +27,12 @@ class OwnedAssetsRepository(final PowerSyncDatabase _powerSync) {
             .putIfAbsent(valuation.ownedAssetId, () => [])
             .add(valuation);
       }
-      return [
-        for (final row in assetRows)
-          OwnedAssetWithValuations(
-            asset: _assetFromRow(row),
-            valuations: valuationsByAssetId[_idFromRow(row)] ?? const [],
-          ),
-      ];
+      return assetRows.mapL(
+        (row) => OwnedAssetWithValuations(
+          asset: _assetFromRow(row),
+          valuations: valuationsByAssetId[_idFromRow(row)] ?? const [],
+        ),
+      );
     } catch (error, stackTrace) {
       _log.error('Failed to list owned assets', error, stackTrace);
       rethrow;

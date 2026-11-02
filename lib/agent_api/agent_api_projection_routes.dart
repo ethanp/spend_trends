@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:ethan_utils/ethan_utils.dart';
 import 'package:shelf/shelf.dart';
 import 'package:shelf_router/shelf_router.dart';
 import 'package:spend_trends/agent_api/agent_api_json.dart';
@@ -59,24 +60,23 @@ class const AgentApiProjectionRoutes({
             entry.key: entry.value.name,
         },
       },
-      'years': [
-        for (final year in projection.years)
-          {
-            'age': year.age,
-            'year': year.year,
-            'taxable': year.taxable.round(),
-            'traditional': year.traditional.round(),
-            'roth': year.roth.round(),
-            'college': year.college.round(),
-            'liquid': year.liquid.round(),
-            'homeEquity': year.homeEquity.round(),
-            'income': year.income.round(),
-            'spending': year.spending.round(),
-            'housing': year.housing.round(),
-            'mortgagePayment': year.mortgagePayment.round(),
-            'moveCosts': year.moveCosts.round(),
-          },
-      ],
+      'years': projection.years.mapL(
+        (year) => {
+          'age': year.age,
+          'year': year.year,
+          'taxable': year.taxable.round(),
+          'traditional': year.traditional.round(),
+          'roth': year.roth.round(),
+          'college': year.college.round(),
+          'liquid': year.liquid.round(),
+          'homeEquity': year.homeEquity.round(),
+          'income': year.income.round(),
+          'spending': year.spending.round(),
+          'housing': year.housing.round(),
+          'mortgagePayment': year.mortgagePayment.round(),
+          'moveCosts': year.moveCosts.round(),
+        },
+      ),
     });
   }
 

@@ -117,7 +117,7 @@ class SimpleFinWindowIngester({
       return next;
     }
 
-    final knownPulls = [for (final bank in banks) pullBank(bank)];
+    final knownPulls = banks.mapL(pullBank);
     final discovery = knownBanks.isEmpty
         ? Future<void>.value()
         : _pullBanksDiscoveredLater(
@@ -190,7 +190,7 @@ class SimpleFinWindowIngester({
         SimpleFinBankLoad(connectionId: bank.connectionId, name: bank.name),
       );
     }
-    await Future.wait([for (final bank in extras) pullBank(bank)]);
+    await Future.wait(extras.mapL(pullBank));
   }
 
   Future<SimpleFinWindowIngestResult> _ingestUnsplit({
@@ -387,10 +387,12 @@ class SimpleFinWindowIngester({
   ) {
     onProgress?.call(
       SimpleFinPullProgress.banksWaiting(
-        banks: [
-          for (final bank in banks)
-            SimpleFinBankLoad(connectionId: bank.connectionId, name: bank.name),
-        ],
+        banks: banks.mapL(
+          (bank) => SimpleFinBankLoad(
+            connectionId: bank.connectionId,
+            name: bank.name,
+          ),
+        ),
       ),
     );
   }

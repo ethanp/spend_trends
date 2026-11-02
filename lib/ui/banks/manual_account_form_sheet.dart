@@ -115,10 +115,10 @@ class _ManualAccountFormSheetState()
         isDense: true,
         decoration: EInput.filled(),
         style: EText.body.medium.copyWith(color: EColors.textPrimary),
-        items: [
-          for (final kind in AccountKind.values)
-            DropdownMenuItem(value: kind, child: Text(kind.legendLabel)),
-        ],
+        items: AccountKind.values.mapL(
+          (kind) =>
+              DropdownMenuItem(value: kind, child: Text(kind.legendLabel)),
+        ),
         onChanged: (selected) {
           if (selected != null) setState(() => _kind = selected);
         },

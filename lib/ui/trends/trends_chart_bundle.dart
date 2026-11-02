@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:ethan_utils/ethan_utils.dart';
 import 'package:spend_trends/ui/trends/category_trend_series.dart';
 
 class const TrendsChartBundle({
@@ -9,9 +10,9 @@ class const TrendsChartBundle({
   /// Milliseconds each build phase took, in build order, for the app log.
   final Map<String, int> phaseMillis = const {},
 }) {
-  String get phaseSummary =>
-      [for (final phase in phaseMillis.entries) '${phase.key} ${phase.value}ms']
-          .join(', ');
+  String get phaseSummary => phaseMillis.entries
+      .mapL((phase) => '${phase.key} ${phase.value}ms')
+      .join(', ');
 
   bool get isEmpty =>
       categorySpend.isEmpty && cashFlows.isEmpty && netWorth.isEmpty;

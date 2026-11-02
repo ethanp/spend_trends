@@ -42,10 +42,9 @@ class const AgentApiBankRoutes({required final ProviderContainer container}) {
     return jsonOk({
       'accountCount': result.accountCount,
       'newTransactionCount': result.transactionCount,
-      'errors': [
-        for (final error in result.errors)
-          {'code': error.code, 'message': error.message},
-      ],
+      'errors': result.errors.mapL(
+        (error) => {'code': error.code, 'message': error.message},
+      ),
       'newAccounts': [
         for (final account in snapshot.accounts)
           if (!accountIdsBefore.contains(account.id))

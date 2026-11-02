@@ -309,15 +309,14 @@ class BanksPullLiveSession() extends Notifier<BanksPullLiveSessionState?> {
 
     final accounts = [...session.accounts];
     for (final account in accounts) {
-      account.transactions = [
-        for (final pulled in account.transactions)
-          _categorizedPull(
-            pulled: pulled,
-            bankTransaction: byId[pulled.id],
-            categoryNameById: categoryNameById,
-            ruleMatchIndex: ruleMatchIndex,
-          ),
-      ];
+      account.transactions = account.transactions.mapL(
+        (pulled) => _categorizedPull(
+          pulled: pulled,
+          bankTransaction: byId[pulled.id],
+          categoryNameById: categoryNameById,
+          ruleMatchIndex: ruleMatchIndex,
+        ),
+      );
     }
     state = session.copyWith(accounts: accounts, categorizationReady: true);
   }

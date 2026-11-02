@@ -1,4 +1,5 @@
 import 'package:spend_trends/domain/accounts/account.dart';
+import 'package:ethan_utils/ethan_utils.dart';
 import 'package:spend_trends/data/simplefin/simplefin_models.dart';
 
 /// One bank to fetch from SimpleFIN, with the account ids that belong to it.
@@ -13,14 +14,15 @@ class const SimpleFinBankTarget({
       if (!account.isFromSimpleFin) continue;
       grouped.putIfAbsent(account.institutionGroupKey, () => []).add(account);
     }
-    return _sorted([
-      for (final group in grouped.values)
-        SimpleFinBankTarget(
+    return _sorted(
+      grouped.values.mapL(
+        (group) => SimpleFinBankTarget(
           connectionId: group.first.institutionGroupKey,
           name: group.first.institutionDisplayName,
           accountIds: [for (final account in group) account.externalId],
         ),
-    ]);
+      ),
+    );
   }
 
   static List<SimpleFinBankTarget> fromAccountSet(
@@ -53,9 +55,9 @@ class const SimpleFinBankTarget({
       );
       grouped.putIfAbsent(connectionId, () => []).add(account);
     }
-    return _sorted([
-      for (final group in grouped.values)
-        SimpleFinBankTarget(
+    return _sorted(
+      grouped.values.mapL(
+        (group) => SimpleFinBankTarget(
           connectionId: Account.institutionGroupKeyFor(
             connId: group.first.connId,
             connName: group.first.connName,
@@ -63,7 +65,8 @@ class const SimpleFinBankTarget({
           name: _bankName(group.first),
           accountIds: [for (final account in group) account.id],
         ),
-    ]);
+      ),
+    );
   }
 
   static String _bankName(SimpleFinAccount account) {

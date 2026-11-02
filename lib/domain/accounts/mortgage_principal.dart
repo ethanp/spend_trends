@@ -64,10 +64,9 @@ class const MortgagePrincipal(final List<MortgagePrincipalPayment> payments) {
           .add(transaction);
     }
     final lifePlan = LifePlan(lifeEvents);
-    final List<CalendarDay> loanOpenedDays = [
-      for (final loanSnapshots in snapshotsByLoanId.values)
-        loanSnapshots.first.recordedDay,
-    ];
+    final List<CalendarDay> loanOpenedDays = snapshotsByLoanId.values.mapL(
+      (loanSnapshots) => loanSnapshots.first.recordedDay,
+    );
     return MortgagePrincipal([
       for (final entry in snapshotsByLoanId.entries)
         ..._measuredPayments(

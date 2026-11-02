@@ -100,13 +100,13 @@ class const ConsciousSpendingNumbers({
       categories: categories,
       accounts: accounts,
     );
-    final List<_ConsciousSpendingWindowTally> windowTallies = [
-      for (final window in ConsciousSpendingWindow.values)
-        _ConsciousSpendingWindowTally(
-          window: window,
-          firstDay: lastDay.plusDays(-(window.days - 1)),
-        ),
-    ];
+    final List<_ConsciousSpendingWindowTally> windowTallies =
+        ConsciousSpendingWindow.values.mapL(
+          (window) => _ConsciousSpendingWindowTally(
+            window: window,
+            firstDay: lastDay.plusDays(-(window.days - 1)),
+          ),
+        );
 
     for (final transaction in transactions) {
       final CalendarDay day = transaction.postedDay;

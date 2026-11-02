@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:ethan_utils/ethan_utils.dart';
 import 'package:spend_trends/domain/accounts/account.dart';
 import 'package:spend_trends/ui/banks/bank_accounts_by_institution.dart';
 
@@ -11,10 +12,11 @@ void main() {
     ]);
 
     expect(groups, hasLength(1));
-    expect(
-      [for (final account in groups.first.accounts) account.id],
-      ['card', 'checking', 'savings'],
-    );
+    expect(groups.first.accounts.mapL((account) => account.id), [
+      'card',
+      'checking',
+      'savings',
+    ]);
   });
 }
 

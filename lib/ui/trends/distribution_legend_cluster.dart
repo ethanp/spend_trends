@@ -1,4 +1,5 @@
 import 'package:spend_trends/ui/trends/category_trend_series.dart';
+import 'package:ethan_utils/ethan_utils.dart';
 
 /// Group rollup (or standalone category) plus its member series for whiskers.
 class const DistributionLegendCluster({
@@ -20,12 +21,11 @@ class const DistributionLegendCluster({
       }
       membersByGroupSeriesId.putIfAbsent(groupSeriesId, () => []).add(series);
     }
-    return [
-      for (final rollup in rollups)
-        DistributionLegendCluster(
-          rollup: rollup,
-          members: membersByGroupSeriesId[rollup.id] ?? const [],
-        ),
-    ];
+    return rollups.mapL(
+      (rollup) => DistributionLegendCluster(
+        rollup: rollup,
+        members: membersByGroupSeriesId[rollup.id] ?? const [],
+      ),
+    );
   }
 }

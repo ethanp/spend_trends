@@ -74,24 +74,23 @@ class const AgentApiLifePlanRoutes({
         await (await container.read(ownedAssetsRepositoryProvider.future))
             .listWithValuations();
     return jsonOk({
-      'ownedAssets': [
-        for (final ownedAsset in ownedAssets)
-          {
-            'id': ownedAsset.asset.id,
-            'name': ownedAsset.asset.name,
-            'kind': ownedAsset.asset.kind.name,
-            'soldOn': ownedAsset.asset.soldOn?.isoDate,
-            'note': ownedAsset.asset.note,
-            'valuations': [
-              for (final valuation in ownedAsset.valuations)
-                {
-                  'id': valuation.id,
-                  'valuedOn': valuation.valuedOn.isoDate,
-                  'valueCents': valuation.valueCents,
-                },
-            ],
-          },
-      ],
+      'ownedAssets': ownedAssets.mapL(
+        (ownedAsset) => {
+          'id': ownedAsset.asset.id,
+          'name': ownedAsset.asset.name,
+          'kind': ownedAsset.asset.kind.name,
+          'soldOn': ownedAsset.asset.soldOn?.isoDate,
+          'note': ownedAsset.asset.note,
+          'valuations': [
+            for (final valuation in ownedAsset.valuations)
+              {
+                'id': valuation.id,
+                'valuedOn': valuation.valuedOn.isoDate,
+                'valueCents': valuation.valueCents,
+              },
+          ],
+        },
+      ),
     });
   }
 

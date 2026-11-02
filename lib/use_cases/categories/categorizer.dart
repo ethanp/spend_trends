@@ -1,4 +1,5 @@
 import 'package:spend_trends/domain/categories/category.dart';
+import 'package:ethan_utils/ethan_utils.dart';
 import 'package:spend_trends/domain/categories/rule_change_plan.dart';
 import 'package:spend_trends/domain/transactions/transaction.dart';
 import 'package:spend_trends/data/repositories/categories_repository.dart';
@@ -103,7 +104,7 @@ class Categorizer({
     List<RuleDraft> drafts,
     List<CategorizationRule> rulesBefore,
   ) {
-    return [for (final draft in drafts) _ruleFor(draft, rulesBefore)];
+    return drafts.mapL((draft) => _ruleFor(draft, rulesBefore));
   }
 
   CategorizationRule _ruleFor(

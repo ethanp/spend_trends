@@ -130,9 +130,9 @@ class const BuildTrendsCharts() {
           ? historyStart
           : earliestSpend;
     } else if (accounts.isNotEmpty || ownedAssets.isNotEmpty) {
-      final DateTime? earliestTxn = _earliestDay([
-        for (final transaction in inRangeTransactions) transaction.postedDay,
-      ])?.localMidnight;
+      final DateTime? earliestTxn = _earliestDay(
+        inRangeTransactions.mapL((transaction) => transaction.postedDay),
+      )?.localMidnight;
       chartStart = earliestTxn != null && earliestTxn.isAfter(historyStart)
           ? earliestTxn
           : historyStart;
