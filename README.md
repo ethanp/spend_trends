@@ -38,7 +38,7 @@ SimpleFIN Bridge ──HTTP──► App (claim + /accounts)
 ```
 
 1. Buy SimpleFIN Bridge (~$15/yr) and create a Setup Token in their UI.
-2. Set `POWERSYNC_JWT_SECRET` + `SERVER_HOST_LAN` in `.env` (required), then run the app.
+2. Set `POWERSYNC_JWT_SECRET` in `.env` and the home-server hosts in `../ethan_sync/home_server.env` (required), then run the app.
 3. In **Settings → Connect**, paste the Setup Token. The app claims an Access URL (`https://user:pass@…/simplefin`), saves it to keychain, and you should also put it in `.env` as `SIMPLEFIN_ACCESS_URL` so it survives reinstall.
 4. Sync (or import) loads transactions into PowerSync. Categorization uses sticky merchant → category memory plus explicit rules.
 5. Trends charts roll categorized outflows into a trailing 365-day window and smooth for readable lines. Changes upload via PostgREST and download on other devices.
@@ -70,7 +70,7 @@ Sibling path packages (same layout as your other Flutter apps):
 ```bash
 cd ~/code/my-code/Active/Flutter/spend_trends
 cp .env.example .env
-# Required: POWERSYNC_JWT_SECRET, SERVER_HOST_LAN
+# Required: POWERSYNC_JWT_SECRET (hosts: ../ethan_sync/home_server.env)
 # Optional: SIMPLEFIN_ACCESS_URL (after first Connect), LLM_APP_SECRET
 flutter pub get
 flutter run -d macos
@@ -82,7 +82,6 @@ flutter run -d iphone
 
 | Key | Required | Purpose |
 |-----|----------|---------|
-| `SERVER_HOST_LAN` | Yes | Home server host |
 | `POWERSYNC_JWT_SECRET` | Yes | ethan_sync JWT (raw secret; infra `SPEND_TRENDS_POWERSYNC_JWT_KEY` is its base64url form) |
 | `SIMPLEFIN_ACCESS_URL` | After claim | Claimed Access URL (not Setup Token) |
 | `LLM_APP_NAME` | Optional | Usually `spend_trends` |
@@ -125,7 +124,7 @@ truth; this table is a map).
 | Duplicate imports | `GET /duplicates` (preview), `POST /duplicates/remove {linked, sameAccount}` |
 | Categories, groups | `GET /categories`, `POST /categories`, `PATCH /categories/<id>`, `POST /categories/<id>/merge`, `POST /groups` |
 | Banks, accounts, imports | `POST /banks/pull`, `PATCH /accounts/<id>`, `POST /accounts/manual`, `POST /accounts`, `POST /transactions/import` |
-| Empower history | `GET`/`POST /imports/empower`; the pull itself is in [docs/empower_transactions_pull.md](docs/empower_transactions_pull.md) |
+| Empower history | `GET`/`POST /imports/empower`, `POST /imports/empower/tax-basis`; the pull itself is in [docs/empower_transactions_pull.md](docs/empower_transactions_pull.md) |
 | Projections | `GET /projections`, `PATCH /projections/assumptions` |
 
 Writes that delete or rewrite rows take a dry run or preview first; use it.

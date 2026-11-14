@@ -59,9 +59,11 @@ class const AgentApiBankRoutes({required final ProviderContainer container}) {
     });
   }
 
-  /// `{kind?, taxTreatment?}`: kind e.g. `investment` for a crypto exchange
-  /// the name heuristics missed; taxTreatment for projections, `null` back
-  /// to automatic.
+  /// `{kind?, taxTreatment?, taxBasisCents?}`: kind e.g. `investment` for a
+  /// crypto exchange the name heuristics missed; taxTreatment for
+  /// projections, `null` back to automatic; taxBasisCents is what an
+  /// investment account cost (Roth: contributions and conversions), as of
+  /// today, `null` to forget it.
   Future<Response> _updateAccount(Request request, String accountId) async {
     final body = await request.readJsonObject();
     final AccountsRepository accountsRepository = await container.read(
@@ -80,6 +82,16 @@ class const AgentApiBankRoutes({required final ProviderContainer container}) {
       await accountsRepository.updateTaxTreatment(
         accountId: accountId,
         taxTreatment: _optionalTaxTreatment(body['taxTreatment']),
+      );
+    }
+    if (body.containsKey('taxBasisCents')) {
+      await accountsRepository.updateTaxBasis(
+        accountId: accountId,
+        taxBasis: switch (body['taxBasisCents']) {
+          null => null,
+          final int cents => TaxBasis(cents: cents, asOf: DateTime.now()),
+          _ => throw ArgumentError('taxBasisCents must be an int or null.'),
+        },
       );
     }
     return _accountResponse(accountId);

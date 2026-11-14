@@ -66,3 +66,6 @@ empower_*.json
 *_transactions_*.json
 transactions_*.json
 *.copilot.csv
+
+# Real-data snapshot from export_real_data_snapshot.sh (private rows)
+.real_data/

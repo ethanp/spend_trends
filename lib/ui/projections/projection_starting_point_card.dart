@@ -93,6 +93,16 @@ class const ProjectionStartingPointCard({
         color: treatment.color,
         bold: true,
       ),
+      if (treatment == AccountTaxTreatment.taxable ||
+          treatment == AccountTaxTreatment.roth)
+        _figure(
+          '${treatment == AccountTaxTreatment.roth ? 'Contributions' : 'Cost'}'
+          ' recorded · '
+          '${formatCentsWholeDollars((projection.start.balanceWithoutTaxBasisFor(treatment) * 100).round())}'
+          ' unknown',
+          projection.start.taxBasisByTreatment[treatment] ?? 0,
+          indent: true,
+        ),
       for (final account in bucketAccounts)
         _figure(
           account.displayNameWithInstitution,

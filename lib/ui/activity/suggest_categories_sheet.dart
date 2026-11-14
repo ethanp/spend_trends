@@ -55,9 +55,7 @@ class _SuggestCategoriesSheetState()
   Future<void> _loadSuggestions() async {
     final suggester = await ref.read(suggestMerchantCategoriesProvider.future);
     if (suggester == null) {
-      _showLoadError(
-        'Configure LLM_APP_SECRET and SERVER_HOST_LAN in .env to use suggestions.',
-      );
+      _showLoadError('Set LLM_APP_SECRET in .env to use suggestions.');
       return;
     }
 

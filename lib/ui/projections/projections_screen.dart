@@ -10,6 +10,7 @@ import 'package:spend_trends/ui/projections/projection_headline_card.dart';
 import 'package:spend_trends/ui/projections/projection_starting_point_card.dart';
 import 'package:spend_trends/ui/projections/fire_outlook_card.dart';
 import 'package:spend_trends/ui/projections/projections_providers.dart';
+import 'package:spend_trends/ui/projections/roth_conversion_card.dart';
 
 /// Retirement projection from live balances and last year's flows, with the
 /// assumptions that drive it.
@@ -54,6 +55,8 @@ class const ProjectionsScreen() extends ConsumerWidget {
         if (projection.currentAge != null) ...[
           const SizedBox(height: ELayout.spaceLg),
           ProjectionChartCard(projection: projection),
+          const SizedBox(height: ELayout.spaceLg),
+          RothConversionCard(projection: projection),
         ],
         const SizedBox(height: ELayout.spaceLg),
         _assumptionsBesideStartingPoint(projection),

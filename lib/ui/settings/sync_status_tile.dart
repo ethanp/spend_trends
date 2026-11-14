@@ -19,8 +19,8 @@ class const SyncStatusTile() extends StatelessWidget {
           )
         else
           const Text(
-            'Set POWERSYNC_JWT_SECRET and SERVER_HOST_LAN or '
-            'SERVER_HOST_TAILSCALE in .env to enable sync.',
+            'Set POWERSYNC_JWT_SECRET in .env and a host in '
+            'ethan_sync/home_server.env to enable sync.',
             style: SettingsType.sectionMeta,
           ),
       ],

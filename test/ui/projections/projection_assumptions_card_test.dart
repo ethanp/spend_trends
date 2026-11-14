@@ -47,7 +47,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.byType(Slider), findsNWidgets(7));
+    expect(find.byType(Slider), findsNWidgets(9));
     expect(find.text('last 365 days'), findsOneWidget);
     expect(find.textContaining(RegExp(r'^invest \d+%$')), findsNothing);
     expect(tester.takeException(), isNull);

@@ -35,6 +35,10 @@ class const EmpowerTransaction({
   /// share moves inside the account are not.
   bool get isContribution =>
       transactionType.toLowerCase().contains('contribution');
+
+  /// Dividends (and fund gains) bought back into the account: earnings.
+  bool get isReinvestedDividend =>
+      transactionType.toLowerCase().contains('reinvest');
 }
 
 /// Where an Empower account's rows land: the app account, and the label

@@ -3,6 +3,7 @@ import 'dart:math' as math;
 
 import 'package:ethan_utils/ethan_utils.dart';
 import 'package:spend_trends/domain/projection/life_event.dart';
+import 'package:spend_trends/domain/taxes/filing_status.dart';
 
 /// What the retirement projection assumes about the future. Everything is in
 /// today's dollars (real), so returns are real returns.
@@ -12,15 +13,28 @@ import 'package:spend_trends/domain/projection/life_event.dart';
 /// replaces the seeded non-housing spending when set. An assumed move is a
 /// home the projection adds on its own, to try a move before it is a life
 /// event.
+///
+/// Taxes follow the federal return for [filingStatus] (Texas has no state
+/// income tax). Accounts with no recorded tax basis assume the share of
+/// taxable that is cost and of Roth that is contributions. A Roth conversion bracket fills ordinary income to the top of
+/// that bracket each retired year, converting what spending does not use.
 class const ProjectionAssumptions({
   final DateTime? birthDate,
   final int retirementAge = 45,
   final int endAge = 95,
   final double realReturnPercent = 6,
   final double inflationPercent = 3.4,
+  final FilingStatus filingStatus = FilingStatus.single,
 
-  /// Tax on traditional withdrawals and on 85% of Social Security.
-  final double retirementTaxPercent = 22,
+  /// Null: traditional money leaves only when spending needs it or a
+  /// required distribution takes it.
+  final int? rothConversionBracketPercent,
+  final int taxableCostPercent = 60,
+  final int rothContributionsPercent = 50,
+
+  /// The benchmark (second-lowest silver) marketplace plan for one adult
+  /// your age today, before any credit; it is age-rated from there.
+  final int marketplacePremiumMonthlyDollars = 500,
   final int socialSecurityMonthlyDollars = 2561,
   final int? spendingOverrideAnnualDollars,
 
@@ -85,9 +99,17 @@ class const ProjectionAssumptions({
       inflationPercent:
           (json['inflationPercent'] as num?)?.toDouble() ??
           defaults.inflationPercent,
-      retirementTaxPercent:
-          (json['retirementTaxPercent'] as num?)?.toDouble() ??
-          defaults.retirementTaxPercent,
+      filingStatus: FilingStatus.fromStorage(json['filingStatus'] as String?),
+      rothConversionBracketPercent:
+          json['rothConversionBracketPercent'] as int?,
+      taxableCostPercent:
+          json['taxableCostPercent'] as int? ?? defaults.taxableCostPercent,
+      rothContributionsPercent:
+          json['rothContributionsPercent'] as int? ??
+          defaults.rothContributionsPercent,
+      marketplacePremiumMonthlyDollars:
+          json['marketplacePremiumMonthlyDollars'] as int? ??
+          defaults.marketplacePremiumMonthlyDollars,
       socialSecurityMonthlyDollars:
           json['socialSecurityMonthlyDollars'] as int? ??
           defaults.socialSecurityMonthlyDollars,
@@ -111,7 +133,11 @@ class const ProjectionAssumptions({
     'endAge': endAge,
     'realReturnPercent': realReturnPercent,
     'inflationPercent': inflationPercent,
-    'retirementTaxPercent': retirementTaxPercent,
+    'filingStatus': filingStatus.name,
+    'rothConversionBracketPercent': rothConversionBracketPercent,
+    'taxableCostPercent': taxableCostPercent,
+    'rothContributionsPercent': rothContributionsPercent,
+    'marketplacePremiumMonthlyDollars': marketplacePremiumMonthlyDollars,
     'socialSecurityMonthlyDollars': socialSecurityMonthlyDollars,
     'spendingOverrideAnnualDollars': spendingOverrideAnnualDollars,
     'assumedMoveYear': assumedMoveYear,
@@ -132,6 +158,16 @@ class const ProjectionAssumptions({
 
   /// Applies the keys present in [changes] (JSON shape; `null` clears the
   /// override, the birth date, or the assumed move).
-  ProjectionAssumptions merged(Map<String, dynamic> changes) =>
-      ProjectionAssumptions.fromJson({...toJson(), ...changes});
+  ProjectionAssumptions merged(Map<String, dynamic> changes) {
+    final merged = ProjectionAssumptions.fromJson({...toJson(), ...changes});
+    final int? bracketPercent = merged.rothConversionBracketPercent;
+    if (bracketPercent != null &&
+        !merged.filingStatus.fillableBracketPercents.contains(bracketPercent)) {
+      throw ArgumentError(
+        'rothConversionBracketPercent must be one of '
+        '${merged.filingStatus.fillableBracketPercents} or null.',
+      );
+    }
+    return merged;
+  }
 }

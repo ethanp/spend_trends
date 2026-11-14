@@ -18,6 +18,8 @@ const Schema spendTrendsSchema = Schema([
     Column.text('account_kind'),
     Column.text('belongs_to_account_id'),
     Column.text('tax_treatment'),
+    Column.integer('tax_basis_cents'),
+    Column.integer('tax_basis_as_of'),
   ]),
   Table('categories', [
     Column.text('name'),

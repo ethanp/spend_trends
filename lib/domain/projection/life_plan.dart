@@ -21,6 +21,9 @@ class LifePlan(List<LifeEvent> lifeEvents) {
   double childCostsIn(int year) =>
       children.fold(0.0, (total, child) => total + child.costIn(year));
 
+  int dependentsIn(int year) =>
+      children.where((child) => child.isDependentIn(year)).length;
+
   /// The college-years part of [childCostsIn].
   double collegeCostsIn(int year) =>
       children.fold(0.0, (total, child) => total + child.collegeCostIn(year));

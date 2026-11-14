@@ -83,6 +83,40 @@ Read the dry run before applying:
 Then repeat the call without `dryRun`. A second dry run should report
 `insert: 0`.
 
+## Tax basis from holdings
+
+The projection taxes only real gains, and needs to know what a Roth gives
+back tax-free before 59½, so each investment account carries a tax basis.
+
+1. In the same signed-in tab, re-send `invest/getHoldings` with the
+   captured `csrf` and `apiClient` (no `userAccountIds` returns every
+   account). Each holding has `userAccountId`, `value`, and `costBasis`.
+2. Save it as `empower_holdings_<yyyy-mm-dd>.json` (ask first, as above).
+3. Dry run, mapping each Empower `userAccountId` to an app account id:
+
+```bash
+scripts/agent_api POST /imports/empower/tax-basis '{
+  "file": "~/Downloads/empower_holdings_<yyyy-mm-dd>.json",
+  "accounts": {"<empowerUserAccountId>": "<appAccountId>"},
+  "dryRun": true
+}'
+```
+
+- `holdingsValueCents` should match `appBalanceCents`; if not, the mapping
+  is wrong or a holding is missing.
+- A Roth's `taxBasisCents` is its holdings' cost less the reinvested
+  dividends in the newest transactions export (earnings, not
+  contributions). Pull transactions first so that export is current.
+- An account with `holdingsWithoutCost` is left alone. Cash positions
+  count at their value.
+- Holdings Empower lists "In Multiple Accounts" carry a cost for only part
+  of the position (VTI worth $900k at a $2k cost). Map only accounts whose
+  `holdingsCostCents` is believable; set the rest from the institution
+  with `PATCH /accounts/<id>`.
+
+Repeat without `dryRun` to record. For an account Empower cannot see, set
+it directly: `PATCH /accounts/<id> {"taxBasisCents": …}`.
+
 ## Things that went wrong once
 
 - **Paired contributions are real.** Sunrun 401(k) shows two identical

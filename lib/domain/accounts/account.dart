@@ -1,6 +1,9 @@
 import 'package:ethan_utils/ethan_utils.dart';
 import 'package:spend_trends/domain/accounts/account_kind.dart';
 import 'package:spend_trends/domain/accounts/account_tax_treatment.dart';
+import 'package:spend_trends/domain/accounts/tax_basis.dart';
+
+export 'package:spend_trends/domain/accounts/tax_basis.dart';
 
 class const Account({
   required final String id,
@@ -33,7 +36,15 @@ class const Account({
 
   /// Set on Banks; null means [AccountTaxTreatment.inferredFor] decides.
   final AccountTaxTreatment? chosenTaxTreatment,
+
+  /// Recorded from the institution; null when unknown.
+  final TaxBasis? recordedTaxBasis,
 }) {
+  /// What the balance cost for tax. Cash has no gains, so it is its own
+  /// basis; investments need a [recordedTaxBasis].
+  int? get taxBasisCents =>
+      isInvestment ? recordedTaxBasis?.cents : balanceCents;
+
   AccountTaxTreatment get taxTreatment =>
       chosenTaxTreatment ?? AccountTaxTreatment.inferredFor(this);
 
@@ -159,6 +170,7 @@ class const Account({
     String? belongsToAccountId,
     bool clearBelongsTo = false,
     AccountTaxTreatment? chosenTaxTreatment,
+    TaxBasis? recordedTaxBasis,
   }) {
     return Account(
       id: id ?? this.id,
@@ -181,6 +193,7 @@ class const Account({
           ? null
           : (belongsToAccountId ?? this.belongsToAccountId),
       chosenTaxTreatment: chosenTaxTreatment ?? this.chosenTaxTreatment,
+      recordedTaxBasis: recordedTaxBasis ?? this.recordedTaxBasis,
     );
   }
 }

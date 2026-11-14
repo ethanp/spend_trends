@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:spend_trends/domain/projection/assumption_sweep.dart';
 import 'package:spend_trends/domain/projection/retirement_projection.dart';
+import 'package:spend_trends/domain/taxes/filing_status.dart';
 import 'package:spend_trends/ui/projections/projections_providers.dart';
 import 'package:spend_trends/use_cases/projection/projection_assumptions_editor.dart';
 import 'package:spend_trends/ui/widgets/app_date_picker.dart';
@@ -31,7 +32,12 @@ class const ProjectionAssumptionsCard({
             'across its range: % of pay to invest to retire at '
             '${projection.assumptions.retirementAge}, or for spending, the '
             'earliest retirement age. Jobs, homes, and children are life '
-            'events; an assumed move tries one without adding it there.',
+            'events; an assumed move tries one without adding it there. '
+            'Taxes are 2026 federal brackets. Accounts with a recorded tax '
+            'basis use it; the rest take the share set here. Retired before '
+            '65, the household buys the benchmark marketplace plan (priced '
+            'by age) and gets the premium tax credit up to 400% of the '
+            'poverty line.',
             style: EText.caption,
           ),
           const SizedBox(height: ELayout.spaceSm),
@@ -39,6 +45,7 @@ class const ProjectionAssumptionsCard({
             maxWidth: 720,
             rows: [
               _BirthDateRow(projection: projection),
+              _FilingJointlySwitchRow(projection: projection),
               for (final slider in _sliders())
                 AssumptionSliderRow(
                   key: ValueKey(slider.range.assumptionKey),
@@ -108,15 +115,38 @@ class const ProjectionAssumptionsCard({
       caption: (value) => '${value.toStringAsFixed(1)}%',
     ),
     AssumptionSlider(
-      label: 'Retirement tax',
+      label: 'Taxable cost, where unknown',
       range: const AssumptionSweepRange(
-        assumptionKey: 'retirementTaxPercent',
+        assumptionKey: 'taxableCostPercent',
         min: 0,
-        max: 40,
+        max: 100,
         step: 1,
         outcomeKind: SweepOutcomeKind.investingPercentNeeded,
       ),
-      caption: (value) => '${value.round()}%',
+      caption: (value) => '${value.round()}% of value',
+    ),
+    AssumptionSlider(
+      label: 'Roth contributions, where unknown',
+      range: const AssumptionSweepRange(
+        assumptionKey: 'rothContributionsPercent',
+        min: 0,
+        max: 100,
+        step: 1,
+        outcomeKind: SweepOutcomeKind.investingPercentNeeded,
+      ),
+      caption: (value) => '${value.round()}% of balance',
+    ),
+    AssumptionSlider(
+      label: 'Marketplace plan, one adult today',
+      range: const AssumptionSweepRange(
+        assumptionKey: 'marketplacePremiumMonthlyDollars',
+        min: 200,
+        max: 1500,
+        step: 10,
+        outcomeKind: SweepOutcomeKind.investingPercentNeeded,
+      ),
+      caption: (value) =>
+          '${formatCentsWholeDollars((value * 100).round())}/mo',
     ),
     AssumptionSlider(
       label: 'Social Security from 62',
@@ -216,6 +246,38 @@ class const _AssumedMoveSwitchRow({
                 'assumedMoveYear': assumesMove
                     ? DateTime.now().year + _defaultYearsAhead
                     : null,
+              }),
+        ),
+      ],
+    );
+  }
+}
+
+/// Files single, or jointly with the jointly brackets and deduction.
+class const _FilingJointlySwitchRow({
+  required final RetirementProjection projection,
+}) extends ConsumerWidget {
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return Row(
+      children: [
+        Expanded(
+          child: Text(
+            FilingStatus.marriedFilingJointly.label,
+            style: EText.caption,
+          ),
+        ),
+        Switch(
+          value:
+              projection.assumptions.filingStatus ==
+              FilingStatus.marriedFilingJointly,
+          onChanged: (filesJointly) =>
+              ref.read(projectionAssumptionsEditorProvider).apply({
+                'filingStatus':
+                    (filesJointly
+                            ? FilingStatus.marriedFilingJointly
+                            : FilingStatus.single)
+                        .name,
               }),
         ),
       ],

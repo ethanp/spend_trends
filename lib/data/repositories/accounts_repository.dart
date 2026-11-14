@@ -150,6 +150,17 @@ WHERE conn_name = ?
     );
   }
 
+  /// Null forgets it: the projection assumes a share of the balance again.
+  Future<void> updateTaxBasis({
+    required String accountId,
+    required TaxBasis? taxBasis,
+  }) async {
+    await _powerSync.execute(
+      'UPDATE accounts SET tax_basis_cents = ?, tax_basis_as_of = ? WHERE id = ?',
+      [taxBasis?.cents, taxBasis?.asOf.millisecondsSinceEpoch, accountId],
+    );
+  }
+
   Future<void> updateKind({
     required String accountId,
     required AccountKind kind,
@@ -225,6 +236,16 @@ WHERE conn_name = ?
       chosenTaxTreatment: AccountTaxTreatment.tryFromStorage(
         columns['tax_treatment'] as String?,
       ),
+      recordedTaxBasis: switch ((
+        columns['tax_basis_cents'].asIntOrNull(),
+        columns['tax_basis_as_of'].asIntOrNull().dateTimeFromMillis,
+      )) {
+        (final int cents, final DateTime asOf) => TaxBasis(
+          cents: cents,
+          asOf: asOf,
+        ),
+        _ => null,
+      },
     );
     final storedKind = AccountKind.tryFromStorage(
       columns['account_kind'] as String?,

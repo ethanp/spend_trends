@@ -10,6 +10,7 @@ import 'package:spend_trends/domain/projection/projection_starting_point.dart';
 import 'package:spend_trends/domain/accounts/account_tax_treatment.dart';
 import 'package:spend_trends/domain/projection/assumption_sweep.dart';
 import 'package:spend_trends/domain/projection/retirement_projection.dart';
+import 'package:spend_trends/domain/projection/roth_conversion_comparison.dart';
 
 void main() {
   ProjectionStartingPoint startingPoint({
@@ -115,15 +116,22 @@ void main() {
         birthDate: DateTime(1990),
         retirementAge: 60,
         realReturnPercent: 0,
+        inflationPercent: 0,
+        taxableCostPercent: 60,
       ),
     ).years.first;
     expect(firstYear.traditional, 220000);
     expect(firstYear.income, 150000);
     // No home event: no housing is modeled.
     expect(firstYear.housing, 0);
-    // Taxable pays its yearly drag: 11.59% realized, taxed at 15%.
-    const taxDrag = 500000 * 0.1159 * 0.15;
-    expect(firstYear.taxable, closeTo(500000 - taxDrag + 150000 - 60000, 1));
+    // Dividends (1.6%) and a tenth of holdings traded (40% of it gain) are
+    // taxed 15%: take-home puts them in that band.
+    const realizedGains = 500000 * 0.016 + 500000 * 0.1 * 0.4;
+    expect(firstYear.taxes, closeTo(realizedGains * 0.15, 1));
+    expect(
+      firstYear.taxable,
+      closeTo(500000 + 150000 - 60000 - realizedGains * 0.15, 1),
+    );
   });
 
   test('a job event replaces live take-home from the year it applies', () {
@@ -537,6 +545,78 @@ void main() {
       ),
       same(ConsciousSpendingArea.fixedCosts.ramitGuideline),
     );
+  });
+
+  group('Roth conversions', () {
+    RetirementProjection retiringAt45({int? bracketPercent}) =>
+        RetirementProjection(
+          lifePlan: LifePlan(const []),
+          start: startingPoint(
+            taxable: 1500000,
+            traditional: 600000,
+            roth: 100000,
+          ),
+          assumptions: ProjectionAssumptions(
+            birthDate: DateTime(1990),
+            retirementAge: 45,
+            rothConversionBracketPercent: bracketPercent,
+          ),
+        );
+
+    test('happen only once retired', () {
+      final years = retiringAt45(bracketPercent: 12).years;
+      expect(
+        years
+            .where((year) => year.age <= 45)
+            .every((year) => year.rothConversion == 0),
+        isTrue,
+      );
+      expect(
+        years.firstWhere((year) => year.age == 46).rothConversion,
+        closeTo(66500, 1),
+      );
+    });
+
+    test('filling 12% pays less lifetime tax than no conversions', () {
+      final comparison = RothConversionComparison(retiringAt45());
+      final RothConversionOutcome none = comparison.outcomes.first;
+      final RothConversionOutcome fillTwelve = comparison.outcomes.firstWhere(
+        (outcome) => outcome.bracketPercent == 12,
+      );
+      expect(none.label, 'None');
+      expect(
+        fillTwelve.lifetimeTaxesPresentValue,
+        lessThan(none.lifetimeTaxesPresentValue),
+      );
+      expect(fillTwelve.leftToHeirs, greaterThan(none.leftToHeirs));
+    });
+
+    test('a bracket the filing status does not have is refused', () {
+      expect(
+        () => const ProjectionAssumptions().merged({
+          'rothConversionBracketPercent': 15,
+        }),
+        throwsArgumentError,
+      );
+    });
+  });
+
+  test('traditional money spent before 59½ pays the penalty', () {
+    double taxesAt(int age, {required DateTime birthDate}) =>
+        RetirementProjection(
+          lifePlan: LifePlan(const []),
+          start: startingPoint(taxable: 0, traditional: 5000000, roth: 0),
+          assumptions: ProjectionAssumptions(
+            birthDate: birthDate,
+            retirementAge: 40,
+            realReturnPercent: 0,
+            inflationPercent: 0,
+          ),
+        ).years.firstWhere((year) => year.age == age).taxes;
+    // 59½ is May 2050: mid-2049 (the year ending at 58) is still early.
+    final double penalized = taxesAt(58, birthDate: DateTime(1990, 11, 22));
+    final double penaltyFree = taxesAt(59, birthDate: DateTime(1990, 11, 22));
+    expect(penalized - penaltyFree, greaterThan(0.1 * 81600));
   });
 
   test('age counts from the birthday, not just the year', () {

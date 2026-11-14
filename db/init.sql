@@ -16,7 +16,9 @@ CREATE TABLE IF NOT EXISTS accounts (
     conn_user_label TEXT,
     account_kind TEXT,
     belongs_to_account_id TEXT REFERENCES accounts(id) ON DELETE SET NULL,
-    tax_treatment TEXT CHECK (tax_treatment IN ('traditional', 'roth', 'college', 'taxable', 'excluded'))
+    tax_treatment TEXT CHECK (tax_treatment IN ('traditional', 'roth', 'college', 'taxable', 'excluded')),
+    tax_basis_cents BIGINT,
+    tax_basis_as_of BIGINT
 );
 
 CREATE TABLE IF NOT EXISTS categories (

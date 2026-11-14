@@ -18,6 +18,12 @@ import 'package:spend_trends/domain/transactions/transaction.dart';
 class const ProjectionStartingPoint({
   required final DateTime today,
   required final Map<AccountTaxTreatment, double> balanceByTreatment,
+
+  /// Summed over accounts whose [Account.taxBasisCents] is known.
+  final Map<AccountTaxTreatment, double> taxBasisByTreatment = const {},
+
+  /// Balances whose tax basis is unknown; the projection assumes a share.
+  final Map<AccountTaxTreatment, double>? balanceWithoutTaxBasisByTreatment,
   required final Map<String, AccountTaxTreatment> treatmentByAccountId,
   required final double homeValue,
   required final double mortgageBalance,
@@ -46,10 +52,19 @@ class const ProjectionStartingPoint({
     final balanceByTreatment = {
       for (final treatment in AccountTaxTreatment.values) treatment: 0.0,
     };
+    final taxBasisByTreatment = {...balanceByTreatment};
+    final balanceWithoutTaxBasisByTreatment = {...balanceByTreatment};
     for (final account in liveAccounts) {
       final treatment = treatmentByAccountId[account.id]!;
-      balanceByTreatment[treatment] =
-          balanceByTreatment[treatment]! + account.balanceCents / 100;
+      final double balance = account.balanceCents / 100;
+      balanceByTreatment[treatment] = balanceByTreatment[treatment]! + balance;
+      if (account.taxBasisCents case final int basisCents) {
+        taxBasisByTreatment[treatment] =
+            taxBasisByTreatment[treatment]! + basisCents / 100;
+      } else {
+        balanceWithoutTaxBasisByTreatment[treatment] =
+            balanceWithoutTaxBasisByTreatment[treatment]! + balance;
+      }
     }
 
     final mortgages = [
@@ -79,6 +94,8 @@ class const ProjectionStartingPoint({
     return ProjectionStartingPoint(
       today: today.startOfDay,
       balanceByTreatment: balanceByTreatment,
+      taxBasisByTreatment: taxBasisByTreatment,
+      balanceWithoutTaxBasisByTreatment: balanceWithoutTaxBasisByTreatment,
       treatmentByAccountId: treatmentByAccountId,
       homeValue: [
         for (final ownedAsset in ownedAssets)
@@ -98,4 +115,18 @@ class const ProjectionStartingPoint({
 
   double balanceFor(AccountTaxTreatment treatment) =>
       balanceByTreatment[treatment] ?? 0;
+
+  /// Recorded basis, plus [assumedBasisPercent] of balances with none.
+  double taxBasisFor(
+    AccountTaxTreatment treatment, {
+    required int assumedBasisPercent,
+  }) =>
+      (taxBasisByTreatment[treatment] ?? 0) +
+      balanceWithoutTaxBasisFor(treatment) * assumedBasisPercent / 100;
+
+  /// Every balance counts as unknown when no account basis was read.
+  double balanceWithoutTaxBasisFor(AccountTaxTreatment treatment) =>
+      balanceWithoutTaxBasisByTreatment == null
+      ? balanceFor(treatment)
+      : balanceWithoutTaxBasisByTreatment![treatment] ?? 0;
 }

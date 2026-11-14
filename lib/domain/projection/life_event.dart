@@ -370,6 +370,12 @@ class const ChildBirth({
   static const _lastCollegeAge = 22;
   static const _collegeCostAnnual = 30e3;
 
+  /// On the household's return and health plan from birth through college.
+  bool isDependentIn(int year) {
+    final childAge = year - startedOn.year;
+    return childAge >= 0 && childAge <= _lastCollegeAge;
+  }
+
   /// The part of [costIn] that a 529 can pay: in-state public university.
   double collegeCostIn(int year) {
     final childAge = year - startedOn.year;
