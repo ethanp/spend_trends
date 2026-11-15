@@ -135,7 +135,10 @@ void main() {
 
   group('fetch failure messages', () {
     test('bridge HTML error page shows its title and retry advice', () async {
-      final client = SimpleFinClient(httpClient: _BridgeOutageClient());
+      final client = SimpleFinClient(
+        httpClient: _BridgeOutageClient(),
+        serverErrorRetryDelays: const [],
+      );
       await expectLater(
         client.fetchAccounts(
           accessUrl: Uri.parse(
@@ -153,11 +156,62 @@ void main() {
       );
     });
   });
+
+  group('bridge server error retries', () {
+    final accessUrl = Uri.parse(
+      'https://demo:demo@bridge.simplefin.org/simplefin',
+    );
+    const threeImmediateRetries = [Duration.zero, Duration.zero, Duration.zero];
+
+    test('a bridge error that clears on a retry returns the Account Set', () async {
+      final outageClient = _BridgeOutageClient(failuresBeforeSuccess: 2);
+      final client = SimpleFinClient(
+        httpClient: outageClient,
+        serverErrorRetryDelays: threeImmediateRetries,
+      );
+
+      final accountSet = await client.fetchAccounts(accessUrl: accessUrl);
+
+      expect(accountSet.accounts, isEmpty);
+      expect(outageClient.requestCount, 3);
+    });
+
+    test('a bridge error on every retry fails after the last one', () async {
+      final outageClient = _BridgeOutageClient();
+      final client = SimpleFinClient(
+        httpClient: outageClient,
+        serverErrorRetryDelays: threeImmediateRetries,
+      );
+
+      await expectLater(
+        client.fetchAccounts(accessUrl: accessUrl),
+        throwsA(
+          isA<SimpleFinFetchException>().having(
+            (exception) => exception.isServerError,
+            'isServerError',
+            isTrue,
+          ),
+        ),
+      );
+      expect(outageClient.requestCount, 4);
+    });
+  });
 }
 
-class _BridgeOutageClient() extends http.BaseClient {
+/// Answers with the bridge's HTML 500 page, then (after
+/// [failuresBeforeSuccess] failures, when set) an empty Account Set.
+class _BridgeOutageClient({final int? failuresBeforeSuccess})
+    extends http.BaseClient {
+  int requestCount = 0;
+
   @override
   Future<http.StreamedResponse> send(http.BaseRequest request) async {
+    requestCount++;
+    if (failuresBeforeSuccess != null &&
+        requestCount > failuresBeforeSuccess!) {
+      final body = utf8.encode('{"errlist":[],"accounts":[]}');
+      return http.StreamedResponse(Stream<List<int>>.fromIterable([body]), 200);
+    }
     final body = utf8.encode(
       '<!doctype html> <html lang="en"> <head> '
       '<title>Unexpected Error - SimpleFIN Bridge</title> </head> '

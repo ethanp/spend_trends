@@ -22,9 +22,9 @@ class ProjectedHome({
   /// Upkeep, property tax, insurance, and HOA.
   double get carryingCostAnnual => _home?.carryingCostAnnual(_value) ?? 0;
 
-  /// When [nextHome] is a different home: carries the one held for the new
-  /// home's [HomeOwnership.monthsCarryingPreviousHome], sells it, and buys
-  /// the new one. Null when the home is the same.
+  /// When [nextHome] is a different home: buys it and moves in, carries the
+  /// one held for the new home's [HomeOwnership.monthsCarryingPreviousHome],
+  /// then sells it. Null when the home is the same.
   HomeMove? moveTo(HomeOwnership? nextHome, {required double priceLevel}) {
     final HomeOwnership? previousHome = _home;
     if (nextHome?.id == previousHome?.id) return null;
@@ -90,8 +90,8 @@ class ProjectedHome({
   }
 }
 
-/// A move's costs (carrying the old home until it sells, selling it, buyer
-/// closing costs, movers) and the cash it frees: the old home's equity
+/// A move's costs (buyer closing costs, movers, carrying the old home after
+/// moving in until it sells, selling it) and the cash it frees: the old home's equity
 /// after those costs, less the new home's cash part. Negative when buying
 /// takes more than selling frees.
 class const HomeMove({

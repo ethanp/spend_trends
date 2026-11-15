@@ -197,10 +197,10 @@ class _BanksSourceSectionState() extends ConsumerState<BanksSourceSection> {
     if (lastSuccessfulPull == null) {
       return 'Past 2 years · same for every bank';
     }
-    final since = SimpleFinPullWindows.sinceLastPull(
+    final since = SimpleFinPullWindows.sinceLastPullStart(
       lastPull: lastSuccessfulPull,
       now: DateTime.now().toUtc(),
-    ).start.toLocal();
+    ).toLocal();
     return 'Since ${DateFormat.yMMMd().format(since)} · same for every bank';
   }
 

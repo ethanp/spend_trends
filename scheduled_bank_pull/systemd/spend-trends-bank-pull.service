@@ -1,0 +1,9 @@
+[Unit]
+Description=Pull Spend Trends bank transactions from SimpleFIN
+After=docker.service network-online.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=%h/infra
+ExecStart=/usr/bin/docker compose --profile jobs run --rm --build spend-trends-bank-pull
+TimeoutStartSec=45min

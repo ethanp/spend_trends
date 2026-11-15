@@ -90,26 +90,18 @@ class PullSimpleFinTransactions({
 
     var rulesRun = false;
     try {
-      final pullResult = kind == SimpleFinPullKind.full
-          ? await _pullFullHistory(
-              accessUrl: accessUrl,
-              now: now,
-              onProgress: onProgress,
-              newlyInsertedByAccountExternalId:
-                  newlyInsertedByAccountExternalId,
-              outcomes: outcomes,
-              knownBanks: knownBanks,
-            )
-          : await _pullSinceLastPull(
-              accessUrl: accessUrl,
-              lastPull: lastPull!,
-              now: now,
-              onProgress: onProgress,
-              newlyInsertedByAccountExternalId:
-                  newlyInsertedByAccountExternalId,
-              outcomes: outcomes,
-              knownBanks: knownBanks,
-            );
+      final pullResult = await _ingestWindows(
+        kind: kind,
+        windows: kind == SimpleFinPullKind.full
+            ? SimpleFinPullWindows.fullHistory(now)
+            : SimpleFinPullWindows.sinceLastPull(lastPull: lastPull!, now: now),
+        accessUrl: accessUrl,
+        now: now,
+        onProgress: onProgress,
+        newlyInsertedByAccountExternalId: newlyInsertedByAccountExternalId,
+        outcomes: outcomes,
+        knownBanks: knownBanks,
+      );
 
       final accountDrafts = outcomes.drafts;
       final pulledAccountCount = accountDrafts.isNotEmpty
@@ -176,7 +168,13 @@ class PullSimpleFinTransactions({
     return accessUrl;
   }
 
-  Future<SimpleFinWindowIngestResult> _pullFullHistory({
+  /// Ingests [windows] newest first. A rate limit during a full-history pull
+  /// keeps what was fetched and reports the missing older history; during an
+  /// incremental pull it fails the pull, so the next one retries the whole gap
+  /// from the same last successful pull.
+  Future<SimpleFinWindowIngestResult> _ingestWindows({
+    required SimpleFinPullKind kind,
+    required List<SimpleFinDateWindow> windows,
     required Uri accessUrl,
     required DateTime now,
     void Function(SimpleFinPullProgress progress)? onProgress,
@@ -185,14 +183,13 @@ class PullSimpleFinTransactions({
     required SimpleFinPullOutcomeAccumulator outcomes,
     required List<SimpleFinBankTarget> knownBanks,
   }) async {
-    final windows = SimpleFinPullWindows.fullHistory(now);
     var transactionCount = 0;
     final aggregatedErrors = <SimpleFinError>[];
 
     for (var index = 0; index < windows.length; index++) {
       final window = windows[index];
       _logger.log(
-        'History window #${index + 1} '
+        '${kind.displayLabel} window #${index + 1}/${windows.length} '
         '${window.start.toIso8601String()} → ${window.end.toIso8601String()}',
       );
       final SimpleFinWindowIngestResult result;
@@ -209,9 +206,7 @@ class PullSimpleFinTransactions({
           knownBanks: knownBanks,
         );
       } on SimpleFinFetchException catch (error) {
-        if (!error.isRateLimited) rethrow;
-        // Windows run newest first, so what is missing is the oldest
-        // history; stop instead of hammering a throttled bridge.
+        if (!error.isRateLimited || kind != SimpleFinPullKind.full) rethrow;
         aggregatedErrors.add(
           SimpleFinError(
             code: 'rateLimited',
@@ -230,35 +225,6 @@ class PullSimpleFinTransactions({
     return SimpleFinWindowIngestResult(
       transactionCount: transactionCount,
       errors: aggregatedErrors,
-    );
-  }
-
-  Future<SimpleFinWindowIngestResult> _pullSinceLastPull({
-    required Uri accessUrl,
-    required DateTime lastPull,
-    required DateTime now,
-    void Function(SimpleFinPullProgress progress)? onProgress,
-    required Map<String, List<SimpleFinPulledTransaction>>
-    newlyInsertedByAccountExternalId,
-    required SimpleFinPullOutcomeAccumulator outcomes,
-    required List<SimpleFinBankTarget> knownBanks,
-  }) async {
-    final window = SimpleFinPullWindows.sinceLastPull(
-      lastPull: lastPull,
-      now: now,
-    );
-    _logger.log(
-      'Incremental window '
-      '${window.start.toIso8601String()} → ${window.end.toIso8601String()}',
-    );
-    return _ingester.ingest(
-      accessUrl: accessUrl,
-      window: window,
-      syncedAt: now,
-      outcomes: outcomes,
-      newlyInsertedByAccountExternalId: newlyInsertedByAccountExternalId,
-      onProgress: onProgress,
-      knownBanks: knownBanks,
     );
   }
 }

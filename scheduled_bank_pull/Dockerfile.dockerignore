@@ -1,0 +1,7 @@
+# Secrets are bind-mounted at run time, never baked into the image.
+**/.env
+**/home_server.env
+**/.git
+**/build
+**/.dart_tool
+**/.real_data

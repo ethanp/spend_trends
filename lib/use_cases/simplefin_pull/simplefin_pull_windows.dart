@@ -5,8 +5,43 @@ class SimpleFinPullWindows._() {
   static const fullHistoryDays = 365 * 2;
   static const incrementalOverlapDays = 2;
 
-  static List<SimpleFinDateWindow> fullHistory(DateTime now) {
-    final earliest = now.subtract(const Duration(days: fullHistoryDays));
+  static List<SimpleFinDateWindow> fullHistory(DateTime now) =>
+      _windowsNewestFirst(
+        earliest: now.subtract(const Duration(days: fullHistoryDays)),
+        now: now,
+      );
+
+  /// Every 44-day window from [sinceLastPullStart] to [now], newest first, so
+  /// a gap longer than one bridge window is still fully fetched.
+  static List<SimpleFinDateWindow> sinceLastPull({
+    required DateTime lastPull,
+    required DateTime now,
+  }) => _windowsNewestFirst(
+    earliest: sinceLastPullStart(lastPull: lastPull, now: now),
+    now: now,
+  );
+
+  /// 2 days before [lastPull], but never further back than the full-history
+  /// span.
+  static DateTime sinceLastPullStart({
+    required DateTime lastPull,
+    required DateTime now,
+  }) {
+    final overlapStart = lastPull.subtract(
+      const Duration(days: incrementalOverlapDays),
+    );
+    final fullHistoryStart = now.subtract(
+      const Duration(days: fullHistoryDays),
+    );
+    return overlapStart.isBefore(fullHistoryStart)
+        ? fullHistoryStart
+        : overlapStart;
+  }
+
+  static List<SimpleFinDateWindow> _windowsNewestFirst({
+    required DateTime earliest,
+    required DateTime now,
+  }) {
     final windows = <SimpleFinDateWindow>[];
     var windowEnd = now;
     while (windowEnd.isAfter(earliest)) {
@@ -18,16 +53,6 @@ class SimpleFinPullWindows._() {
       windowEnd = clampedStart;
     }
     return windows;
-  }
-
-  static SimpleFinDateWindow sinceLastPull({
-    required DateTime lastPull,
-    required DateTime now,
-  }) {
-    return SimpleFinDateWindow(
-      start: lastPull.subtract(const Duration(days: incrementalOverlapDays)),
-      end: now,
-    );
   }
 }
 

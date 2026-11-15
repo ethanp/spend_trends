@@ -27,10 +27,11 @@ const _mainTabs = <EMainTab>[
 ];
 
 void main() {
-  const SyncedAppLaunch(
+  SyncedAppLaunch(
     appName: AppIdentity.displayName,
-    syncConfig: buildSpendTrendsSyncConfig,
-    home: EMainTabScreen(tabs: _mainTabs),
+    syncConfig: (preferences) =>
+        buildSpendTrendsSyncConfig(preferences: preferences),
+    home: const EMainTabScreen(tabs: _mainTabs),
     beforeRunApp: AgentApiServer.startFromEnv,
   ).launch();
 }

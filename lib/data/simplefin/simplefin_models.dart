@@ -125,6 +125,10 @@ class SimpleFinFetchException(final String message, {final int? statusCode})
   /// can wait for a later pull.
   bool get isRateLimited => statusCode == 429;
 
+  /// The bridge itself failed (an HTML error page, not an Account Set);
+  /// these usually clear within a minute.
+  bool get isServerError => (statusCode ?? 0) >= 500;
+
   @override
   String toString() => message;
 }

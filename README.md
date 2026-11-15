@@ -54,8 +54,9 @@ Four layers, each grouped by subject inside (`accounts/`, `categories/`, …):
 | `data/` | PowerSync repositories + their read providers, SimpleFIN client, Copilot CSV / Empower parsers, LLM prompt. |
 | `ui/` | One folder per tab (`activity/`, `banks/`, `trends/`, …) plus `widgets/` and `theme/`. |
 | `agent_api/` | Loopback HTTP API for agent categorization audits (macOS). |
+| `scheduled/` | The daily bank pull the home server runs headless (see `scheduled_bank_pull/README.md`). |
 
-Dependencies point one way: `ui` and `agent_api` → `use_cases` → `domain`;
+Dependencies point one way: `ui`, `agent_api`, and `scheduled` → `use_cases` → `domain`;
 anything but `domain` may use `data`. `test/layer_dependencies_test.dart`
 fails on an import that breaks this. `test/` mirrors `lib/`.
 

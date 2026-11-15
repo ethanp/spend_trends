@@ -16,7 +16,16 @@ const simpleFinCreateUrl = 'https://bridge.simplefin.org/simplefin/create';
 
 class const _FetchWindow({final int? startUnix, final int? endUnix});
 
-class SimpleFinClient({http.Client? httpClient}) {
+class SimpleFinClient({
+  http.Client? httpClient,
+
+  /// Waits before each retry of a bridge server error (HTTP 5xx).
+  final List<Duration> serverErrorRetryDelays = const [
+    Duration(seconds: 10),
+    Duration(seconds: 20),
+    Duration(seconds: 30),
+  ],
+}) {
   final http.Client _httpClient = httpClient ?? http.Client();
 
   Future<Uri> claimAccessUrl(String setupToken) async {
@@ -112,12 +121,39 @@ class SimpleFinClient({http.Client? httpClient}) {
       balancesOnly: balancesOnly,
       accountIds: accountIds,
     );
-    final response = await _getAccountsResponse(
+    return _fetchAccountSetRetryingServerErrors(
       accessUrl: accessUrl,
       requestUrl: requestUrl,
       onBytes: onBytes,
     );
-    return _accountSetFromResponse(response);
+  }
+
+  Future<SimpleFinAccountSet> _fetchAccountSetRetryingServerErrors({
+    required Uri accessUrl,
+    required Uri requestUrl,
+    void Function(int bytesReceived, int? contentLength)? onBytes,
+  }) async {
+    for (var retryIndex = 0; ; retryIndex++) {
+      try {
+        final response = await _getAccountsResponse(
+          accessUrl: accessUrl,
+          requestUrl: requestUrl,
+          onBytes: onBytes,
+        );
+        return _accountSetFromResponse(response);
+      } on SimpleFinFetchException catch (error) {
+        if (!error.isServerError ||
+            retryIndex >= serverErrorRetryDelays.length) {
+          rethrow;
+        }
+        final retryDelay = serverErrorRetryDelays[retryIndex];
+        _logger.warn(
+          '${error.message} Retry ${retryIndex + 1} of '
+          '${serverErrorRetryDelays.length} in ${retryDelay.inSeconds}s',
+        );
+        await Future<void>.delayed(retryDelay);
+      }
+    }
   }
 
   void _logFetchWindow(_FetchWindow window) {

@@ -25,9 +25,18 @@ const _conflictColumns = <String, String>{
   'sync_state': 'key',
 };
 
-SyncConfig buildSpendTrendsSyncConfig(SharedPreferences preferences) {
+/// The app passes [preferences] (cached path under Documents); the scheduled
+/// bank pull on the home server passes its own [databasePath] and
+/// [ConnectionSettings.oneShotRun].
+SyncConfig buildSpendTrendsSyncConfig({
+  SharedPreferences? preferences,
+  Future<String> Function()? databasePath,
+  ConnectionSettings connection = const ConnectionSettings.alwaysOn(),
+}) {
   return DotEnvSyncBootstrap.build(
     preferences: preferences,
+    databasePath: databasePath,
+    connection: connection,
     appName: AppIdentity.syncAppName,
     powersyncPort: 8083,
     postgrestPort: 3006,

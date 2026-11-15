@@ -2,7 +2,7 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 
-/// `ui` and `agent_api` → `use_cases` → `domain`; anything but `domain` may
+/// `ui`, `agent_api`, and `scheduled` → `use_cases` → `domain`; anything but `domain` may
 /// use `data`. See README "Code layout".
 class const LayerRule({
   required final String layer,
@@ -19,7 +19,7 @@ class const LayerRule({
   static const all = [
     LayerRule(
       layer: 'domain',
-      forbiddenLayers: ['use_cases', 'data', 'ui', 'agent_api'],
+      forbiddenLayers: ['use_cases', 'data', 'ui', 'agent_api', 'scheduled'],
       forbiddenPackages: [
         'package:flutter/',
         'dart:ui',
@@ -32,17 +32,22 @@ class const LayerRule({
     ),
     LayerRule(
       layer: 'use_cases',
-      forbiddenLayers: ['ui', 'agent_api'],
+      forbiddenLayers: ['ui', 'agent_api', 'scheduled'],
       forbiddenPackages: _widgetPackages,
     ),
     LayerRule(
       layer: 'data',
-      forbiddenLayers: ['use_cases', 'ui', 'agent_api'],
+      forbiddenLayers: ['use_cases', 'ui', 'agent_api', 'scheduled'],
       forbiddenPackages: _widgetPackages,
     ),
     LayerRule(
       layer: 'agent_api',
-      forbiddenLayers: ['ui'],
+      forbiddenLayers: ['ui', 'scheduled'],
+      forbiddenPackages: _widgetPackages,
+    ),
+    LayerRule(
+      layer: 'scheduled',
+      forbiddenLayers: ['ui', 'agent_api'],
       forbiddenPackages: _widgetPackages,
     ),
   ];
