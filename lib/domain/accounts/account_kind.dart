@@ -22,10 +22,17 @@ enum AccountKind({final String? _legendLabel}) {
   String get storageValue => name;
 
   /// Holdings are never owed, so an investment balance a bank reports as
-  /// negative (M1 sends its portfolio that way) is stored positive. Other
-  /// kinds keep the reported sign: credit cards and loans are negative.
-  int balanceCentsFromReported(int reportedCents) =>
-      this == investment ? reportedCents.abs() : reportedCents;
+  /// negative is stored positive. M1's margin account (via MX) sends its
+  /// portfolio either as a negative balance or as balance 0.00 with the value
+  /// in available-balance; both become the positive portfolio value. Other
+  /// kinds keep the reported balance: credit cards and loans are negative.
+  int balanceCentsFromReported(int reportedCents, {int? availableCents}) {
+    if (this != investment) return reportedCents;
+    if (reportedCents == 0 && availableCents != null) {
+      return availableCents.abs();
+    }
+    return reportedCents.abs();
+  }
 
   static AccountKind? tryFromStorage(String? value) {
     final trimmed = value?.trim();

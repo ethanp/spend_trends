@@ -72,11 +72,16 @@ class SimpleFinAccountMapper({
     );
     final AccountKind kind =
         existing?.kind ?? AccountKindClassifier.classify(draft);
-    final int balanceCents = kind.balanceCentsFromReported(draft.balanceCents);
+    final int? availableCents = remoteAccount.availableBalance?.asCents;
+    final int balanceCents = kind.balanceCentsFromReported(
+      draft.balanceCents,
+      availableCents: availableCents,
+    );
     if (balanceCents != draft.balanceCents) {
       _log.log(
         '${labelFor(remoteAccount)}: ${kind.name} balance reported as '
-        '${draft.balanceCents} cents, stored as $balanceCents',
+        '${draft.balanceCents} cents (available $availableCents), '
+        'stored as $balanceCents',
       );
     }
     await _accountsRepository.upsertAccount(

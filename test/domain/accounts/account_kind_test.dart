@@ -60,9 +60,31 @@ void main() {
       expect(AccountKind.investment.balanceCentsFromReported(5000), 5000);
     });
 
+    test('an investment reported 0 with a negative available balance '
+        'stores the available balance positive', () {
+      expect(
+        AccountKind.investment.balanceCentsFromReported(
+          0,
+          availableCents: -117379055,
+        ),
+        117379055,
+      );
+    });
+
+    test('an investment reported 0 with no available balance stays 0', () {
+      expect(AccountKind.investment.balanceCentsFromReported(0), 0);
+    });
+
     test('loans and credit cards keep their negative balance', () {
       expect(AccountKind.loans.balanceCentsFromReported(-50000), -50000);
       expect(AccountKind.creditCard.balanceCentsFromReported(-1200), -1200);
+    });
+
+    test('a loan reported 0 ignores its available balance', () {
+      expect(
+        AccountKind.loans.balanceCentsFromReported(0, availableCents: -90000),
+        0,
+      );
     });
   });
 }
