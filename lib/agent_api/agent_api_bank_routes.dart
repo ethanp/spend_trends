@@ -12,6 +12,8 @@ import 'package:spend_trends/use_cases/accounts/manual_accounts.dart';
 import 'package:spend_trends/use_cases/simplefin_pull/pull_simplefin_transactions.dart';
 import 'package:spend_trends/data/sync/spend_data_changed.dart';
 import 'package:spend_trends/data/repositories/accounts_repository.dart';
+import 'package:spend_trends/data/repositories/account_balance_snapshots_repository.dart';
+import 'package:spend_trends/domain/accounts/account_balance_snapshot.dart';
 
 /// Bank pulls and account fixes, the same calls the Banks tab makes.
 class const AgentApiBankRoutes({required final ProviderContainer container}) {
@@ -20,7 +22,49 @@ class const AgentApiBankRoutes({required final ProviderContainer container}) {
       ..post('/banks/pull', _pull)
       ..patch('/accounts/<accountId>', _updateAccount)
       ..post('/accounts/manual', _createManualAccount)
-      ..post('/accounts/<accountId>/balance', _recordManualBalance);
+      ..post('/accounts/<accountId>/balance', _recordManualBalance)
+      ..delete(
+        '/accounts/<accountId>/balances/<snapshotId>',
+        _deleteBalanceSnapshot,
+      );
+  }
+
+  /// Removes one recorded balance (the `id` `<accountId>@<isoDate>` for a
+  /// pulled day). A manual account's balance then follows its newest
+  /// remaining snapshot, as in the Banks tab.
+  Future<Response> _deleteBalanceSnapshot(
+    Request request,
+    String accountId,
+    String snapshotId,
+  ) async {
+    final AccountBalanceSnapshotsRepository snapshotsRepository =
+        await container.read(accountBalanceSnapshotsRepositoryProvider.future);
+    final AccountBalanceSnapshot? snapshot = (await snapshotsRepository
+            .listAll())
+        .where(
+          (candidate) =>
+              candidate.id == snapshotId && candidate.accountId == accountId,
+        )
+        .firstOrNull;
+    if (snapshot == null) {
+      return jsonError(
+        'No balance snapshot $snapshotId on account $accountId',
+        status: 404,
+      );
+    }
+    final AccountsRepository accountsRepository = await container.read(
+      accountsRepositoryProvider.future,
+    );
+    final Account? account = await accountsRepository.findById(accountId);
+    if (account != null && account.isManual) {
+      final ManualAccounts manualAccounts = await container.read(
+        manualAccountsProvider.future,
+      );
+      await manualAccounts.deleteBalance(snapshot);
+    } else {
+      await snapshotsRepository.delete(snapshot.id);
+    }
+    return _accountResponse(accountId);
   }
 
   /// `{fullHistory?: bool}`. Pulls SimpleFIN (since the last pull unless
