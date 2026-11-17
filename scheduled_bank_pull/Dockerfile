@@ -6,12 +6,12 @@ FROM debian:trixie-slim
 # (trixie, not bookworm). The sqlite3 package opens the unversioned
 # libsqlite3.so, which only the -dev package links.
 RUN apt-get update \
-  && apt-get install -y --no-install-recommends \
-    ca-certificates curl git unzip xz-utils libsqlite3-dev \
+  && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+    ca-certificates curl git unzip xz-utils libsqlite3-dev tzdata \
   && rm -rf /var/lib/apt/lists/*
 
 # Same Flutter as the Mac, so pubspec.lock resolves the same way.
-ARG FLUTTER_VERSION=3.47.8
+ARG FLUTTER_VERSION=3.50.0
 RUN git clone --depth 1 --branch "$FLUTTER_VERSION" \
     https://github.com/flutter/flutter.git /opt/flutter
 ENV PATH=/opt/flutter/bin:$PATH
@@ -32,5 +32,8 @@ RUN flutter pub get
 RUN cp "$(find / -xdev -path '*/powersync_flutter_libs-*/linux/libpowersync_x64.so' -print -quit)" /usr/local/lib/ \
   && ldconfig
 
+# The Mac's zone, so a pulled balance lands on the same local day (and the
+# same <accountId>@<isoDate> snapshot) as a pull from the app.
+ENV TZ=America/Chicago
 ENV BANK_PULL_DATABASE_PATH=/data/spend_trends_bank_pull.db
 CMD ["flutter", "test", "tool/scheduled_bank_pull_harness.dart", "--reporter", "expanded"]
