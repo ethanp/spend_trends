@@ -25,7 +25,7 @@ const _conflictColumns = <String, String>{
   'sync_state': 'key',
 };
 
-/// The app passes [preferences] (cached path under Documents); the scheduled
+/// The app passes [preferences] (cached path under Application Support); the scheduled
 /// bank pull on the home server passes its own [databasePath] and
 /// [ConnectionSettings.oneShotRun].
 SyncConfig buildSpendTrendsSyncConfig({
