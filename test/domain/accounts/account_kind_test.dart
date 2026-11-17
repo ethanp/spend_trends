@@ -50,6 +50,21 @@ void main() {
       expect(_kind(name: 'Vehicle'), AccountKind.nonFinancialAssets);
     });
   });
+
+  group('balanceCentsFromReported', () {
+    test('an investment reported negative is stored positive', () {
+      expect(
+        AccountKind.investment.balanceCentsFromReported(-117379055),
+        117379055,
+      );
+      expect(AccountKind.investment.balanceCentsFromReported(5000), 5000);
+    });
+
+    test('loans and credit cards keep their negative balance', () {
+      expect(AccountKind.loans.balanceCentsFromReported(-50000), -50000);
+      expect(AccountKind.creditCard.balanceCentsFromReported(-1200), -1200);
+    });
+  });
 }
 
 AccountKind _kind({

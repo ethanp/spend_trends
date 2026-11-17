@@ -6,6 +6,8 @@ import 'package:spend_trends/data/repositories/accounts_repository.dart';
 import 'package:ethan_utils/ethan_utils.dart';
 import 'package:uuid/uuid.dart';
 
+const _log = ELogger('SimpleFinAccountMapper');
+
 /// Maps SimpleFIN remote accounts into local [Account] rows, saving each
 /// pulled balance as that day's snapshot for net worth history.
 class SimpleFinAccountMapper({
@@ -68,14 +70,21 @@ class SimpleFinAccountMapper({
       connUserLabel: existing?.connUserLabel,
       belongsToAccountId: existing?.belongsToAccountId,
     );
+    final AccountKind kind =
+        existing?.kind ?? AccountKindClassifier.classify(draft);
+    final int balanceCents = kind.balanceCentsFromReported(draft.balanceCents);
+    if (balanceCents != draft.balanceCents) {
+      _log.log(
+        '${labelFor(remoteAccount)}: ${kind.name} balance reported as '
+        '${draft.balanceCents} cents, stored as $balanceCents',
+      );
+    }
     await _accountsRepository.upsertAccount(
-      draft.copyWith(
-        kind: existing?.kind ?? AccountKindClassifier.classify(draft),
-      ),
+      draft.copyWith(kind: kind, balanceCents: balanceCents),
     );
     await _snapshotsRepository.recordDailyBalance(
       accountId: localId,
-      balanceCents: draft.balanceCents,
+      balanceCents: balanceCents,
       day: (draft.balanceAsOf ?? syncedAt).toLocal(),
     );
     return localId;
