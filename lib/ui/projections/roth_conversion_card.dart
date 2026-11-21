@@ -110,9 +110,12 @@ class const RothConversionCard({required final RetirementProjection projection})
     required String earliestAge,
     required TextStyle style,
   }) {
-    Widget figure(String text) => SizedBox(
-      width: _figureWidth,
-      child: Text(text, textAlign: TextAlign.right, style: style),
+    // Full width when there is room; shares what is left on a phone.
+    Widget figure(String text) => Flexible(
+      child: SizedBox(
+        width: _figureWidth,
+        child: Text(text, textAlign: TextAlign.right, style: style),
+      ),
     );
     return Row(
       children: [

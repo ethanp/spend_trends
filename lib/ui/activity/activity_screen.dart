@@ -22,7 +22,6 @@ import 'package:spend_trends/ui/banks/banks_pull_live_session.dart';
 import 'package:spend_trends/data/simplefin/simplefin_access_store.dart';
 import 'package:spend_trends/ui/banks/connection_status.dart';
 import 'package:spend_trends/data/sync/spend_data_changed.dart';
-import 'package:spend_trends/ui/widgets/app_browse_split_shell.dart';
 
 class const ActivityScreen() extends ConsumerStatefulWidget {
   @override
@@ -83,7 +82,7 @@ class _ActivityScreenState() extends ConsumerState<ActivityScreen> {
         reloadProgressLabel: headerReloadProgressLabel,
         actions: [
           const FireOutlookCard(),
-          if (AppBrowseSplitShell.isSplit(context)) ...[
+          if (ESplitPanes.showsBothPanes(context)) ...[
             TextButton(
               onPressed: () => SuggestCategoriesSheet.show(context),
               child: const Text('Suggest categories'),
@@ -134,10 +133,11 @@ class _ActivityScreenState() extends ConsumerState<ActivityScreen> {
   Widget _transactionList(ActivityBrowseData browseData) {
     if (browseData.transactions.isEmpty) return _emptyState();
     final snapshot = _listSnapshot(browseData);
-    return AppBrowseSplitShell(
-      sizedSide: AppBrowseSplitSizedSide.left,
+    return ESplitPanes(
+      kind: ESplitPanesKind.browse,
+      sizedSide: ESplitPaneSide.left,
       initialSizedWidth: _leftComfortWidth,
-      growth: const AppBrowseSplitGrowth(
+      growth: const ESplitPaneGrowth(
         leftComfortWidth: _leftComfortWidth,
         rightComfortWidth: _rightComfortWidth,
       ),
@@ -189,7 +189,7 @@ class _ActivityScreenState() extends ConsumerState<ActivityScreen> {
             setState(() => _uncategorizedOnly = uncategorizedOnly);
           },
         ),
-        if (!AppBrowseSplitShell.isSplit(context))
+        if (!ESplitPanes.showsBothPanes(context))
           Padding(
             padding: const EdgeInsets.fromLTRB(
               ELayout.spaceLg,
@@ -279,7 +279,7 @@ class _ActivityScreenState() extends ConsumerState<ActivityScreen> {
   }
 
   void _selectTransaction(BankTransaction transaction) {
-    if (!AppBrowseSplitShell.isSplit(context)) {
+    if (!ESplitPanes.showsBothPanes(context)) {
       RecategorizeSheet.show(context, ref: ref, transaction: transaction);
       return;
     }

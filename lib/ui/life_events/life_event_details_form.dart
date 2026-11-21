@@ -26,7 +26,7 @@ sealed class LifeEventDetailsForm {
   };
 
   /// Rows under the shared fields; [rebuild] redraws after a toggle.
-  List<Widget> fields(VoidCallback rebuild);
+  List<ELabeledControlRow> fields(VoidCallback rebuild);
 
   /// Throws [FormatException] naming the field that is not a number.
   LifeEvent eventWith(LifeEventBasics basics);
@@ -36,7 +36,7 @@ sealed class LifeEventDetailsForm {
 
 class _NoDetailsForm(final LifeEventKind kind) implements LifeEventDetailsForm {
   @override
-  List<Widget> fields(VoidCallback rebuild) => const [];
+  List<ELabeledControlRow> fields(VoidCallback rebuild) => const [];
 
   @override
   LifeEvent eventWith(LifeEventBasics basics) => LifeEvent.fromStorage(
@@ -63,7 +63,10 @@ class _JobDetailsForm(Job? job) implements LifeEventDetailsForm {
   );
 
   @override
-  List<Widget> fields(VoidCallback rebuild) => [_salary.row(), _bonus.row()];
+  List<ELabeledControlRow> fields(VoidCallback rebuild) => [
+    _salary.row(),
+    _bonus.row(),
+  ];
 
   @override
   LifeEvent eventWith(LifeEventBasics basics) => Job(
@@ -125,22 +128,28 @@ class _HomeDetailsForm(HomeOwnership? home) implements LifeEventDetailsForm {
   );
 
   @override
-  List<Widget> fields(VoidCallback rebuild) => [
+  List<ELabeledControlRow> fields(VoidCallback rebuild) => [
     _price.row(),
-    _toggle('Mortgage', _isFinanced, (isFinanced) {
-      _isFinanced = isFinanced;
-      rebuild();
-    }),
+    ELabeledControlRow.toggle(
+      label: 'Mortgage',
+      value: _isFinanced,
+      onChanged: (isFinanced) {
+        _isFinanced = isFinanced;
+        rebuild();
+      },
+    ),
     if (_isFinanced) ...[
       _downPayment.row(),
       _mortgageRate.row(),
       _mortgageYears.row(),
-      _toggle('Escrow (tax and insurance via servicer)', _hasEscrow, (
-        hasEscrow,
-      ) {
-        _hasEscrow = hasEscrow;
-        rebuild();
-      }),
+      ELabeledControlRow.toggle(
+        label: 'Escrow (tax and insurance via servicer)',
+        value: _hasEscrow,
+        onChanged: (hasEscrow) {
+          _hasEscrow = hasEscrow;
+          rebuild();
+        },
+      ),
     ],
     _insurance.row(),
     _hoa.row(),
@@ -177,15 +186,6 @@ class _HomeDetailsForm(HomeOwnership? home) implements LifeEventDetailsForm {
     monthsCarryingPreviousHome: _monthsCarryingPreviousHome.wholeNumber,
     movingCost: _movingCost.wholeNumber,
   );
-
-  Widget _toggle(String label, bool isOn, ValueChanged<bool> onChanged) {
-    return Row(
-      children: [
-        Expanded(child: Text(label, style: EText.caption)),
-        Switch(value: isOn, onChanged: onChanged),
-      ],
-    );
-  }
 
   @override
   void dispose() {
@@ -228,25 +228,18 @@ class _NumberInput(final String label, num? initialValue) {
     }
   }
 
-  Widget row() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 2),
-      child: Row(
-        children: [
-          Expanded(child: Text(label, style: EText.caption)),
-          SizedBox(
-            width: 120,
-            child: TextField(
-              controller: _controller,
-              textAlign: TextAlign.right,
-              keyboardType: const TextInputType.numberWithOptions(
-                decimal: true,
-              ),
-              style: EText.caption.copyWith(color: EColors.textPrimary),
-              decoration: EInput.filled().copyWith(isDense: true),
-            ),
-          ),
-        ],
+  ELabeledControlRow row() {
+    return ELabeledControlRow.trailing(
+      label: label,
+      child: SizedBox(
+        width: 120,
+        child: TextField(
+          controller: _controller,
+          textAlign: TextAlign.right,
+          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+          style: EText.caption.copyWith(color: EColors.textPrimary),
+          decoration: EInput.filled().copyWith(isDense: true),
+        ),
       ),
     );
   }

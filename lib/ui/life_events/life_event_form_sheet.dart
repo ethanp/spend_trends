@@ -111,7 +111,7 @@ class _LifeEventFormSheetState() extends ConsumerState<LifeEventFormSheet> {
                   onActivated: () => _pickDate(isStart: false),
                 ),
               ],
-              ..._detailsForm.fields(() => setState(() {})),
+              _detailFields(),
               const SizedBox(height: ELayout.spaceMd),
               _noteField(),
               if (_error != null) ...[
@@ -199,6 +199,17 @@ class _LifeEventFormSheetState() extends ConsumerState<LifeEventFormSheet> {
           }
         });
       },
+    );
+  }
+
+  /// The kind's own fields, as one labeled-control table.
+  Widget _detailFields() {
+    final List<ELabeledControlRow> detailRows = _detailsForm.fields(
+      () => setState(() {}),
+    );
+    if (detailRows.isEmpty) return const SizedBox.shrink();
+    return ELabeledControlTable(
+      sections: [ELabeledControlSection(rows: detailRows)],
     );
   }
 

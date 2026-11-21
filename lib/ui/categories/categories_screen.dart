@@ -11,7 +11,6 @@ import 'package:spend_trends/ui/categories/categories_burn_pane.dart';
 import 'package:spend_trends/ui/categories/category_browse_list.dart';
 import 'package:spend_trends/ui/categories/category_editor_sheet.dart';
 import 'package:spend_trends/ui/categories/category_list_sections.dart';
-import 'package:spend_trends/ui/widgets/app_browse_split_shell.dart';
 import 'package:spend_trends/ui/widgets/app_primary_button.dart';
 
 import 'categories_providers.dart';
@@ -86,7 +85,8 @@ class _CategoriesScreenState() extends ConsumerState<CategoriesScreen> {
       for (final category in categories) category.id: category,
     };
 
-    return AppBrowseSplitShell(
+    return ESplitPanes(
+      kind: ESplitPanesKind.browse,
       initialSizedWidth: _rightPaneWidth,
       maxSizedWidth: _rightPaneWidth,
       left: CategoryBrowseList(
@@ -108,7 +108,7 @@ class _CategoriesScreenState() extends ConsumerState<CategoriesScreen> {
   }
 
   void _selectCategory(SpendCategory category) {
-    if (!AppBrowseSplitShell.isSplit(context)) {
+    if (!ESplitPanes.showsBothPanes(context)) {
       CategoryEditorSheet.show(context, ref: ref, category: category);
       return;
     }

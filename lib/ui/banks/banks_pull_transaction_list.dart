@@ -12,7 +12,6 @@ import 'package:spend_trends/ui/activity/activity_transaction_tile.dart';
 import 'package:spend_trends/ui/activity/manage_rule_sheet.dart';
 import 'package:spend_trends/ui/activity/recategorize_sheet.dart';
 import 'package:spend_trends/data/repositories/categories_repository.dart';
-import 'package:spend_trends/ui/widgets/app_browse_split_shell.dart';
 
 import 'package:spend_trends/data/repositories/accounts_repository.dart';
 
@@ -237,7 +236,7 @@ class _BanksPullTransactionListState()
   }
 
   void _selectTransaction(BankTransaction transaction) {
-    if (!AppBrowseSplitShell.isSplit(context)) {
+    if (!ESplitPanes.showsBothPanes(context)) {
       RecategorizeSheet.show(context, ref: ref, transaction: transaction);
       return;
     }

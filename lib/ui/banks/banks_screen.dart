@@ -14,7 +14,6 @@ import 'package:spend_trends/ui/owned_assets/owned_asset_detail_pane.dart';
 import 'package:spend_trends/data/repositories/transactions_repository.dart';
 import 'package:spend_trends/data/repositories/owned_assets_repository.dart';
 import 'package:spend_trends/data/sync/spend_data_changed.dart';
-import 'package:spend_trends/ui/widgets/app_browse_split_shell.dart';
 
 import 'connection_status.dart';
 
@@ -71,7 +70,7 @@ class _BanksScreenState() extends ConsumerState<BanksScreen> {
                       selectedAccountId: _selectedAccountId,
                       selectedOwnedAssetId: _selectedOwnedAssetId,
                       onAccountSelected: (accountId) {
-                        if (!AppBrowseSplitShell.isSplit(context)) return;
+                        if (!ESplitPanes.showsBothPanes(context)) return;
                         setState(() {
                           _selectedAccountId = accountId;
                           _selectedOwnedAssetId = null;
@@ -79,7 +78,7 @@ class _BanksScreenState() extends ConsumerState<BanksScreen> {
                         });
                       },
                       onOwnedAssetSelected: (ownedAssetId) {
-                        if (!AppBrowseSplitShell.isSplit(context)) return;
+                        if (!ESplitPanes.showsBothPanes(context)) return;
                         setState(() {
                           _selectedOwnedAssetId = ownedAssetId;
                           _selectedAccountId = null;
@@ -109,7 +108,8 @@ class _BanksScreenState() extends ConsumerState<BanksScreen> {
               ],
             );
             if (!status.isConnected) return scroll;
-            return AppBrowseSplitShell(
+            return ESplitPanes(
+              kind: ESplitPanesKind.browse,
               left: scroll,
               right: _rightPane(
                 accounts: status.accounts,
@@ -146,7 +146,7 @@ class _BanksScreenState() extends ConsumerState<BanksScreen> {
   }
 
   void _selectPullTransaction(BankTransaction transaction) {
-    if (!AppBrowseSplitShell.isSplit(context)) return;
+    if (!ESplitPanes.showsBothPanes(context)) return;
     setState(() {
       _selectedPullTransaction = transaction;
       _selectedAccountId = null;

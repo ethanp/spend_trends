@@ -35,34 +35,42 @@ class const SettingsScreen() extends ConsumerWidget {
             ),
           ),
           children: [
-            const BanksAdvancedSection(),
-            const SizedBox(height: ELayout.spaceXl),
-            const SyncStatusTile(),
-            const SizedBox(height: ELayout.spaceXl),
-            const ESettingsSection(
-              title: 'Copilot migration',
-              children: [
-                ESettingsRowGroup(
-                  children: [
-                    CopilotImportTile(),
-                    RemoveDuplicateTransactionsTile(),
-                  ],
-                ),
-              ],
-            ),
-            const SizedBox(height: ELayout.spaceXl),
-            ESettingsSection(
-              title: 'Diagnostics',
-              children: [
-                ESettingsRowGroup(
-                  children: [
-                    EAppLogRow(
-                      eyebrow: AppIdentity.displayName,
-                      accent: SettingsSectionStyle.sync.accent,
-                    ),
-                  ],
-                ),
-              ],
+            EReadableMeasure(
+              maxWidth: ELayout.contentMaxWidth,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  const BanksAdvancedSection(),
+                  const SizedBox(height: ELayout.spaceXl),
+                  const SyncStatusTile(),
+                  const SizedBox(height: ELayout.spaceXl),
+                  const ESettingsSection(
+                    title: 'Copilot migration',
+                    children: [
+                      ESettingsRowGroup(
+                        children: [
+                          CopilotImportTile(),
+                          RemoveDuplicateTransactionsTile(),
+                        ],
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: ELayout.spaceXl),
+                  ESettingsSection(
+                    title: 'Diagnostics',
+                    children: [
+                      ESettingsRowGroup(
+                        children: [
+                          EAppLogRow(
+                            eyebrow: AppIdentity.displayName,
+                            accent: SettingsSectionStyle.sync.accent,
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ],
+              ),
             ),
           ],
         ),

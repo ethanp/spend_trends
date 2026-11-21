@@ -6,7 +6,6 @@ import 'package:spend_trends/domain/accounts/owned_asset.dart';
 import 'package:spend_trends/ui/owned_assets/owned_asset_detail_pane.dart';
 import 'package:spend_trends/ui/owned_assets/owned_asset_form_sheet.dart';
 import 'package:spend_trends/ui/owned_assets/owned_asset_row.dart';
-import 'package:spend_trends/ui/widgets/app_browse_split_shell.dart';
 import 'package:spend_trends/ui/widgets/app_primary_button.dart';
 import 'package:spend_trends/ui/widgets/help_tooltip.dart';
 
@@ -84,7 +83,7 @@ class const OwnedAssetsSection({
     BuildContext context,
     OwnedAssetWithValuations ownedAsset,
   ) {
-    if (AppBrowseSplitShell.isSplit(context) && onOwnedAssetSelected != null) {
+    if (ESplitPanes.showsBothPanes(context) && onOwnedAssetSelected != null) {
       onOwnedAssetSelected!(ownedAsset.asset.id);
       return;
     }
