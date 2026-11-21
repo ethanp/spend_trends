@@ -35,6 +35,19 @@ extension ConsciousSpendingAreaColor on ConsciousSpendingArea {
   };
 }
 
+extension ConsciousSpendingGuidelineScoreColor on ConsciousSpendingGuideline {
+  /// [onTarget] at the guideline, shading to green as [percent] beats it and
+  /// to red as it misses, fully colored once [score] saturates. A near miss
+  /// barely tints, so it does not read as an alarm.
+  Color colorForPercent(int percent, {Color onTarget = EColors.textPrimary}) {
+    final double guidelineScore = score(percent);
+    if (guidelineScore >= 0) {
+      return Color.lerp(onTarget, EColors.success, guidelineScore)!;
+    }
+    return Color.lerp(onTarget, EColors.danger, -guidelineScore)!;
+  }
+}
+
 extension AccountTaxTreatmentColor on AccountTaxTreatment {
   Color get color => switch (this) {
     AccountTaxTreatment.traditional => const Color(0xFF7D5BA6),

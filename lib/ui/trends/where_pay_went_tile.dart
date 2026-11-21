@@ -91,7 +91,8 @@ class const WherePayWentTile({
     );
   }
 
-  /// Pay per month, or, when spending passed pay, how far past it went.
+  /// Average pay per month; beneath it, when spending passed pay, how far
+  /// past, tinted red by how far it misses Savings' guideline.
   Widget _payCaption(
     EWidthTypeScale typeScale,
     ConsciousSpendingWindowTotals? totals, {
@@ -99,17 +100,27 @@ class const WherePayWentTile({
   }) {
     if (totals == null) return Text('— /mo pay', style: labelStyle);
     final int? savingsPercent = totals.savingsPercentOfPay;
-    if (savingsPercent != null && savingsPercent < 0) {
-      return Text(
-        'spent ${100 - savingsPercent}%',
-        style: labelStyle.copyWith(color: EColors.danger),
-      );
-    }
-    return Text(
-      '${formatCentsWholeDollars((totals.annualPayCents / 12).round())}/mo pay',
-      style: labelStyle.copyWith(
-        fontFeatures: const [FontFeature.tabularFigures()],
-      ),
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          '${formatCentsWholeDollars((totals.annualPayCents / 12).round())}/mo pay',
+          style: labelStyle.copyWith(
+            fontFeatures: const [FontFeature.tabularFigures()],
+          ),
+        ),
+        if (savingsPercent != null && savingsPercent < 0)
+          Text(
+            'spent ${100 - savingsPercent}%',
+            style: labelStyle.copyWith(
+              color: ConsciousSpendingGuideline.savings.colorForPercent(
+                savingsPercent,
+                onTarget: labelStyle.color!,
+              ),
+              fontFeatures: const [FontFeature.tabularFigures()],
+            ),
+          ),
+      ],
     );
   }
 

@@ -290,7 +290,7 @@ class const _ConsciousSpendingNumberTile({
       style: typeRamp.percent.copyWith(
         color: guideline == null
             ? EColors.textPrimary
-            : _colorForGuidelineScore(guideline!.score(percent)),
+            : guideline!.colorForPercent(percent),
       ),
     );
   }
@@ -332,15 +332,6 @@ class const _ConsciousSpendingNumberTile({
   static String _signedWholeDollars(int cents) {
     if (cents < 0) return '−${formatCentsWholeDollars(-cents)}';
     return formatCentsWholeDollars(cents);
-  }
-
-  /// White on the guideline, shading to green as it is beaten and to red as
-  /// it is missed.
-  static Color _colorForGuidelineScore(double score) {
-    if (score >= 0) {
-      return Color.lerp(EColors.textPrimary, EColors.success, score)!;
-    }
-    return Color.lerp(EColors.textPrimary, EColors.danger, -score)!;
   }
 }
 
