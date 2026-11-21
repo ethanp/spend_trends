@@ -1,6 +1,6 @@
 import 'package:spend_trends/domain/accounts/account_kind.dart';
 import 'package:ethan_utils/ethan_utils.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// Stable colors for account-kind identity on the net worth chart.
 ///

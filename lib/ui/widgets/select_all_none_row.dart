@@ -1,5 +1,5 @@
 import 'package:ethan_ui/ethan_ui.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// Select all / Select none shortcuts for multi-select match lists.
 class const SelectAllNoneRow({

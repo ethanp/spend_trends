@@ -4,7 +4,7 @@ publish_to: "none"
 version: 1.0.0+1
 
 environment:
-  sdk: ^3.13.0
+  sdk: ^3.14.0
 
 dependencies:
   flutter:
@@ -32,6 +32,7 @@ dependencies:
   powersync: ^1.16.2
   file_picker: ^13.1.0
   csv: ^6.0.0
+  material_ui: ^1.11.1
 
 dev_dependencies:
   flutter_test:

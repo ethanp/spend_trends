@@ -16,7 +16,7 @@ import 'package:spend_trends/domain/trends/net_worth_component_history.dart';
 import 'package:spend_trends/ui/trends/trend_chart_catalog.dart';
 import 'package:spend_trends/ui/theme/account_kind_color.dart';
 import 'package:ethan_utils/ethan_utils.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// Reconstructs daily net worth from current balances + later transactions.
 class NetWorthTrend._() {

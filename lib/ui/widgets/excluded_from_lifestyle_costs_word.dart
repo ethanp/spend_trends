@@ -1,5 +1,5 @@
 import 'package:ethan_ui/ethan_ui.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// Muted “excluded” beside a rule or transaction left out of lifestyle costs.
 class const ExcludedFromLifestyleCostsWord() extends StatelessWidget {

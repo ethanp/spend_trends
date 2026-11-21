@@ -8,7 +8,7 @@ import 'package:spend_trends/ui/trends/trend_chart_catalog.dart';
 import 'package:spend_trends/ui/theme/category_color.dart';
 import 'package:spend_trends/ui/theme/finance_colors.dart';
 import 'package:ethan_utils/ethan_utils.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// Daily spend totals keyed by category (and rollups).
 class const CategorySpendDailyMaps({

@@ -1,5 +1,5 @@
 import 'package:ethan_ui/ethan_ui.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:spend_trends/ui/trends/category_trend_plot.dart';
 
 /// Inspected calendar day on a Trends chart (hairline + legend as-of).

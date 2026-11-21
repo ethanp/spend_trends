@@ -4,7 +4,7 @@ import 'package:spend_trends/ui/categories/category_list_sections.dart';
 import 'package:spend_trends/ui/theme/finance_colors.dart';
 import 'package:spend_trends/ui/theme/category_color.dart';
 import 'package:ethan_ui/ethan_ui.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// Category chips under spending-area titles, as on the Categories list.
 class const CategoryPicker({

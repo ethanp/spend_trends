@@ -10,7 +10,7 @@ import 'package:spend_trends/ui/trends/build_trends_charts.dart';
 import 'package:spend_trends/domain/trends/centered_moving_average.dart';
 import 'package:spend_trends/domain/trends/net_worth_component_history.dart';
 import 'package:spend_trends/ui/trends/net_worth_trend.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:spend_trends/ui/trends/trend_chart_catalog.dart';
 

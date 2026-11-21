@@ -3,7 +3,7 @@ import 'package:spend_trends/domain/categories/special_category.dart';
 import 'package:spend_trends/ui/theme/finance_colors.dart';
 import 'package:ethan_ui/ethan_ui.dart';
 import 'package:ethan_utils/ethan_utils.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// Stable colors for category identity across Activity / Trends.
 ///

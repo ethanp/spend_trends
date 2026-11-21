@@ -8,7 +8,7 @@ import 'package:spend_trends/ui/trends/annual_pace_smoother.dart';
 import 'package:spend_trends/ui/trends/trend_chart_catalog.dart';
 import 'package:spend_trends/ui/theme/finance_colors.dart';
 import 'package:ethan_utils/ethan_utils.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// Daily take-home pay / spending / transfer / conscious-spending-area totals
 /// for cash-flow Trends, summed from [CashFlowBreakdown] contributions.

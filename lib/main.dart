@@ -1,6 +1,6 @@
 import 'package:ethan_sync/ethan_sync.dart';
 import 'package:ethan_ui/ethan_ui.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:spend_trends/agent_api/agent_api_server.dart';
 import 'package:spend_trends/app_identity.dart';
 import 'package:spend_trends/ui/activity/activity_screen.dart';

@@ -10,9 +10,9 @@ class const LayerRule({
   required final List<String> forbiddenPackages,
 }) {
   static const _widgetPackages = [
-    'package:flutter/material.dart',
+    'package:material_ui/',
+    'package:cupertino_ui/',
     'package:flutter/widgets.dart',
-    'package:flutter/cupertino.dart',
     'package:ethan_ui/',
   ];
 

@@ -1,5 +1,5 @@
 import 'package:ethan_ui/ethan_ui.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:spend_trends/use_cases/simplefin_pull/simplefin_pull_progress.dart';
 import 'package:spend_trends/ui/theme/finance_colors.dart';
 

@@ -1,6 +1,6 @@
 import 'package:ethan_ui/ethan_ui.dart';
 import 'package:ethan_utils/ethan_utils.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:spend_trends/ui/trends/category_trend_series.dart';
 import 'package:spend_trends/ui/trends/trend_chart_catalog.dart';

@@ -1,6 +1,6 @@
 import 'package:ethan_ui/ethan_ui.dart';
 import 'package:ethan_utils/ethan_utils.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:spend_trends/domain/projection/life_event.dart';
 import 'package:spend_trends/ui/theme/draw/date_range_band.dart';
 import 'package:spend_trends/ui/theme/life_event_lane_color.dart';

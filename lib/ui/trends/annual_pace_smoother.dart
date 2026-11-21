@@ -5,7 +5,7 @@ import 'package:spend_trends/domain/trends/category_trend_point.dart';
 import 'package:spend_trends/ui/trends/category_trend_series.dart';
 import 'package:spend_trends/domain/trends/hann_annual_pace_kernel.dart';
 import 'package:ethan_utils/ethan_utils.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// Inclusive index span where a kernel centered at a day has support.
 class const KernelSupportSpan({

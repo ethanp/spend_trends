@@ -1,6 +1,6 @@
 import 'package:ethan_sync/ethan_sync.dart';
 import 'package:ethan_ui/ethan_ui.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:spend_trends/ui/settings/settings_action_row.dart';
 
 /// Sync settings: the shared connection panel, or a setup hint when `.env`

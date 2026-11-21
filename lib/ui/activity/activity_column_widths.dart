@@ -2,7 +2,7 @@ import 'dart:math' as math;
 
 import 'package:ethan_ui/ethan_ui.dart';
 import 'package:ethan_utils/ethan_utils.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:spend_trends/domain/accounts/account.dart';
 import 'package:spend_trends/domain/categories/category.dart';
 import 'package:spend_trends/domain/transactions/transaction.dart';

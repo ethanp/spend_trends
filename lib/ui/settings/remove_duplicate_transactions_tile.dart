@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:spend_trends/use_cases/csv_import/remove_copilot_duplicates.dart';
 import 'package:spend_trends/ui/settings/settings_action_row.dart';

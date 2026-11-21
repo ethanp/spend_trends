@@ -1,5 +1,5 @@
 import 'package:ethan_ui/ethan_ui.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:spend_trends/domain/categories/category.dart';
 import 'package:spend_trends/ui/widgets/excluded_from_lifestyle_costs_word.dart';
 

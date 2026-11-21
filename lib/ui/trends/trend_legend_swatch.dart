@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:spend_trends/ui/trends/category_trend_series.dart';
 
 /// Color chip for a trend series (solid, dotted, or long-dash guide).

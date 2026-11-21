@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// App primary (filled) action button; shows a spinner while [busy].
 class const AppPrimaryButton({

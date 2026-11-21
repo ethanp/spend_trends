@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:spend_trends/domain/accounts/account_kind.dart';
 import 'package:spend_trends/domain/trends/trend_spend_rate.dart';

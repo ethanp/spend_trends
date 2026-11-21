@@ -1,6 +1,6 @@
 import 'dart:math' as math;
 
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:spend_trends/domain/trends/category_trend_point.dart';
 import 'package:spend_trends/ui/trends/trend_chart_catalog.dart';
 
