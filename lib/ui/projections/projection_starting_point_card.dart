@@ -1,23 +1,18 @@
 import 'package:ethan_ui/ethan_ui.dart';
 import 'package:ethan_utils/ethan_utils.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:spend_trends/domain/accounts/account.dart';
 import 'package:spend_trends/domain/accounts/account_tax_treatment.dart';
 import 'package:spend_trends/domain/projection/life_event.dart';
 import 'package:spend_trends/domain/projection/retirement_projection.dart';
-import 'package:spend_trends/data/repositories/accounts_repository.dart';
 import 'package:spend_trends/ui/theme/finance_colors.dart';
 
-/// What the projection reads from live data, with each tax bucket's
-/// accounts listed under it.
+/// What the projection reads from live data: the last 365 days, the home,
+/// and each tax bucket's total. The accounts behind a bucket are on Banks.
 class const ProjectionStartingPointCard({
   required final RetirementProjection projection,
-}) extends ConsumerWidget {
+}) extends StatelessWidget {
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final Map<String, Account> accounts =
-        ref.watch(accountsMapProvider).asData?.value ?? const {};
+  Widget build(BuildContext context) {
     final start = projection.start;
     return ECard(
       kind: ESurfaceKind.row,
@@ -40,15 +35,15 @@ class const ProjectionStartingPointCard({
               _figure('Mortgage balance', start.mortgageBalance),
               _figure('Home value', start.homeValue),
               ..._lifeEventsApplyingToday(),
+              const SizedBox(height: ELayout.spaceMd),
               for (final treatment in AccountTaxTreatment.values)
                 if (treatment != AccountTaxTreatment.excluded)
-                  ..._taxBucket(treatment, accounts),
+                  ..._taxBucket(treatment),
             ],
           ),
           const SizedBox(height: ELayout.spaceSm),
           Text(
-            'Set an account’s tax type on Banks. Accounts with no balance '
-            'are hidden.',
+            'Each account’s balance and tax type are on Banks.',
             style: EText.caption,
           ),
         ],
@@ -74,19 +69,10 @@ class const ProjectionStartingPointCard({
     ];
   }
 
-  /// The bucket total, then its accounts largest first.
-  List<Widget> _taxBucket(
-    AccountTaxTreatment treatment,
-    Map<String, Account> accounts,
-  ) {
-    final bucketAccounts = [
-      for (final entry in projection.start.treatmentByAccountId.entries)
-        if (entry.value == treatment)
-          if (accounts[entry.key] case final Account account)
-            if (account.balanceCents != 0) account,
-    ]..sort((left, right) => right.balanceCents.compareTo(left.balanceCents));
+  /// The bucket total; for Roth and taxable, how much of it has a
+  /// recorded tax basis.
+  List<Widget> _taxBucket(AccountTaxTreatment treatment) {
     return [
-      const SizedBox(height: ELayout.spaceMd),
       _figure(
         treatment.label,
         projection.start.balanceFor(treatment),
@@ -101,12 +87,6 @@ class const ProjectionStartingPointCard({
           '${formatCentsWholeDollars((projection.start.balanceWithoutTaxBasisFor(treatment) * 100).round())}'
           ' unknown',
           projection.start.taxBasisByTreatment[treatment] ?? 0,
-          indent: true,
-        ),
-      for (final account in bucketAccounts)
-        _figure(
-          account.displayNameWithInstitution,
-          account.balanceCents / 100,
           indent: true,
         ),
     ];
