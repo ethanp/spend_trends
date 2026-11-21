@@ -66,31 +66,12 @@ class const ProjectionsScreen() extends ConsumerWidget {
 
   /// Two columns when there is room; stacked otherwise.
   Widget _assumptionsBesideStartingPoint(RetirementProjection projection) {
-    final assumptions = ProjectionAssumptionsCard(projection: projection);
-    final startingPoint = ProjectionStartingPointCard(projection: projection);
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        if (constraints.maxWidth < _twoColumnMinWidth) {
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              assumptions,
-              const SizedBox(height: ELayout.spaceLg),
-              startingPoint,
-            ],
-          );
-        }
-        return Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(child: assumptions),
-            const SizedBox(width: ELayout.spaceLg),
-            Expanded(child: startingPoint),
-          ],
-        );
-      },
+    return EBalancedRowsTileGrid(
+      minTileWidth: 400,
+      tiles: [
+        ProjectionAssumptionsCard(projection: projection),
+        ProjectionStartingPointCard(projection: projection),
+      ],
     );
   }
-
-  static const _twoColumnMinWidth = 1000.0;
 }

@@ -44,12 +44,12 @@ enum ConsciousSpendingArea({
 }
 
 /// Which side of a guideline's target beats it.
-enum GuidelineBetterSide() {
-  higher,
-  lower,
+enum GuidelineBetterSide({required final String boundSymbol}) {
+  higher(boundSymbol: '≥'),
+  lower(boundSymbol: '≤'),
 
   /// Any distance from the target misses it.
-  neither,
+  neither(boundSymbol: '≈'),
 }
 
 /// A target share of pay, and which side of it is better. Spending areas are
@@ -89,6 +89,9 @@ class const ConsciousSpendingGuideline({
   }
 
   String get targetLabel => '$targetPercent%';
+
+  /// The target with the side that beats it: `≤55%`, `≥10%`, `≈0%`.
+  String get boundedTargetLabel => '${betterSide.boundSymbol}$targetPercent%';
 
   /// At the target or on its better side.
   bool isMetBy(int percent) => switch (betterSide) {
