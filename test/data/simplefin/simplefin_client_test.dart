@@ -196,6 +196,74 @@ void main() {
       expect(outageClient.requestCount, 4);
     });
   });
+  group('bridge self-redirects while preparing accounts', () {
+    final accessUrl = Uri.parse(
+      'https://demo:demo@bridge.simplefin.org/simplefin',
+    );
+
+    test('follows repeated redirects to the same URL with auth', () async {
+      final redirectingClient = _SelfRedirectingBridgeClient(
+        redirectsBeforeAccountSet: 3,
+        location: '/simplefin/accounts?version=2&account=ACT-1',
+      );
+      final client = SimpleFinClient(httpClient: redirectingClient);
+
+      final accountSet = await client.fetchAccounts(
+        accessUrl: accessUrl,
+        accountIds: const ['ACT-1'],
+      );
+
+      expect(accountSet.accounts, isEmpty);
+      expect(redirectingClient.requestedUrls, hasLength(4));
+      expect(
+        redirectingClient.requestedUrls.skip(1).map((url) => url.toString()),
+        everyElement(
+          'https://bridge.simplefin.org/simplefin/accounts?version=2&account=ACT-1',
+        ),
+      );
+      expect(redirectingClient.authorizationHeaders, everyElement(isNotNull));
+    });
+
+    test('refuses to send credentials to another host', () async {
+      final client = SimpleFinClient(
+        httpClient: _SelfRedirectingBridgeClient(
+          redirectsBeforeAccountSet: 1,
+          location: 'https://elsewhere.example.com/accounts',
+        ),
+      );
+
+      await expectLater(
+        client.fetchAccounts(accessUrl: accessUrl),
+        throwsA(isA<SimpleFinFetchException>()),
+      );
+    });
+  });
+}
+
+/// Redirects [redirectsBeforeAccountSet] times to [location], then answers
+/// with an empty Account Set.
+class _SelfRedirectingBridgeClient({
+  required final int redirectsBeforeAccountSet,
+  required final String location,
+}) extends http.BaseClient {
+  final List<Uri> requestedUrls = [];
+  final List<String?> authorizationHeaders = [];
+
+  @override
+  Future<http.StreamedResponse> send(http.BaseRequest request) async {
+    expect(request.followRedirects, isFalse);
+    requestedUrls.add(request.url);
+    authorizationHeaders.add(request.headers['Authorization']);
+    if (requestedUrls.length <= redirectsBeforeAccountSet) {
+      return http.StreamedResponse(
+        const Stream<List<int>>.empty(),
+        302,
+        headers: {'location': location},
+      );
+    }
+    final body = utf8.encode('{"errlist":[],"accounts":[]}');
+    return http.StreamedResponse(Stream<List<int>>.fromIterable([body]), 200);
+  }
 }
 
 /// Answers with the bridge's HTML 500 page, then (after

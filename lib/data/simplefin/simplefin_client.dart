@@ -222,10 +222,12 @@ class SimpleFinClient({
       'GET ${_redactUri(requestUrl)} auth=${headers.containsKey('Authorization')}',
     );
 
-    final request = http.Request('GET', requestUrl);
-    request.headers.addAll(headers);
     try {
-      final streamed = await _httpClient.send(request);
+      final streamed = await _sendFollowingBridgeSelfRedirects(
+        accessUrl: accessUrl,
+        requestUrl: requestUrl,
+        headers: headers,
+      );
       final contentLength = streamed.contentLength;
       final body = BytesBuilder(copy: false);
       var received = 0;
@@ -238,11 +240,62 @@ class SimpleFinClient({
         body.takeBytes(),
         streamed.statusCode,
         headers: streamed.headers,
-        request: request,
+        request: streamed.request,
       );
     } catch (error, stackTrace) {
       _logger.error('Fetch request failed', error, stackTrace);
       rethrow;
+    }
+  }
+
+  /// The bridge answers a slow Account Set request by redirecting it to
+  /// itself, as often as it takes to finish. dart:io calls the second identical
+  /// redirect a loop and gives up, so follow them here instead, only within the
+  /// Access URL's host so the Authorization header never leaves the bridge.
+  Future<http.StreamedResponse> _sendFollowingBridgeSelfRedirects({
+    required Uri accessUrl,
+    required Uri requestUrl,
+    required Map<String, String> headers,
+  }) async {
+    const maxBridgeRedirects = 30;
+    var currentUrl = requestUrl;
+    for (var redirectCount = 0; ; redirectCount++) {
+      final request = http.Request('GET', currentUrl)
+        ..followRedirects = false
+        ..headers.addAll(headers);
+      final streamed = await _httpClient.send(request);
+      if (!const {301, 302, 303, 307, 308}.contains(streamed.statusCode)) {
+        return streamed;
+      }
+      await streamed.stream.drain<void>();
+      final String? location = streamed.headers['location'];
+      if (location == null) {
+        throw SimpleFinFetchException(
+          'SimpleFIN redirected (HTTP ${streamed.statusCode}) without a '
+          'Location.',
+          statusCode: streamed.statusCode,
+        );
+      }
+      final redirectUrl = currentUrl.resolve(location);
+      if (redirectUrl.scheme != 'https' || redirectUrl.host != accessUrl.host) {
+        throw SimpleFinFetchException(
+          'SimpleFIN redirected off the bridge to ${redirectUrl.host}; '
+          'not sending credentials there.',
+          statusCode: streamed.statusCode,
+        );
+      }
+      if (redirectCount >= maxBridgeRedirects) {
+        throw SimpleFinFetchException(
+          'SimpleFIN was still preparing accounts after '
+          '$maxBridgeRedirects redirects. Try again later.',
+          statusCode: streamed.statusCode,
+        );
+      }
+      _logger.log(
+        'Bridge redirect ${redirectCount + 1} (HTTP ${streamed.statusCode}) '
+        'to ${redirectUrl == currentUrl ? 'the same URL' : redirectUrl.path}',
+      );
+      currentUrl = redirectUrl;
     }
   }
 
