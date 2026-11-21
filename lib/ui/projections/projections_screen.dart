@@ -55,22 +55,29 @@ class const ProjectionsScreen() extends ConsumerWidget {
         if (projection.currentAge != null) ...[
           const SizedBox(height: ELayout.spaceLg),
           ProjectionChartCard(projection: projection),
-          const SizedBox(height: ELayout.spaceLg),
-          RothConversionCard(projection: projection),
         ],
         const SizedBox(height: ELayout.spaceLg),
-        _assumptionsBesideStartingPoint(projection),
+        _summariesBesideAssumptions(projection),
       ],
     );
   }
 
-  /// Two columns when there is room; stacked otherwise.
-  Widget _assumptionsBesideStartingPoint(RetirementProjection projection) {
+  /// Roth conversions over the starting point, beside the taller
+  /// assumptions, when there is room; all three stacked otherwise.
+  Widget _summariesBesideAssumptions(RetirementProjection projection) {
     return EBalancedRowsTileGrid(
       minTileWidth: 400,
       tiles: [
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          spacing: ELayout.spaceLg,
+          children: [
+            if (projection.currentAge != null)
+              RothConversionCard(projection: projection),
+            ProjectionStartingPointCard(projection: projection),
+          ],
+        ),
         ProjectionAssumptionsCard(projection: projection),
-        ProjectionStartingPointCard(projection: projection),
       ],
     );
   }

@@ -26,29 +26,49 @@ class const RothConversionCard({required final RetirementProjection projection})
         children: [
           Text('Roth conversions', style: EText.section),
           const SizedBox(height: ELayout.spaceXs),
-          Text(
-            'Each retired year, traditional money fills ordinary income to '
-            'the top of the bracket; what spending does not use converts '
-            'to Roth (before 59½, all of it). Heirs pay tax on traditional '
-            'over ten years; taxable and Roth pass free. Lifetime tax is '
-            'discounted at the real return, since tax paid early also costs '
-            'its growth. Today’s dollars.',
-            style: EText.caption,
+          EReadableMeasure(
+            child: Text(
+              'Each retired year, traditional money fills ordinary income to '
+              'the top of the bracket; what spending does not use converts '
+              'to Roth (before 59½, all of it). Heirs pay tax on traditional '
+              'over ten years; taxable and Roth pass free. Lifetime tax is '
+              'discounted at the real return, since tax paid early also '
+              'costs its growth. Today’s dollars.',
+              style: EText.caption,
+            ),
           ),
           const SizedBox(height: ELayout.spaceSm),
-          _headerRow(),
-          for (final outcome in outcomes) _outcomeRow(ref, outcome),
+          _outcomeTable(ref, outcomes),
         ],
       ),
     );
   }
 
-  Widget _headerRow() => _columns(
-    choice: 'Convert',
-    lifetimeTaxes: 'Lifetime tax (PV)',
-    leftToHeirs: 'Heirs keep at ${projection.assumptions.endAge}',
-    earliestAge: 'Earliest',
-    style: EText.caption.copyWith(color: EColors.textMuted),
+  /// As wide as its columns, so figures sit beside their choice however wide
+  /// the card is; the chosen row's highlight spans just the table.
+  Widget _outcomeTable(WidgetRef ref, List<RothConversionOutcome> outcomes) {
+    return EReadableMeasure(
+      child: IntrinsicWidth(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            _headerRow(),
+            for (final outcome in outcomes) _outcomeRow(ref, outcome),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _headerRow() => Padding(
+    padding: const EdgeInsets.symmetric(horizontal: ELayout.spaceXs),
+    child: _columns(
+      choice: 'Convert',
+      lifetimeTaxes: 'Lifetime tax (PV)',
+      leftToHeirs: 'Heirs keep at ${projection.assumptions.endAge}',
+      earliestAge: 'Earliest',
+      style: EText.caption.copyWith(color: EColors.textMuted),
+    ),
   );
 
   Widget _outcomeRow(WidgetRef ref, RothConversionOutcome outcome) {
@@ -63,7 +83,10 @@ class const RothConversionCard({required final RetirementProjection projection})
             }),
       child: Container(
         color: isChosen ? EColors.accentSoft : null,
-        padding: const EdgeInsets.symmetric(vertical: 3),
+        padding: const EdgeInsets.symmetric(
+          horizontal: ELayout.spaceXs,
+          vertical: 3,
+        ),
         child: _columns(
           choice: outcome.label,
           lifetimeTaxes: formatCentsWholeDollars(
@@ -100,7 +123,6 @@ class const RothConversionCard({required final RetirementProjection projection})
           width: _choiceWidth,
           child: Text(choice, style: style),
         ),
-        const Spacer(),
         figure(lifetimeTaxes),
         figure(leftToHeirs),
         figure(earliestAge),
