@@ -19,6 +19,9 @@ class const _ScreenWidth({
   required final double width,
   required final TargetPlatform platform,
   required final int expectedColumns,
+
+  /// The phone's own text size setting, which [Text] applies on top.
+  final double systemTextScale = 1.0,
 });
 
 const _screenWidths = [
@@ -27,6 +30,7 @@ const _screenWidths = [
     width: 430,
     platform: TargetPlatform.iOS,
     expectedColumns: 1,
+    systemTextScale: 1.235,
   ),
   _ScreenWidth(
     name: 'macos_quarter_monitor',
@@ -55,7 +59,10 @@ void main() {
     testWidgets('three numbers card at ${screenWidth.name}', (tester) async {
       debugDefaultTargetPlatformOverride = screenWidth.platform;
       addTearDown(() => tester.binding.setSurfaceSize(null));
-      await tester.binding.setSurfaceSize(Size(screenWidth.width, 1300));
+      await tester.binding.setSurfaceSize(Size(screenWidth.width, 1500));
+      tester.platformDispatcher.textScaleFactorTestValue =
+          screenWidth.systemTextScale;
+      addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
       try {
         await tester.pumpWidget(_cardScreen(_fixtureNumbers()));
         await tester.pumpAndSettle();
