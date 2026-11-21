@@ -7,7 +7,7 @@ import 'package:spend_trends/ui/theme/finance_colors.dart';
 
 /// Where pay went over 2y · 1y · 6mo, one donut per window, sliced by the
 /// three areas, excluded spending, and what was saved. A window that drew
-/// cash down has no savings slice and says how much past pay it spent. Null
+/// cash down has no savings slice; the Savings tile says by how much. Null
 /// [consciousSpendingNumbers] (still computing) shows empty rings, so the
 /// tile keeps its shape. The area tiles' colored headings name the slices.
 class const WherePayWentTile({
@@ -46,7 +46,7 @@ class const WherePayWentTile({
     );
   }
 
-  /// The ring with its window inside, pay (or the draw-down) beneath.
+  /// The ring with its window inside, average pay beneath.
   Widget _windowDonut(
     EWidthTypeScale typeScale,
     ConsciousSpendingWindow window,
@@ -85,42 +85,25 @@ class const WherePayWentTile({
         ),
         FittedBox(
           fit: BoxFit.scaleDown,
-          child: _payCaption(typeScale, totals, labelStyle: labelStyle),
+          child: _payCaption(totals, labelStyle: labelStyle),
         ),
       ],
     );
   }
 
-  /// Average pay per month; beneath it, when spending passed pay, how far
-  /// past, tinted red by how far it misses Savings' guideline.
+  /// Average pay per month over the window.
   Widget _payCaption(
-    EWidthTypeScale typeScale,
     ConsciousSpendingWindowTotals? totals, {
     required TextStyle labelStyle,
   }) {
-    if (totals == null) return Text('— /mo pay', style: labelStyle);
-    final int? savingsPercent = totals.savingsPercentOfPay;
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Text(
-          '${formatCentsWholeDollars((totals.annualPayCents / 12).round())}/mo pay',
-          style: labelStyle.copyWith(
-            fontFeatures: const [FontFeature.tabularFigures()],
-          ),
-        ),
-        if (savingsPercent != null && savingsPercent < 0)
-          Text(
-            'spent ${100 - savingsPercent}%',
-            style: labelStyle.copyWith(
-              color: ConsciousSpendingGuideline.savings.colorForPercent(
-                savingsPercent,
-                onTarget: labelStyle.color!,
-              ),
-              fontFeatures: const [FontFeature.tabularFigures()],
-            ),
-          ),
-      ],
+    final String monthlyPay = totals == null
+        ? '—'
+        : formatCentsWholeDollars((totals.annualPayCents / 12).round());
+    return Text(
+      '$monthlyPay/mo pay',
+      style: labelStyle.copyWith(
+        fontFeatures: const [FontFeature.tabularFigures()],
+      ),
     );
   }
 

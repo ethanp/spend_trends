@@ -36,15 +36,15 @@ extension ConsciousSpendingAreaColor on ConsciousSpendingArea {
 }
 
 extension ConsciousSpendingGuidelineScoreColor on ConsciousSpendingGuideline {
-  /// [onTarget] at the guideline, shading to green as [percent] beats it and
-  /// to red as it misses, fully colored once [score] saturates. A near miss
+  /// White on the guideline, shading to green as [percent] beats it and to
+  /// red as it misses, fully colored once [score] saturates. A near miss
   /// barely tints, so it does not read as an alarm.
-  Color colorForPercent(int percent, {Color onTarget = EColors.textPrimary}) {
+  Color colorForPercent(int percent) {
     final double guidelineScore = score(percent);
     if (guidelineScore >= 0) {
-      return Color.lerp(onTarget, EColors.success, guidelineScore)!;
+      return Color.lerp(EColors.textPrimary, EColors.success, guidelineScore)!;
     }
-    return Color.lerp(onTarget, EColors.danger, -guidelineScore)!;
+    return Color.lerp(EColors.textPrimary, EColors.danger, -guidelineScore)!;
   }
 }
 
