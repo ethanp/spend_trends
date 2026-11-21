@@ -24,18 +24,15 @@ class const RothConversionCard({required final RetirementProjection projection})
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text('Roth conversions', style: EText.section),
-          const SizedBox(height: ELayout.spaceXs),
-          EReadableMeasure(
-            child: Text(
-              'Each retired year, traditional money fills ordinary income to '
-              'the top of the bracket; what spending does not use converts '
-              'to Roth (before 59½, all of it). Heirs pay tax on traditional '
-              'over ten years; taxable and Roth pass free. Lifetime tax is '
-              'discounted at the real return, since tax paid early also '
-              'costs its growth. Today’s dollars.',
-              style: EText.caption,
-            ),
+          const ECardHeader(
+            title: 'Roth conversions',
+            blurb:
+                'Each retired year, traditional money fills ordinary income '
+                'to the top of the bracket; what spending does not use '
+                'converts to Roth (before 59½, all of it). Heirs pay tax on '
+                'traditional over ten years; taxable and Roth pass free. '
+                'Lifetime tax is discounted at the real return, since tax '
+                'paid early also costs its growth. Today’s dollars.',
           ),
           const SizedBox(height: ELayout.spaceSm),
           _outcomeTable(ref, outcomes),

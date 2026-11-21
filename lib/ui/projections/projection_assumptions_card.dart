@@ -10,60 +10,161 @@ import 'package:spend_trends/ui/projections/projections_providers.dart';
 import 'package:spend_trends/use_cases/projection/projection_assumptions_editor.dart';
 import 'package:spend_trends/ui/widgets/app_date_picker.dart';
 
-import 'assumption_slider_row.dart';
+import 'assumption_slider.dart';
 
-/// Projection assumptions as sliders. Dragging re-runs the projection on
-/// every frame; under each slider, a line shows the result across its
-/// range.
+/// Projection assumptions as sliders and switches, in groups. Dragging
+/// re-runs the projection on every frame; under each slider, a line shows
+/// the result across its range.
 class const ProjectionAssumptionsCard({
   required final RetirementProjection projection,
-}) extends StatelessWidget {
+}) extends ConsumerWidget {
+  static const _assumedMoveYearsAhead = 3;
+
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final Map<String, AssumptionSlider> sliderByKey = {
+      for (final slider in _sliders()) slider.range.assumptionKey: slider,
+    };
+    ELabeledControlRow sliderRow(String assumptionKey) =>
+        sliderByKey[assumptionKey]!.rowFor(projection);
     return ECard(
       kind: ESurfaceKind.row,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
+        spacing: ELayout.spaceMd,
         children: [
-          Text('Assumptions', style: EText.section),
-          const SizedBox(height: ELayout.spaceXs),
-          Text(
-            'Today’s dollars. The line under each slider is what it does '
-            'across its range: % of pay to invest to retire at '
-            '${projection.assumptions.retirementAge}, or for spending, the '
-            'earliest retirement age. Jobs, homes, and children are life '
-            'events; an assumed move tries one without adding it there. '
-            'Taxes are 2026 federal brackets. Accounts with a recorded tax '
-            'basis use it; the rest take the share set here. Retired before '
-            '65, the household buys the benchmark marketplace plan (priced '
-            'by age) and gets the premium tax credit up to 400% of the '
-            'poverty line.',
-            style: EText.caption,
+          ECardHeader(
+            title: 'Assumptions',
+            blurb:
+                'Today’s dollars. The line under each slider is what it does '
+                'across its range: % of pay to invest to retire at '
+                '${projection.assumptions.retirementAge}, or for spending, '
+                'the earliest retirement age. Jobs, homes, and children are '
+                'life events; an assumed move tries one without adding it '
+                'there. Taxes are 2026 federal brackets. Accounts with a '
+                'recorded tax basis use it; the rest take the share set '
+                'here. Retired before 65, the household buys the benchmark '
+                'marketplace plan (priced by age) and gets the premium tax '
+                'credit up to 400% of the poverty line.',
           ),
-          const SizedBox(height: ELayout.spaceSm),
-          ELabelValueTable(
-            maxWidth: 720,
-            rows: [
-              _BirthDateRow(projection: projection),
-              _FilingJointlySwitchRow(projection: projection),
-              for (final slider in _sliders())
-                AssumptionSliderRow(
-                  key: ValueKey(slider.range.assumptionKey),
-                  slider: slider,
-                  projection: projection,
-                ),
-              _AssumedMoveSwitchRow(projection: projection),
-              if (projection.assumptions.assumedMoveYear != null)
-                for (final slider in _assumedMoveSliders())
-                  AssumptionSliderRow(
-                    key: ValueKey(slider.range.assumptionKey),
-                    slider: slider,
-                    projection: projection,
-                  ),
+          ELabeledControlTable(
+            sections: [
+              ELabeledControlSection(
+                title: 'You',
+                rows: [
+                  _birthDateRow(context, ref),
+                  _filingJointlyRow(ref),
+                  sliderRow('retirementAge'),
+                  sliderRow('endAge'),
+                ],
+              ),
+              ELabeledControlSection(
+                title: 'Money',
+                rows: [
+                  sliderRow('spendingOverrideAnnualDollars'),
+                  sliderRow('socialSecurityMonthlyDollars'),
+                  sliderRow('marketplacePremiumMonthlyDollars'),
+                ],
+              ),
+              ELabeledControlSection(
+                title: 'Markets',
+                rows: [
+                  sliderRow('realReturnPercent'),
+                  sliderRow('inflationPercent'),
+                ],
+              ),
+              ELabeledControlSection(
+                title: 'Tax basis',
+                rows: [
+                  sliderRow('taxableCostPercent'),
+                  sliderRow('rothContributionsPercent'),
+                ],
+              ),
+              ELabeledControlSection(
+                title: 'Move',
+                rows: [
+                  _assumedMoveRow(ref),
+                  if (projection.assumptions.assumedMoveYear != null)
+                    for (final slider in _assumedMoveSliders())
+                      slider.rowFor(projection),
+                ],
+              ),
             ],
           ),
         ],
       ),
+    );
+  }
+
+  /// Opens a calendar (starting on the year grid); saves the pick.
+  ELabeledControlRow _birthDateRow(BuildContext context, WidgetRef ref) {
+    final DateTime? birthDate = projection.assumptions.birthDate;
+    return ELabeledControlRow.trailing(
+      label: 'Birth date',
+      child: TextButton.icon(
+        onPressed: () => _pickBirthDate(context, ref, birthDate),
+        icon: const Icon(Icons.calendar_today, size: 14),
+        label: Text(
+          birthDate == null ? 'Set' : DateFormat.yMMMd().format(birthDate),
+          style: EText.caption.copyWith(color: EColors.textPrimary),
+        ),
+        style: TextButton.styleFrom(
+          visualDensity: VisualDensity.compact,
+          padding: const EdgeInsets.symmetric(horizontal: ELayout.spaceSm),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _pickBirthDate(
+    BuildContext context,
+    WidgetRef ref,
+    DateTime? birthDate,
+  ) async {
+    final ProjectionAssumptionsEditor editor = ref.read(
+      projectionAssumptionsEditorProvider,
+    );
+    final DateTime? picked = await pickAppDate(
+      context,
+      initialDate: birthDate ?? DateTime(DateTime.now().year - 35),
+      minimumDate: DateTime(1920),
+      maximumDate: DateTime.now(),
+      initialMode: DatePickerMode.year,
+    );
+    if (picked == null || picked == birthDate) return;
+    await editor.apply({'birthDate': picked.dayKey});
+  }
+
+  /// Files single, or jointly with the jointly brackets and deduction.
+  ELabeledControlRow _filingJointlyRow(WidgetRef ref) {
+    return ELabeledControlRow.toggle(
+      label: FilingStatus.marriedFilingJointly.label,
+      value:
+          projection.assumptions.filingStatus ==
+          FilingStatus.marriedFilingJointly,
+      onChanged: (filesJointly) =>
+          ref.read(projectionAssumptionsEditorProvider).apply({
+            'filingStatus':
+                (filesJointly
+                        ? FilingStatus.marriedFilingJointly
+                        : FilingStatus.single)
+                    .name,
+          }),
+    );
+  }
+
+  /// Switches the assumed move on (a few years out, keeping its last price,
+  /// down payment, and rate) or off.
+  ELabeledControlRow _assumedMoveRow(WidgetRef ref) {
+    return ELabeledControlRow.toggle(
+      label: 'Assume a move',
+      value: projection.assumptions.assumedMoveYear != null,
+      onChanged: (assumesMove) =>
+          ref.read(projectionAssumptionsEditorProvider).apply({
+            'assumedMoveYear': assumesMove
+                ? DateTime.now().year + _assumedMoveYearsAhead
+                : null,
+          }),
     );
   }
 
@@ -223,109 +324,5 @@ class const ProjectionAssumptionsCard({
         caption: (value) => '${value.toStringAsFixed(2)}%',
       ),
     ];
-  }
-}
-
-/// Switches the assumed move on (a few years out, keeping its last price,
-/// down payment, and rate) or off.
-class const _AssumedMoveSwitchRow({
-  required final RetirementProjection projection,
-}) extends ConsumerWidget {
-  static const _defaultYearsAhead = 3;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final bool isOn = projection.assumptions.assumedMoveYear != null;
-    return Row(
-      children: [
-        Expanded(child: Text('Assume a move', style: EText.caption)),
-        Switch(
-          value: isOn,
-          onChanged: (assumesMove) =>
-              ref.read(projectionAssumptionsEditorProvider).apply({
-                'assumedMoveYear': assumesMove
-                    ? DateTime.now().year + _defaultYearsAhead
-                    : null,
-              }),
-        ),
-      ],
-    );
-  }
-}
-
-/// Files single, or jointly with the jointly brackets and deduction.
-class const _FilingJointlySwitchRow({
-  required final RetirementProjection projection,
-}) extends ConsumerWidget {
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    return Row(
-      children: [
-        Expanded(
-          child: Text(
-            FilingStatus.marriedFilingJointly.label,
-            style: EText.caption,
-          ),
-        ),
-        Switch(
-          value:
-              projection.assumptions.filingStatus ==
-              FilingStatus.marriedFilingJointly,
-          onChanged: (filesJointly) =>
-              ref.read(projectionAssumptionsEditorProvider).apply({
-                'filingStatus':
-                    (filesJointly
-                            ? FilingStatus.marriedFilingJointly
-                            : FilingStatus.single)
-                        .name,
-              }),
-        ),
-      ],
-    );
-  }
-}
-
-/// Opens a calendar (starting on the year grid); saves the pick.
-class const _BirthDateRow({required final RetirementProjection projection})
-    extends ConsumerWidget {
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final DateTime? birthDate = projection.assumptions.birthDate;
-    return Row(
-      children: [
-        Expanded(child: Text('Birth date', style: EText.caption)),
-        TextButton.icon(
-          onPressed: () => _pickBirthDate(context, ref, birthDate),
-          icon: const Icon(Icons.calendar_today, size: 14),
-          label: Text(
-            birthDate == null ? 'Set' : DateFormat.yMMMd().format(birthDate),
-            style: EText.caption.copyWith(color: EColors.textPrimary),
-          ),
-          style: TextButton.styleFrom(
-            visualDensity: VisualDensity.compact,
-            padding: const EdgeInsets.symmetric(horizontal: ELayout.spaceSm),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Future<void> _pickBirthDate(
-    BuildContext context,
-    WidgetRef ref,
-    DateTime? birthDate,
-  ) async {
-    final ProjectionAssumptionsEditor editor = ref.read(
-      projectionAssumptionsEditorProvider,
-    );
-    final DateTime? picked = await pickAppDate(
-      context,
-      initialDate: birthDate ?? DateTime(DateTime.now().year - 35),
-      minimumDate: DateTime(1920),
-      maximumDate: DateTime.now(),
-      initialMode: DatePickerMode.year,
-    );
-    if (picked == null || picked == birthDate) return;
-    await editor.apply({'birthDate': picked.dayKey});
   }
 }

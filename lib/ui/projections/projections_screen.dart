@@ -44,40 +44,44 @@ class const ProjectionsScreen() extends ConsumerWidget {
     );
   }
 
+  /// Results beside the assumptions that drive them, so dragging a slider
+  /// moves the chart in view; stacked when the window is narrow.
   Widget _projectionBody(
     BuildContext context,
     RetirementProjection projection,
   ) {
-    return ListView(
-      padding: ETabBarOverlay.paddingOf(context),
-      children: [
-        ProjectionHeadlineCard(projection: projection),
-        if (projection.currentAge != null) ...[
-          const SizedBox(height: ELayout.spaceLg),
-          ProjectionChartCard(projection: projection),
-        ],
-        const SizedBox(height: ELayout.spaceLg),
-        _summariesBesideAssumptions(projection),
-      ],
+    return ESplitPanes(
+      kind: ESplitPanesKind.columns,
+      breakpoint: EWidthClass.wide.minPhoneWidth * ELayout.typeScale,
+      initialSizedWidth: _assumptionsPaneWidth * ELayout.typeScale,
+      maxSizedWidth: _assumptionsPaneMaxWidth * ELayout.typeScale,
+      columnPadding: ETabBarOverlay.paddingOf(context),
+      left: _results(projection),
+      right: ProjectionAssumptionsCard(projection: projection),
     );
   }
 
-  /// Roth conversions over the starting point, beside the taller
-  /// assumptions, when there is room; all three stacked otherwise.
-  Widget _summariesBesideAssumptions(RetirementProjection projection) {
-    return EBalancedRowsTileGrid(
-      minTileWidth: 400,
-      tiles: [
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          spacing: ELayout.spaceLg,
-          children: [
+  static const _assumptionsPaneWidth = 520.0;
+  static const _assumptionsPaneMaxWidth = 720.0;
+
+  /// The headline and chart, then Roth conversions beside the starting
+  /// point when there is room.
+  Widget _results(RetirementProjection projection) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      spacing: ELayout.spaceLg,
+      children: [
+        ProjectionHeadlineCard(projection: projection),
+        if (projection.currentAge != null)
+          ProjectionChartCard(projection: projection),
+        EBalancedRowsTileGrid(
+          minTileWidth: 400,
+          tiles: [
             if (projection.currentAge != null)
               RothConversionCard(projection: projection),
             ProjectionStartingPointCard(projection: projection),
           ],
         ),
-        ProjectionAssumptionsCard(projection: projection),
       ],
     );
   }

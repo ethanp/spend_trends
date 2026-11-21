@@ -16,139 +16,139 @@ class const AssumptionSlider({
   /// For an override: the actual figure over the last 365 days, used
   /// while the override is unset.
   final double? actualValue,
-});
-
-/// Label, slider, and value. Under the slider, a line traces the result
-/// (the headline's) across the slider's whole range, with a dot where the
-/// slider sits. Dragging re-runs the projection as you go;
-/// letting go saves.
-class const AssumptionSliderRow({
-  super.key,
-  required final AssumptionSlider slider,
-  required final RetirementProjection projection,
-}) extends ConsumerWidget {
-  static const _labelWidth = 170.0;
-  static const _valueWidth = 96.0;
-
+}) {
   /// Thumb overlay radius: the track (and the line under it) is inset by it.
   static const _trackInset = 10.0;
 
-  String get _assumptionKey => slider.range.assumptionKey;
+  String get _assumptionKey => range.assumptionKey;
 
-  /// Null only for an unset override.
-  num? get _setValue => projection.assumptions.toJson()[_assumptionKey] as num?;
-
-  double get _shownValue =>
-      (_setValue?.toDouble() ?? slider.actualValue ?? slider.range.min).clamp(
-        slider.range.min,
-        slider.range.max,
-      );
-
-  /// The result the current value gives, from the projection on screen;
-  /// places the dot.
-  int? get _currentOutcome => switch (slider.range.outcomeKind) {
-    SweepOutcomeKind.investingPercentNeeded =>
-      projection.savingsTarget?.requiredInvestingPercent,
-    SweepOutcomeKind.earliestRetirementAge => projection.earliestRetirementAge,
-  };
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: ELayout.spaceXs),
-      child: Row(
-        children: [
-          SizedBox(width: _labelWidth, child: _label(ref)),
-          Expanded(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [_slider(ref), _sweepLine(ref)],
+  /// Label, slider, and value. Under the slider, a line traces the result
+  /// (the headline's) across the slider's whole range, with a dot where the
+  /// slider sits. Dragging re-runs the projection as you go; letting go
+  /// saves.
+  ELabeledControlRow rowFor(RetirementProjection projection) {
+    return ELabeledControlRow.slider(
+      label: label,
+      caption: actualValue == null
+          ? null
+          : _ActualOrOverrideCaption(
+              assumptionKey: _assumptionKey,
+              isOverridden: _setValueIn(projection) != null,
             ),
-          ),
-          SizedBox(width: _valueWidth, child: _value()),
-        ],
+      slider: _AssumptionSliderControl(
+        key: ValueKey(_assumptionKey),
+        slider: this,
+        shownValue: _shownValueIn(projection),
+      ),
+      valueText: caption(_shownValueIn(projection)),
+      below: _AssumptionSweepLine(
+        slider: this,
+        shownValue: _shownValueIn(projection),
+        currentOutcome: _currentOutcomeIn(projection),
       ),
     );
   }
 
-  Widget _label(WidgetRef ref) {
-    final label = Text(slider.label, style: EText.caption);
-    if (slider.actualValue == null) return label;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        label,
-        if (_setValue == null)
-          Text('last 365 days', style: EText.caption.copyWith(fontSize: 10))
-        else
-          GestureDetector(
-            onTap: () => ref
-                .read(projectionAssumptionDraftsProvider.notifier)
-                .release(_assumptionKey, null),
-            child: Text(
-              'use actual',
-              style: EText.caption.copyWith(
-                fontSize: 10,
-                color: EColors.accentGlow,
-              ),
-            ),
-          ),
-      ],
+  /// Null only for an unset override.
+  num? _setValueIn(RetirementProjection projection) =>
+      projection.assumptions.toJson()[_assumptionKey] as num?;
+
+  double _shownValueIn(RetirementProjection projection) =>
+      (_setValueIn(projection)?.toDouble() ?? actualValue ?? range.min).clamp(
+        range.min,
+        range.max,
+      );
+
+  /// The result the current value gives, from the projection on screen;
+  /// places the dot.
+  int? _currentOutcomeIn(RetirementProjection projection) =>
+      switch (range.outcomeKind) {
+        SweepOutcomeKind.investingPercentNeeded =>
+          projection.savingsTarget?.requiredInvestingPercent,
+        SweepOutcomeKind.earliestRetirementAge =>
+          projection.earliestRetirementAge,
+      };
+
+  /// Snapped to the step; whole-number assumptions are stored as ints.
+  Object _stored(double value) {
+    final double snapped = (value / range.step).round() * range.step;
+    if (range.step >= 1) return snapped.round();
+    return double.parse(snapped.toStringAsFixed(1));
+  }
+}
+
+/// "last 365 days" while the actual figure is in use; once overridden,
+/// "use actual", which clears the override.
+class const _ActualOrOverrideCaption({
+  required final String assumptionKey,
+  required final bool isOverridden,
+}) extends ConsumerWidget {
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    if (!isOverridden) return const Text('last 365 days');
+    return GestureDetector(
+      onTap: () => ref
+          .read(projectionAssumptionDraftsProvider.notifier)
+          .release(assumptionKey, null),
+      child: const Text(
+        'use actual',
+        style: TextStyle(color: EColors.accentGlow),
+      ),
     );
   }
+}
 
-  Widget _slider(WidgetRef ref) {
+class const _AssumptionSliderControl({
+  super.key,
+  required final AssumptionSlider slider,
+  required final double shownValue,
+}) extends ConsumerWidget {
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
     final ProjectionAssumptionDrafts drafts = ref.read(
       projectionAssumptionDraftsProvider.notifier,
     );
-    final range = slider.range;
+    final AssumptionSweepRange range = slider.range;
     return SliderTheme(
       data: SliderThemeData(
         trackHeight: 2,
         thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 6),
-        overlayShape: const RoundSliderOverlayShape(overlayRadius: _trackInset),
+        overlayShape: const RoundSliderOverlayShape(
+          overlayRadius: AssumptionSlider._trackInset,
+        ),
         tickMarkShape: SliderTickMarkShape.noTickMark,
       ),
       child: SizedBox(
         height: 18,
         child: Slider(
-          value: _shownValue,
+          value: shownValue,
           min: range.min,
           max: range.max,
           divisions: ((range.max - range.min) / range.step).round(),
-          onChanged: (value) => drafts.drag(_assumptionKey, _stored(value)),
+          onChanged: (value) =>
+              drafts.drag(slider._assumptionKey, slider._stored(value)),
           onChangeEnd: (value) =>
-              drafts.release(_assumptionKey, _stored(value)),
+              drafts.release(slider._assumptionKey, slider._stored(value)),
         ),
       ),
     );
   }
+}
 
-  /// Snapped to the step; whole-number assumptions are stored as ints.
-  Object _stored(double value) {
-    final step = slider.range.step;
-    final snapped = (value / step).round() * step;
-    if (step >= 1) return snapped.round();
-    return double.parse(snapped.toStringAsFixed(1));
-  }
-
-  Widget _value() {
-    return Text(
-      slider.caption(_shownValue),
-      textAlign: TextAlign.right,
-      style: EText.caption.copyWith(
-        color: EColors.textPrimary,
-        fontFeatures: const [FontFeature.tabularFigures()],
-      ),
-    );
-  }
-
-  Widget _sweepLine(WidgetRef ref) {
+class const _AssumptionSweepLine({
+  required final AssumptionSlider slider,
+  required final double shownValue,
+  required final int? currentOutcome,
+}) extends ConsumerWidget {
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
     final List<SweepPoint>? sweepPoints = ref
         .watch(assumptionSweepProvider(slider.range))
         .value;
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: _trackInset),
+      padding: const EdgeInsets.symmetric(
+        horizontal: AssumptionSlider._trackInset,
+      ),
       child: SizedBox(
         height: 16,
         width: double.infinity,
@@ -158,8 +158,8 @@ class const AssumptionSliderRow({
                 painter: _SweepLinePainter(
                   points: sweepPoints,
                   range: slider.range,
-                  currentValue: _shownValue,
-                  currentOutcome: _currentOutcome,
+                  currentValue: shownValue,
+                  currentOutcome: currentOutcome,
                 ),
               ),
       ),

@@ -19,7 +19,7 @@ class const ProjectionStartingPointCard({
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text('Starting point (live)', style: EText.section),
+          const ECardHeader(title: 'Starting point (live)'),
           const SizedBox(height: ELayout.spaceSm),
           ELabelValueTable(
             rows: [
